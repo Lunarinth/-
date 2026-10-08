@@ -14,11 +14,11 @@ function mkUnit(id,noSig){
   return u;
 }
 function newGame(first){
-  G={act:0,floor:0,gold:60,stones:3,party:[mkUnit('gemini'),mkUnit(first)],relics:[],items:['bread'],
+  G={act:0,floor:0,gold:60,stones:3,party:[mkUnit('belis'),mkUnit(first)],relics:[],items:['bread'],
      cond:{mana:0,draw:0,skill:0},talks:{},turns:0,battles:0,hazeNext:0,recruited:[first],node:null,pendingCardReward:0,
      log:[],stats:{kills:0,cards:0}};
   /* 시작 기술: 각자 대표 기술 1장 (새 기술을 얻으면 기본 카드가 빠지는 규칙 적용) */
-  const SIG={gemini:'magician',clem:'c_flurry',rosa:'r_thorn',opal:'o_poison'};
+  const SIG={belis:'magician',obser:'c_flurry',claire:'r_thorn',sol:'o_poison'};
   for(const u of G.party)addSkill(SIG[u.id]);
   return G;
 }
@@ -224,7 +224,7 @@ async function playCard(uid,target){
   UI.cardPlayed(inst,v,src,tgt);
   await sleep(300);
   await execFx(src,v.fx,v.t,tgt,inst);
-  if(inst.rev&&CARD[inst.id].o==='gemini'){const rb=pp(src.u,'revBlock');if(rb)for(const a of aliveA())addBlock(a,rb)}
+  if(inst.rev&&CARD[inst.id].o==='belis'){const rb=pp(src.u,'revBlock');if(rb)for(const a of aliveA())addBlock(a,rb)}
   B.cardsPlayed;
   if(v.fx.exh)B.exh.push(inst);else B.disc.push(inst);
   UI.refresh();
@@ -285,8 +285,8 @@ async function drawCards(n){
     /* 소유자가 쓰러진 카드는 이번 전투에서 제외 */
     const c=B.draw.pop();
     if(c.o!==null&&!allyOf(c.o)||(c.o!==null&&allyOf(c.o).dead)){B.exh.push(c);i--;continue}
-    const gp=aliveA().some(a=>a.id==='gemini')?pp(allyOf('gemini').u,'revP'):0;
-    c.rev=c.o==='gemini'&&CARD[c.id].rev&&Math.random()<REVP+gp;
+    const gp=aliveA().some(a=>a.id==='belis')?pp(allyOf('belis').u,'revP'):0;
+    c.rev=c.o==='belis'&&CARD[c.id].rev&&Math.random()<REVP+gp;
     B.hand.push(c);drew++;
   }
   UI.drawn(drew);
@@ -321,7 +321,7 @@ async function hurtAllyDirect(A,n){
 async function conduct(){
   if(!B||!B.playerTurn||B.busy||B.over||B.conductUsed)return false;
   B.conductUsed=true;B.discount=1;UI.conduct();
-  const gem=allyOf('gemini');
+  const gem=allyOf('belis');
   const drawN=(G.cond.skill?1:0)+rs('conductDraw')+(gem&&!gem.dead?pp(gem.u,'conductDraw'):0);
   if(drawN)await drawCards(drawN);
   UI.refresh();return true;
@@ -402,7 +402,7 @@ async function enemyAct(e){
 /* ---- 종료 판정 ---- */
 async function checkEnd(){
   if(!B||B.over)return;
-  const gem=allyOf('gemini');
+  const gem=allyOf('belis');
   if(!aliveA().length||(gem&&gem.dead)){B.over=true;B.won=false;await sleep(500);UI.battleEnd(false);return}
   if(!aliveE().length){B.over=true;B.won=true;await sleep(400);UI.battleEnd(true)}
 }
@@ -413,7 +413,7 @@ async function useItem(idx,target){
   if(B){
     if(!B.playerTurn||B.busy)return false;
     B.busy=true;
-    const src=allyOf('gemini')||aliveA()[0];
+    const src=allyOf('belis')||aliveA()[0];
     let t=it.tgt;
     if(t==='a'&&!target)target=aliveA()[0];
     await execFx(src,it.fx,t==='s'?'s':t,target,null);

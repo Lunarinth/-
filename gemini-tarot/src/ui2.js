@@ -83,12 +83,12 @@ async function playScene(lines,opt={}){
     const ln=lines[i],spk=SPK[ln.w]||SPK.narr;
     sc.classList.toggle('narr',ln.w==='narr');
     who.style.display=spk.n?'':'none';who.textContent=spk.n;who.style.setProperty('--c',spk.color);
-    const side=ln.pos||(ln.w==='gemini'?'L':'R');
+    const side=ln.pos||(ln.w==='belis'?'L':'R');
     if(spk.pal||spk.kind==='eye'){
       if(side==='L'){setPtr('L',spk);L.classList.remove('dim');R.classList.add('dim')}
       else{setPtr('R',spk);R.classList.remove('dim');L.classList.add('dim')}
     }else{L.classList.add('dim');R.classList.add('dim')}
-    if(ln.w!=='narr'&&ln.w!=='master'&&!L.dataset.k&&side==='R'&&ln.w!=='gemini'){/* 오른쪽만 있는 장면 */}
+    if(ln.w!=='narr'&&ln.w!=='master'&&!L.dataset.k&&side==='R'&&ln.w!=='belis'){/* 오른쪽만 있는 장면 */}
     typeLine(ln.t);
   }
   return new Promise(res=>{
@@ -152,10 +152,17 @@ function makeShards(cx,cy,cw,ch){
   }
   return sh;
 }
+function heroCard(){
+  const c=mkc(768,1280),x=c.getContext('2d'),f=CH_SPR.belis;
+  const g=x.createLinearGradient(0,0,0,1280);g.addColorStop(0,'#3a1458');g.addColorStop(1,'#12041e');x.fillStyle=g;x.fillRect(0,0,768,1280);
+  x.strokeStyle='#d9a94f';x.lineWidth=14;x.strokeRect(14,14,740,1252);x.strokeStyle='#000';x.lineWidth=4;x.strokeRect(26,26,716,1228);
+  const s=Math.min(700/f.width,1150/f.height),w=f.width*s,h=f.height*s;x.shadowColor='#b98cff';x.shadowBlur=50;x.drawImage(f,(768-w)/2,(1280-h)/2+20,w,h);
+  return c;
+}
 async function cutscene(kind){
   if(FAST)return;
   if(kind==='prologue'){
-    const orig=SP.orig,cw0=orig.width,ch0=orig.height;let shards=null;
+    const orig=heroCard(),cw0=orig.width,ch0=orig.height;let shards=null;
     await runCut((c,w,h,t)=>{
       cutBg(c,w,h,'#12041e','#05000a');
       const ch=h*.8,cw=ch*cw0/ch0,cx=w/2-cw/2,cy=h/2-ch/2;
@@ -179,7 +186,7 @@ async function cutscene(kind){
     return;
   }
   if(kind==='twin'){
-    const a=fullFigure('gemini'),b=fullFigure('mirror');
+    const a=fullFigure('belis'),b=fullFigure('belis_inv');
     await runCut((c,w,h,t)=>{
       cutBg(c,w,h,'#05000a','#1a0a30');
       const fh=h*.82,fw=fh*a.width/a.height,k=ease(Math.min(1,t/2));
@@ -209,7 +216,7 @@ async function cutscene(kind){
     return;
   }
   if(kind==='eternal'){
-    const a=fullFigure('gemini'),b=fullFigure('mirror'),dial=makeDial(ACTS[2].colors);
+    const a=fullFigure('belis'),b=fullFigure('belis_inv'),dial=makeDial(ACTS[2].colors);
     await runCut((c,w,h,t)=>{
       cutBg(c,w,h,'#0a0420','#25104a');
       c.save();c.translate(w/2,h*.45);c.rotate(Math.sin(t*.3)*.03);c.globalAlpha=.55;const ds=h*.95;c.drawImage(dial,-ds/2,-ds/2,ds,ds);c.restore();
@@ -444,8 +451,8 @@ function pickCompanion(list,title){
     show('s-pick');$('#pickTitle').textContent=title;const row=$('#pickRow');row.innerHTML='';
     for(const id of list){
       const c=CH[id],p=el('div','panel pcard');p.style.setProperty('--c',c.color);
-      p.innerHTML=`<canvas width="420" height="430"></canvas><h3>${c.n}</h3><div class="ti">${c.title} · HP ${c.hp}</div><p>${c.bio}</p>`;
-      p.querySelector('canvas').getContext('2d').drawImage(bustCanvas(c.pal),0,0);
+      p.innerHTML=`<div class="pimg"></div><h3>${c.n}</h3><div class="ti">${c.title} · HP ${c.hp}</div><p>${c.bio}</p>`;
+      p.querySelector('.pimg').appendChild(cloneCanvas(fullFigure(c.pal)));
       p.addEventListener('click',()=>{Mus.sfx('level');res(id)});row.appendChild(p);
     }
   });
@@ -454,7 +461,7 @@ async function runRecruit(){
   const rem=RECRUITABLE.filter(id=>!G.recruited.includes(id));
   let id=rem[0];if(rem.length>1)id=await pickCompanion(rem,'함께할 동료를 고르십시오');
   Mus.play('story');await playScene(STORY['recruit_'+id]);
-  G.recruited.push(id);G.party.push(mkUnit(id));addSkill({gemini:'magician',clem:'c_flurry',rosa:'r_thorn',opal:'o_poison'}[id]);G.party.forEach(applyHpRelics);addStones(1);
+  G.recruited.push(id);G.party.push(mkUnit(id));addSkill({belis:'magician',obser:'c_flurry',claire:'r_thorn',sol:'o_poison'}[id]);G.party.forEach(applyHpRelics);addStones(1);
   toast(`${CH[id].n}이(가) 일행에 합류했습니다`,true);advance();
 }
 function applyHpRelics(){}
@@ -485,7 +492,7 @@ function runCamp(){
 function openParty(){
   const ov=$('#overlay-party');ov.classList.add('on');
   let h=`<div class="ptop"><h2 class="ttl">일행</h2><div style="display:flex;gap:8px;align-items:center"><span class="chip">◆ 영혼석 <b>${G.stones}</b></span><button class="btn sm ghost" id="ppX">닫기</button></div></div><div class="pgrid" id="pgrid"></div>`;
-  h+=`<div class="sect panel"><h4>지휘자 강화 (제미나이)</h4><div class="cond-row" id="condRow"></div></div>`;
+  h+=`<div class="sect panel"><h4>지휘자 강화 (벨리스)</h4><div class="cond-row" id="condRow"></div></div>`;
   h+=`<div class="sect panel"><h4>유물</h4><div class="relics" id="pRelics"></div></div>`;
   ov.innerHTML=h;
   $('#ppX').onclick=()=>{ov.classList.remove('on');if($('#s-map').classList.contains('on'))renderMap()};
@@ -528,8 +535,7 @@ function showEnd(kind){
   $('#endTitle').textContent=T[0];$('#endDesc').textContent=T[1];
   $('#endStats').innerHTML=[`막 ${Math.min(3,G.act+1)}`,`전투 ${G.battles}회`,`${G.turns}턴`,`쓰러뜨린 적 ${G.stats.kills}`,`사용한 카드 ${G.stats.cards}장`,`일행 ${G.party.length}명`].map(s=>`<span class="rpill">${s}</span>`).join('');
   if(kind==='defeat'){}else Mus.play(kind==='dawn'?'dawn':'eternal');
-  $('#endCan').getContext('2d').clearRect(0,0,420,430);
-  const pal=kind==='defeat'?'ghost':'gemini',b=bustCanvas(pal);$('#endCan').getContext('2d').drawImage(b,0,0);
+  const ec=$('#endCan'),b=bustCanvas(kind==='defeat'?'belis_inv':'belis');ec.width=b.width;ec.height=b.height;const ex=ec.getContext('2d');ex.clearRect(0,0,ec.width,ec.height);ex.drawImage(b,0,0);
 }
 
 /* ================= 막 · 시작 ================= */

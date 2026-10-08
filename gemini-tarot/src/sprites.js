@@ -151,8 +151,19 @@ function paint(src,pal,key){
 }
 const paletteBody=pal=>paint(SP.body,pal,'body');
 const paletteWand=pal=>paint(SP.wand,pal,'wand');
+/* ---- 동료 일러스트(별도 4장): 오른쪽을 보도록 좌우 반전해 둔다 ---- */
+const CH_SPR={};
+function buildChars(imgs){
+  for(const k in imgs){const im=imgs[k],c=mkc(im.naturalWidth,im.naturalHeight);c.getContext('2d').drawImage(im,0,0);CH_SPR[k]=flipX(c)}
+  CH_SPR.belis_inv=invertColors(CH_SPR.belis);
+}
+/* 상반신·얼굴 크롭 (반전 후 좌표, 비율) */
+const CH_BUST={belis:[.02,0,.54,.46],obser:[0,0,.6,.46],sol:[.1,0,.7,.46],claire:[.04,0,.76,.43]};
+const CH_FACE={belis:[.04,.0,.52],obser:[.0,.0,.58],sol:[.08,.0,.56],claire:[.06,.0,.62]};
+function chBase(k){return k==='belis_inv'?'belis':k}
 /* 지휘봉까지 합친 전신 */
 function fullFigure(pal){
+  if(CH_SPR[pal])return CH_SPR[pal];
   const k='full|'+pal;if(_cache[k])return _cache[k];
   const b=paletteBody(pal),w=paletteWand(pal),o=mkc(b.width,b.height),c=o.getContext('2d');
   c.drawImage(b,0,0);c.drawImage(w,SP.wandRect.x,SP.wandRect.y);
@@ -161,6 +172,10 @@ function fullFigure(pal){
 /* 상반신(대화창용) */
 function bustCanvas(pal){
   const k='bust|'+pal;if(_cache[k])return _cache[k];
+  if(CH_SPR[pal]){
+    const f=CH_SPR[pal],b=CH_BUST[chBase(pal)],x=b[0]*f.width,y=b[1]*f.height,w=(b[2]-b[0])*f.width,h=(b[3]-b[1])*f.height;
+    return(_cache[k]=crop(f,x,y,w,h));
+  }
   const f=fullFigure(pal),o=mkc(420,430),c=o.getContext('2d');
   c.drawImage(f,-(170-SP.origin.x),-(60-SP.origin.y));
   return(_cache[k]=o);
@@ -168,6 +183,11 @@ function bustCanvas(pal){
 /* 작은 얼굴 아이콘(카드·파티 목록용) */
 function iconCanvas(pal){
   const k='icon|'+pal;if(_cache[k])return _cache[k];
+  if(CH_SPR[pal]){
+    const f=CH_SPR[pal],fc=CH_FACE[chBase(pal)],sz=fc[2]*f.width,o=mkc(96,96),c=o.getContext('2d');
+    c.imageSmoothingQuality='high';c.drawImage(f,fc[0]*f.width,fc[1]*f.height,sz,sz,0,0,96,96);
+    return(_cache[k]=o);
+  }
   const f=fullFigure(pal),o=mkc(96,96),c=o.getContext('2d');
   c.imageSmoothingQuality='high';
   c.drawImage(f,-(316-SP.origin.x)*.82,-(128-SP.origin.y)*.82,f.width*.82,f.height*.82);

@@ -1,97 +1,97 @@
 /* ================= 데이터: 동료 · 카드 · 적 · 유물 · 이벤트 · 이야기 ================= */
 const CH={
-  gemini:{n:'제미나이',title:'지휘자',pal:'gemini',color:'#d64fa0',hp:62,lead:true,
-    bio:'루센트 저택 야회의 지휘자. 지휘봉으로 타로의 아르카나를 불러내며, 카드는 뽑힐 때 역방향으로 뒤집힐 수 있다.',
+  belis:{n:'벨리스',title:'지휘자',pal:'belis',color:'#b98cff',hp:62,lead:true,
+    bio:'루센트 저택 야회의 지휘자. 지휘봉과 마도서로 타로의 아르카나를 불러내며, 카드는 뽑힐 때 역방향으로 뒤집힐 수 있다.',
     basics:['g_baton','g_baton','g_baton','g_guard','g_guard','g_omen']},
-  clem:{n:'클레멘타인',title:'초침의 시계공',pal:'astra',color:'#4fd0e0',hp:50,
-    bio:'시계탑을 돌보던 견습 시계공. 짧은 박자로 여러 번 찌르고, 약해진 적을 정확하게 마무리한다.',
+  obser:{n:'옵서',title:'천문대의 관측수',pal:'obser',color:'#9fc0ff',hp:50,
+    bio:'시계탑 천문대의 관측수. 별자리 조준경이 달린 대형 망원포로 약점을 꿰뚫고, 약해진 적을 정확하게 마무리한다.',
     basics:['c_tick','c_tick','c_tick','c_stop','c_stop','c_wind']},
-  rosa:{n:'로자문트',title:'문지기',pal:'maid',color:'#e0506a',hp:84,
-    bio:'저택의 대문을 지키던 문지기. 도발과 방어도로 파티를 지키고, 쌓은 방어도를 그대로 힘으로 돌려준다.',
+  claire:{n:'클레르',title:'검의 문지기',pal:'claire',color:'#ffa43a',hp:84,
+    bio:'저택의 대문을 지키던 후광의 기사 하녀. 대검으로 도발하고 막아 내며, 쌓은 방어도를 그대로 일격으로 돌려준다.',
     basics:['r_slam','r_slam','r_bar','r_bar','r_bar','r_stand']},
-  opal:{n:'오팔',title:'온실지기',pal:'sol',color:'#7fd46b',hp:54,
-    bio:'장미 온실의 정원사. 독과 가시로 적을 천천히 말리고, 아군의 상처를 보살핀다.',
+  sol:{n:'솔',title:'레몬 온실지기',pal:'sol',color:'#ffd93d',hp:54,
+    bio:'레몬 온실을 돌보는 햇살의 정원사. 시큼한 즙으로 적을 말리고, 햇살로 아군의 상처를 보살핀다.',
     basics:['o_thorn','o_thorn','o_mend','o_mend','o_leaf','o_leaf']}
 };
-const RECRUITABLE=['clem','rosa','opal'];
+const RECRUITABLE=['obser','claire','sol'];
 
 /* 카드 정의: o=소유자, t=대상(e 적 하나, E 적 전체, a 아군 하나, A 아군 전체, s 소유자 자신, r 무작위 적), c=비용 */
 const CARD={};
 function K(id,n,o,rar,c,t,fx,art,h,rev){CARD[id]={id,n,o,rar,c,t,fx,art,h:h||0,rev:rev||null}}
 /* ---- 제미나이: 기본 ---- */
-K('g_baton','지휘봉 타격','gemini','b',1,'e',{dmg:6},'wand',0);
-K('g_guard','리듬 방어','gemini','b',1,'a',{block:6},'hand',0);
-K('g_omen','점괘','gemini','b',1,'s',{draw:1,sblock:3},'eyes',0);
+K('g_baton','지휘봉 타격','belis','b',1,'e',{dmg:6},'wand',0);
+K('g_guard','리듬 방어','belis','b',1,'a',{block:6},'hand',0);
+K('g_omen','점괘','belis','b',1,'s',{draw:1,sblock:3},'eyes',0);
 /* ---- 제미나이: 타로 (역방향 보유) ---- */
-K('fool','광대','gemini','c',0,'s',{draw:2},'shoes',30,{c:0,t:'s',fx:{draw:3,self:3}});
-K('magician','마법사','gemini','c',1,'e',{dmg:8},'wand',0,{c:0,t:'e',fx:{dmg:5}});
-K('priestess','여사제','gemini','u',1,'a',{block:7,draw:1},'eyes',-30,{c:1,t:'e',fx:{dmg:3,st:{vuln:2}}});
-K('empress','여제','gemini','u',2,'A',{aheal:6,ablock:5},'cape',20,{c:2,t:'A',fx:{ablock:13}});
-K('emperor','황제','gemini','u',2,'e',{dmg:15},'frameTop',-15,{c:2,t:'e',fx:{dmg:22,self:5}});
-K('lovers','연인','gemini','c',1,'e',{dmg:4,hits:2},'hand',-50,{c:1,t:'e',fx:{dmg:3,hits:2,aheal:3}});
-K('strength','힘','gemini','u',1,'a',{st:{str:2}},'hair',60,{c:1,t:'a',fx:{st:{str:3},self:4}});
-K('wheel','운명의 수레바퀴','gemini','u',1,'r',{rand:[4,16]},'ornBR',90,{c:1,t:'r',fx:{rand:[0,26]}});
-K('hierophant','교황','gemini','c',1,'a',{block:5,est:{weak:1}},'ornTL',40,{c:0,t:'s',fx:{est:{weak:2}}});
-K('chariot','전차','gemini','c',2,'e',{dmg:8,ablock:5},'capeP',10,{c:1,t:'e',fx:{dmg:5,ablock:3}});
-K('tower','탑','gemini','u',2,'E',{dmg:9,est:{vuln:1}},'frameTop',170,{c:2,t:'E',fx:{dmg:14,self:8}});
-K('star','별','gemini','c',1,'a',{heal:8,draw:1},'ornTL',-100,{c:2,t:'A',fx:{aheal:7}});
-K('moon','달','gemini','c',1,'e',{st:{weak:2},sblock:5},'capeP',-140,{c:1,t:'e',fx:{st:{weak:3,vuln:2}}});
-K('sun','태양','gemini','u',2,'A',{aheal:5,ast:{str:1}},'face',-175,{c:2,t:'A',fx:{aheal:8}});
-K('judgement','심판','gemini','r',3,'E',{dmg:16,draw:2},'bow',110,{c:3,t:'E',fx:{dmg:22,exh:1}});
-K('world','세계','gemini','r',3,'A',{ablock:14,nextMana:1},'ornBR',-40,{c:2,t:'A',fx:{ablock:9,draw:2}});
-K('death','죽음','gemini','r',3,'e',{dmg:30,exh:1},'eyes',200,{c:2,t:'e',fx:{dmg:20,self:7,exh:1}});
-K('devil','악마','gemini','u',1,'e',{dmg:12,self:3},'wand',150,{c:1,t:'e',fx:{dmg:18,self:6}});
-K('temperance','절제','gemini','c',1,'a',{block:5,heal:4},'cape',-80,{c:1,t:'a',fx:{block:3,heal:7}});
-K('hanged','매달린 사람','gemini','r',0,'s',{mana:2,self:4,exh:1},'face',140,{c:0,t:'s',fx:{mana:1,draw:2,exh:1}});
-K('hermit','은둔자','gemini','c',1,'a',{block:9},'ruffle',-70,{c:0,t:'a',fx:{block:5}});
+K('fool','광대','belis','c',0,'s',{draw:2},'shoes',30,{c:0,t:'s',fx:{draw:3,self:3}});
+K('magician','마법사','belis','c',1,'e',{dmg:8},'wand',0,{c:0,t:'e',fx:{dmg:5}});
+K('priestess','여사제','belis','u',1,'a',{block:7,draw:1},'eyes',-30,{c:1,t:'e',fx:{dmg:3,st:{vuln:2}}});
+K('empress','여제','belis','u',2,'A',{aheal:6,ablock:5},'cape',20,{c:2,t:'A',fx:{ablock:13}});
+K('emperor','황제','belis','u',2,'e',{dmg:15},'frameTop',-15,{c:2,t:'e',fx:{dmg:22,self:5}});
+K('lovers','연인','belis','c',1,'e',{dmg:4,hits:2},'hand',-50,{c:1,t:'e',fx:{dmg:3,hits:2,aheal:3}});
+K('strength','힘','belis','u',1,'a',{st:{str:2}},'hair',60,{c:1,t:'a',fx:{st:{str:3},self:4}});
+K('wheel','운명의 수레바퀴','belis','u',1,'r',{rand:[4,16]},'ornBR',90,{c:1,t:'r',fx:{rand:[0,26]}});
+K('hierophant','교황','belis','c',1,'a',{block:5,est:{weak:1}},'ornTL',40,{c:0,t:'s',fx:{est:{weak:2}}});
+K('chariot','전차','belis','c',2,'e',{dmg:8,ablock:5},'capeP',10,{c:1,t:'e',fx:{dmg:5,ablock:3}});
+K('tower','탑','belis','u',2,'E',{dmg:9,est:{vuln:1}},'frameTop',170,{c:2,t:'E',fx:{dmg:14,self:8}});
+K('star','별','belis','c',1,'a',{heal:8,draw:1},'ornTL',-100,{c:2,t:'A',fx:{aheal:7}});
+K('moon','달','belis','c',1,'e',{st:{weak:2},sblock:5},'capeP',-140,{c:1,t:'e',fx:{st:{weak:3,vuln:2}}});
+K('sun','태양','belis','u',2,'A',{aheal:5,ast:{str:1}},'face',-175,{c:2,t:'A',fx:{aheal:8}});
+K('judgement','심판','belis','r',3,'E',{dmg:16,draw:2},'bow',110,{c:3,t:'E',fx:{dmg:22,exh:1}});
+K('world','세계','belis','r',3,'A',{ablock:14,nextMana:1},'ornBR',-40,{c:2,t:'A',fx:{ablock:9,draw:2}});
+K('death','죽음','belis','r',3,'e',{dmg:30,exh:1},'eyes',200,{c:2,t:'e',fx:{dmg:20,self:7,exh:1}});
+K('devil','악마','belis','u',1,'e',{dmg:12,self:3},'wand',150,{c:1,t:'e',fx:{dmg:18,self:6}});
+K('temperance','절제','belis','c',1,'a',{block:5,heal:4},'cape',-80,{c:1,t:'a',fx:{block:3,heal:7}});
+K('hanged','매달린 사람','belis','r',0,'s',{mana:2,self:4,exh:1},'face',140,{c:0,t:'s',fx:{mana:1,draw:2,exh:1}});
+K('hermit','은둔자','belis','c',1,'a',{block:9},'ruffle',-70,{c:0,t:'a',fx:{block:5}});
 /* ---- 클레멘타인 ---- */
-K('c_tick','째깍','clem','b',1,'e',{dmg:6},'wand',-118);
-K('c_stop','정지','clem','b',1,'s',{sblock:6},'hand',-118);
-K('c_wind','태엽 감기','clem','b',1,'s',{draw:1,sblock:3},'ornTL',-118);
-K('c_second','초침','clem','c',0,'e',{dmg:4},'wand',-100);
-K('c_flurry','연속 째깍','clem','c',1,'e',{dmg:3,hits:3},'wand',-130);
-K('c_minute','분침','clem','u',2,'e',{dmg:14,bonusLow:8},'wand',-90);
-K('c_hour','시침','clem','r',3,'e',{dmg:24,st:{vuln:2}},'wand',-150);
-K('c_overwind','태엽 폭주','clem','u',1,'s',{sst:{str:2},draw:1,self:3},'ornBR',-118);
-K('c_sweep','회전','clem','u',2,'E',{dmg:7},'cape',-118);
-K('c_rewind','되감기','clem','u',1,'s',{draw:2,mana:1,exh:1},'ornTL',-60);
-K('c_aim','정밀 조준','clem','c',1,'e',{dmg:6,pierce:1},'eyes',-118);
-K('c_rust','녹슨 바늘','clem','c',1,'e',{st:{poison:6}},'wand',-30);
-K('c_chain','연쇄 반응','clem','u',2,'e',{dmg:4,hits:4},'hand',-118);
-K('c_freeze','시간 정지','clem','r',2,'e',{dmg:6,st:{stun:1},exh:1},'face',-118);
-K('c_reset','재시동','clem','r',0,'s',{mana:2,draw:2,exh:1},'frameTop',-118);
+K('c_tick','조준 사격','obser','b',1,'e',{dmg:6},'wand',-118);
+K('c_stop','렌즈 덮개','obser','b',1,'s',{sblock:6},'hand',-118);
+K('c_wind','별자리 읽기','obser','b',1,'s',{draw:1,sblock:3},'ornTL',-118);
+K('c_second','유성','obser','c',0,'e',{dmg:4},'wand',-100);
+K('c_flurry','연속 사격','obser','c',1,'e',{dmg:3,hits:3},'wand',-130);
+K('c_minute','정밀 사격','obser','u',2,'e',{dmg:14,bonusLow:8},'wand',-90);
+K('c_hour','혜성 포격','obser','r',3,'e',{dmg:24,st:{vuln:2}},'wand',-150);
+K('c_overwind','과열 사격','obser','u',1,'s',{sst:{str:2},draw:1,self:3},'ornBR',-118);
+K('c_sweep','성운 포','obser','u',2,'E',{dmg:7},'cape',-118);
+K('c_rewind','관측 재개','obser','u',1,'s',{draw:2,mana:1,exh:1},'ornTL',-60);
+K('c_aim','관통탄','obser','c',1,'e',{dmg:6,pierce:1},'eyes',-118);
+K('c_rust','성진 독','obser','c',1,'e',{st:{poison:6}},'wand',-30);
+K('c_chain','쌍성 연사','obser','u',2,'e',{dmg:4,hits:4},'hand',-118);
+K('c_freeze','일식 사격','obser','r',2,'e',{dmg:6,st:{stun:1},exh:1},'face',-118);
+K('c_reset','별자리 재배열','obser','r',0,'s',{mana:2,draw:2,exh:1},'frameTop',-118);
 /* ---- 로자문트 ---- */
-K('r_slam','대문 밀치기','rosa','b',1,'e',{dmg:6},'hand',45);
-K('r_bar','빗장','rosa','b',1,'s',{sblock:7},'ruffle',45);
-K('r_stand','문 앞에 서다','rosa','b',1,'s',{sblock:4,sst:{taunt:1}},'shoes',45);
-K('r_wall','철벽','rosa','c',2,'s',{sblock:16,sst:{taunt:1}},'ruffle',30);
-K('r_thorn','가시 울타리','rosa','c',1,'s',{sblock:5,sst:{thorns:3}},'ornTL',30);
-K('r_bash','방패 치기','rosa','c',1,'e',{blockdmg:1},'hand',60);
-K('r_gate','수문','rosa','u',3,'A',{ablock:10},'capeP',45);
-K('r_taunt','도발','rosa','c',0,'s',{sst:{taunt:1}},'face',45);
-K('r_endure','인내','rosa','u',1,'s',{sblock:6,sheal:5},'ruffle',20);
-K('r_ram','돌격','rosa','u',2,'e',{dmg:10,sblock:8},'shoes',30);
-K('r_oath','맹세','rosa','r',2,'s',{sst:{str:3,thorns:4}},'bow',45);
-K('r_lock','잠금','rosa','u',1,'e',{dmg:6,st:{weak:2}},'ornBR',45);
-K('r_mace','쇠몽둥이','rosa','r',2,'e',{blockdmg:1.5},'wand',45);
-K('r_garrison','수비대','rosa','u',2,'A',{ablock:7,ast:{thorns:2}},'cape',45);
-K('r_lastgate','마지막 문','rosa','r',3,'s',{sblock:30,sst:{taunt:2},exh:1},'frameTop',45);
+K('r_slam','검면 치기','claire','b',1,'e',{dmg:6},'hand',45);
+K('r_bar','검을 세우다','claire','b',1,'s',{sblock:7},'ruffle',45);
+K('r_stand','문 앞에 서다','claire','b',1,'s',{sblock:4,sst:{taunt:1}},'shoes',45);
+K('r_wall','성벽','claire','c',2,'s',{sblock:16,sst:{taunt:1}},'ruffle',30);
+K('r_thorn','가시 검기','claire','c',1,'s',{sblock:5,sst:{thorns:3}},'ornTL',30);
+K('r_bash','방패 같은 검','claire','c',1,'e',{blockdmg:1},'hand',60);
+K('r_gate','수문','claire','u',3,'A',{ablock:10},'capeP',45);
+K('r_taunt','도발','claire','c',0,'s',{sst:{taunt:1}},'face',45);
+K('r_endure','인내','claire','u',1,'s',{sblock:6,sheal:5},'ruffle',20);
+K('r_ram','돌진 베기','claire','u',2,'e',{dmg:10,sblock:8},'shoes',30);
+K('r_oath','기사의 맹세','claire','r',2,'s',{sst:{str:3,thorns:4}},'bow',45);
+K('r_lock','검 걸기','claire','u',1,'e',{dmg:6,st:{weak:2}},'ornBR',45);
+K('r_mace','대검 휘두르기','claire','r',2,'e',{blockdmg:1.5},'wand',45);
+K('r_garrison','수비대','claire','u',2,'A',{ablock:7,ast:{thorns:2}},'cape',45);
+K('r_lastgate','마지막 문','claire','r',3,'s',{sblock:30,sst:{taunt:2},exh:1},'frameTop',45);
 /* ---- 오팔 ---- */
-K('o_thorn','가시 던지기','opal','b',1,'e',{dmg:6},'ornTL',170);
-K('o_mend','약초','opal','b',1,'a',{heal:6},'hand',170);
-K('o_leaf','이파리 방패','opal','b',1,'a',{block:5},'cape',170);
-K('o_bloom','개화','opal','c',2,'A',{aheal:6},'cape',150);
-K('o_poison','독초','opal','c',1,'e',{st:{poison:6}},'ornBR',170);
-K('o_sprout','새순','opal','c',1,'a',{st:{regen:3}},'hair',150);
-K('o_vines','덩굴','opal','u',1,'e',{dmg:4,st:{vuln:2}},'ornTL',190);
-K('o_pollen','꽃가루','opal','u',1,'E',{dmg:3,est:{weak:1}},'face',170);
-K('o_prune','가지치기','opal','u',1,'e',{dmg:9,st:{poison:3}},'wand',170);
-K('o_cure','상처 치유','opal','u',1,'a',{cure:5,heal:3},'hand',200);
-K('o_thornwall','가시 장벽','opal','u',2,'A',{ablock:4,ast:{thorns:3}},'ornBR',150);
-K('o_nectar','꿀','opal','c',1,'a',{heal:9},'eyes',150);
-K('o_wither','시들음','opal','r',2,'E',{est:{poison:7}},'ornTL',130);
-K('o_rebirth','윤회','opal','r',3,'A',{aheal:10,acure:5,ast:{regen:2},exh:1},'bow',170);
-K('o_greenhouse','온실','opal','r',2,'A',{ast:{str:2},ablock:6},'frameTop',170);
+K('o_thorn','레몬 슬라이스','sol','b',1,'e',{dmg:6},'ornTL',170);
+K('o_mend','레몬 에이드','sol','b',1,'a',{heal:6},'hand',170);
+K('o_leaf','햇살 방패','sol','b',1,'a',{block:5},'cape',170);
+K('o_bloom','햇살 한 아름','sol','c',2,'A',{aheal:6},'cape',150);
+K('o_poison','시큼한 즙','sol','c',1,'e',{st:{poison:6}},'ornBR',170);
+K('o_sprout','새싹 레몬','sol','c',1,'a',{st:{regen:3}},'hair',150);
+K('o_vines','레몬 덩굴','sol','u',1,'e',{dmg:4,st:{vuln:2}},'ornTL',190);
+K('o_pollen','꽃가루','sol','u',1,'E',{dmg:3,est:{weak:1}},'face',170);
+K('o_prune','가지치기','sol','u',1,'e',{dmg:9,st:{poison:3}},'wand',170);
+K('o_cure','비타민 C','sol','u',1,'a',{cure:5,heal:3},'hand',200);
+K('o_thornwall','레몬 장벽','sol','u',2,'A',{ablock:4,ast:{thorns:3}},'ornBR',150);
+K('o_nectar','꿀 레몬','sol','c',1,'a',{heal:9},'eyes',150);
+K('o_wither','산성비','sol','r',2,'E',{est:{poison:7}},'ornTL',130);
+K('o_rebirth','일출','sol','r',3,'A',{aheal:10,acure:5,ast:{regen:2},exh:1},'bow',170);
+K('o_greenhouse','온실 속 태양','sol','r',2,'A',{ast:{str:2},ablock:6},'frameTop',170);
 /* ---- 안개: 사용할 수 없는 카드 ---- */
 CARD.haze={id:'haze',n:'안개',o:null,rar:'x',c:'×',t:'s',fx:{},art:'hair',h:200,unplay:1,rev:null};
 
@@ -138,16 +138,16 @@ function plusFx(f){
 
 /* ---- 패시브(레벨 2·4에서 둘 중 하나) ---- */
 const PASS={
-  gemini:[
+  belis:[
     [{k:'gp1',n:'고딕 오르간',d:'전투 시작 시 아군 전체 방어도 5',ablockStart:5},{k:'gp2',n:'점괘의 서막',d:'첫 턴 드로우 +1',firstDraw:1}],
     [{k:'gp3',n:'역위치 숙련',d:'역방향 확률 +15%, 역방향 카드를 쓰면 아군 전체 방어도 3',revP:.15,revBlock:3},{k:'gp4',n:'지휘의 여운',d:'지휘를 쓰면 카드 1장 뽑기',conductDraw:1}]],
-  clem:[
+  obser:[
     [{k:'cp1',n:'예리한 바늘',d:'모든 공격 +1 피해',dmgBonus:1},{k:'cp2',n:'태엽 감기',d:'전투 시작 시 힘 +1',startSt:{str:1}}],
     [{k:'cp3',n:'정각',d:'첫 턴 마나 +1',firstMana:1},{k:'cp4',n:'째깍 중독',d:'공격할 때 독 1 부여',poisonOnHit:1}]],
-  rosa:[
+  claire:[
     [{k:'rp1',n:'강철 빗장',d:'전투 시작 시 방어도 10',startBlock:10},{k:'rp2',n:'가시 문',d:'전투 시작 시 가시 3',startSt:{thorns:3}}],
     [{k:'rp3',n:'불굴',d:'최대 HP +12',maxHp:12},{k:'rp4',n:'수호의 맹세',d:'매 턴 시작 시 아군 전체 방어도 2',turnABlock:2}]],
-  opal:[
+  sol:[
     [{k:'op1',n:'아침 이슬',d:'매 턴 시작 시 가장 다친 아군 HP +3',turnHealLow:3},{k:'op2',n:'가시 덩굴',d:'전투 시작 시 아군 전체 가시 2',startAst:{thorns:2}}],
     [{k:'op3',n:'만개',d:'모든 치유량 +2',healBonus:2},{k:'op4',n:'독초 재배',d:'독 부여량 +2',poisonBonus:2}]]
 };
@@ -195,7 +195,7 @@ const EN={
   twisted:{n:'일그러진 지휘자',elite:1,spr:{kind:'figure',pal:'mirror',scale:1.02},hp:84,
     pat:[A(11),A(4,3),{curse:2,name:'안개 지휘'},D(14,{sst:{str:2},name:'박자 정돈'})]},
   shard:{n:'거울 파편',spr:{kind:'eye',scale:.55,filter:'hue-rotate(160deg)'},hp:13,pat:[A(4),A(6)]},
-  blindeye:{n:'눈먼 거울',boss:1,spr:{kind:'eye',scale:1.7},hp:136,
+  blindeye:{n:'눈먼 거울',boss:1,spr:{kind:'eye',scale:1.7},hp:112,
     pat:[A(9,1,{st:{weak:1},name:'응시'}),{summon:'shard',name:'파편 소환'},A(6,1,{all:1,name:'균열'}),D(14,{atk:7,hits:1}),A(5,3)],
     ph2:{at:.5,pat:[A(13),A(6,1,{all:1,st:{vuln:1},name:'산산이'}),{summon:'shard',name:'파편 소환'},A(7,3),{curse:3,name:'안개 폭풍'}],str:2}},
   vine:{n:'가시 덩굴',spr:{kind:'orn',color:'#7a1230',scale:.9},hp:37,pat:[A(5,1,{st:{poison:3},name:'가시 독'}),A(9),D(9)]},
@@ -209,11 +209,11 @@ const EN={
     ph2:{at:.5,pat:[A(17),{aoeSt:{poison:3},name:'만개',atk:6,all:1},A(8,3),{heal:15,name:'재생'},A(10,1,{all:1,name:'가시 폭풍'})],str:1}},
   hourhand:{n:'시침',spr:{kind:'wand',pal:'ghost',scale:1.35,filter:'grayscale(1) brightness(1.3)'},hp:51,pat:[A(14),D(10,{atk:4}),A(7,2)]},
   bat:{n:'태엽 박쥐',spr:{kind:'cape',pal:'ghost',filter:'hue-rotate(40deg) saturate(.8)',scale:.9},hp:56,pat:[A(6,1,{all:1}),A(13),A(6,1,{all:1,st:{weak:1}})]},
-  second:{n:'초침의 분신',spr:{kind:'figure',pal:'astra',scale:.98,flip:1},hp:62,pat:[A(4,4),A(11),D(9,{sst:{str:1}})]},
+  second:{n:'푸른 분신',spr:{kind:'figure',pal:'astra',scale:.98,flip:1},hp:62,pat:[A(4,4),A(11),D(9,{sst:{str:1}})]},
   moment:{n:'정지된 순간',spr:{kind:'head',pal:'ghost',filter:'grayscale(.7) brightness(1.15)',scale:.95},hp:59,pat:[A(5,1,{st:{stun:1},name:'정지'}),A(12),{curse:2,atk:6,name:'안개 속삭임'}]},
   bellkeeper:{n:'종지기의 하수인',elite:1,spr:{kind:'figure',pal:'ghost',scale:1.04,filter:'grayscale(.8) brightness(1.1)'},hp:136,
     pat:[A(15),A(6,3,{all:1,name:'조종'}),D(16,{sst:{str:3},name:'정렬'}),{atk:8,st:{stun:1},name:'정적'}]},
-  finalmirror:{n:'역상의 제미나이',boss:1,spr:{kind:'figure',pal:'mirror',scale:1.1},hp:272,
+  finalmirror:{n:'역상의 벨리스',boss:1,spr:{kind:'figure',pal:'belis_inv',scale:1.1},hp:235,
     pat:[A(14),{atk:5,hits:3,all:1,name:'역방향 박자'},{curse:3,name:'안개 지휘'},D(16,{sst:{str:2},name:'정지의 박자'}),{atk:11,all:1,name:'열두 번째 종',st:{weak:1}}],
     ph2:{at:.5,pat:[A(19),{atk:7,hits:3,all:1,name:'역방향 박자'},{summon:'hourhand',name:'시침 소환'},{atk:14,all:1,name:'열세 번째 종',st:{vuln:2}},{curse:4,atk:10,name:'정지된 야회'},D(20,{sst:{str:3}})],str:3}}
 };
@@ -230,86 +230,86 @@ const ACTS=[
 
 /* ---- 이야기 ---- */
 const SPK={
-  gemini:{n:'제미나이',pal:'gemini',color:'#e070b8'},clem:{n:'클레멘타인',pal:'astra',color:'#4fd0e0'},
-  rosa:{n:'로자문트',pal:'maid',color:'#e0506a'},opal:{n:'오팔',pal:'sol',color:'#7fd46b'},
-  mirror:{n:'거울 속의 제미나이',pal:'mirror',color:'#b8c8ff'},eye:{n:'눈먼 거울',pal:'mirror',color:'#b8c8ff',kind:'eye'},
+  belis:{n:'벨리스',pal:'belis',color:'#c89bff'},obser:{n:'옵서',pal:'obser',color:'#9fc0ff'},
+  claire:{n:'클레르',pal:'claire',color:'#ffa43a'},sol:{n:'솔',pal:'sol',color:'#ffd93d'},
+  mirror:{n:'거울 속의 벨리스',pal:'belis_inv',color:'#b8c8ff'},eye:{n:'눈먼 거울',pal:'mirror',color:'#b8c8ff',kind:'eye'},
   gard:{n:'정원사',pal:'ghost',color:'#e08aa0'},master:{n:'주인님',pal:null,color:'#ffe29a'},narr:{n:'',pal:null,color:'#c9b8e0'},
-  twin:{n:'역상의 제미나이',pal:'mirror',color:'#b8c8ff'}
+  twin:{n:'역상의 벨리스',pal:'belis_inv',color:'#b8c8ff'}
 };
 const STORY={
   prologue:[
     {w:'narr',t:'루센트 저택, 마지막 야회의 밤.'},
     {w:'narr',t:'지휘자는 열두 번 종소리에 맞춰 지휘봉을 들었고, 손님들은 마지막 왈츠에 몸을 맡겼다.'},
-    {w:'gemini',t:'열두 번째 종이 울렸습니다, 주인님. 이제 열세 번째 종이 울리면 야회는 막을 내립니다.'},
+    {w:'belis',t:'열두 번째 종이 울렸습니다, 주인님. 이제 열세 번째 종이 울리면 야회는 막을 내립니다.'},
     {w:'narr',t:'…그러나 열세 번째 종은 울리지 않았다. 시계탑의 바늘이 멈춘 것이다.'},
-    {w:'gemini',t:'종소리가 오지 않는군요.',pos:'R'},
+    {w:'belis',t:'종소리가 오지 않는군요.',pos:'L'},
     {w:'narr',t:'거울마다 하얀 안개가 번졌다. 손님들은 한 명씩, 아무 말 없이 거울 속으로 걸어 들어갔다.'},
-    {w:'gemini',t:'거울 속의 저는 박자를 어긋나게 움직이고 있습니다. 불쾌하군요. 안개는 거울에서 흘러나옵니다.'},
-    {w:'gemini',t:'……주인님께서는 안개가 닿아도 얼굴이 바뀌지 않으십니다. 어째서일까요.'},
+    {w:'belis',t:'거울 속의 저는 박자를 어긋나게 움직이고 있습니다. 불쾌하군요. 안개는 거울에서 흘러나옵니다.'},
+    {w:'belis',t:'……주인님께서는 안개가 닿아도 모습이 바뀌지 않으십니다. 어째서일까요.'},
     {w:'master',t:'……'},
-    {w:'gemini',t:'질문은 나중에 하겠습니다. 시계탑에 올라 멈춘 종을 찾아야 합니다. 지휘봉을 들겠습니다.'},
+    {w:'belis',t:'질문은 나중에 하겠습니다. 시계탑에 올라 멈춘 종을 찾아야 합니다. 지휘봉과 마도서를 들겠습니다.'},
   ],
   act1:[
     {w:'narr',t:'제1막, 거울 회랑.'},
-    {w:'gemini',t:'회랑의 거울이 전부 제 얼굴을 하고 있습니다. 안개가 사람들의 얼굴을 빌려 간 모양입니다.'},
-    {w:'gemini',t:'앞으로는 동료의 얼굴도 같아질지 모릅니다. 눈빛과 망토 색으로 구분해 주십시오, 주인님.'},
+    {w:'belis',t:'회랑의 거울마다 제 얼굴을 한 그림자가 서 있습니다. 안개가 지휘자의 얼굴을 빌려 가는 모양입니다.'},
+    {w:'belis',t:'혼자 지휘할 수는 없습니다, 주인님. 이 안개 속에서도 박자를 지켜 줄 동료를 찾아야 합니다.'},
   ],
-  recruit_clem:[
-    {w:'clem',t:'째깍. 째깍. ……움직이지 마세요. 지금 움직이면 박자가 어긋나요.'},
-    {w:'gemini',t:'시계공이십니까.'},
-    {w:'clem',t:'클레멘타인. 시계탑 견습 시계공이에요. 제 바늘이 멈춘 순간부터 저는 이 얼굴이 되었어요. ……당신과 같은 얼굴이죠.'},
-    {w:'clem',t:'탑까지 길을 압니다. 대신 약속해 주세요. 멈춘 바늘을 반드시 돌려놓겠다고.'},
-    {w:'gemini',t:'약속하겠습니다. 지휘자의 박자는 지키라고 있는 것이니까요.'},
+  recruit_obser:[
+    {w:'obser',t:'정지. 지금 움직이면 조준이 어긋납니다.'},
+    {w:'belis',t:'……관측수이십니까. 망원포를 들고 계시는군요.'},
+    {w:'obser',t:'옵서. 시계탑 천문대 소속입니다. 별은 움직이지 않습니다. 열두 시 십삼 분에서 하늘 전체가 멈췄습니다.'},
+    {w:'obser',t:'탑까지 가는 길의 별자리를 읽을 수 있습니다. 대신 약속해 주십시오. 멈춘 별을 다시 흐르게 하겠다고.'},
+    {w:'belis',t:'약속하겠습니다. 지휘자의 박자는 지키라고 있는 것이니까요.'},
   ],
-  recruit_rosa:[
-    {w:'rosa',t:'대문은 제가 지킵니다. 누구도 들이지 않고, 누구도 내보내지 않습니다.'},
-    {w:'gemini',t:'이미 안개가 저택 안에 가득합니다, 문지기.'},
-    {w:'rosa',t:'……압니다. 안개는 대문으로 들어오지 않았습니다. 안에서 피어올랐습니다. 그래서 문을 지킨 것이 아무 소용이 없었지요.'},
-    {w:'rosa',t:'로자문트입니다. 이번에는 문 앞이 아니라 앞장서겠습니다. 뒤는 맡기십시오.'},
+  recruit_claire:[
+    {w:'claire',t:'대문은 제가 지킵니다. 누구도 들이지 않고, 누구도 내보내지 않습니다.'},
+    {w:'belis',t:'이미 안개가 저택 안에 가득합니다, 문지기.'},
+    {w:'claire',t:'……압니다. 안개는 대문으로 들어오지 않았습니다. 안에서 피어올랐습니다. 그래서 문을 지킨 것이 아무 소용이 없었지요.'},
+    {w:'claire',t:'클레르입니다. 이번에는 문 앞이 아니라 앞장서겠습니다. 뒤는 맡기십시오.'},
   ],
-  recruit_opal:[
-    {w:'opal',t:'어머, 오래 걸리셨네요. 온실의 꽃들이 시들지 않아요. 이상하죠? 시간이 멈췄는데 가시만 자라요.'},
-    {w:'gemini',t:'오팔 씨이십니까. 온실지기라고 들었습니다.'},
-    {w:'opal',t:'네. 이 얼굴도 낯설지만 흙 냄새는 그대로예요. 다친 분이 계시면 말씀하세요. 상처는 시간이 지나야 낫는데, 그 시간이 없다는 게 문제지만요.'},
-    {w:'opal',t:'함께 가요. 멈춘 시간을 다시 흐르게 하면, 꽃도 마음 편히 질 수 있을 테니까요.'},
+  recruit_sol:[
+    {w:'sol',t:'어머, 오래 걸리셨네요! 온실의 레몬이 하나도 안 시들어요. 이상하죠? 시간이 멈췄는데 가시만 쑥쑥 자라요.'},
+    {w:'belis',t:'솔 씨이십니까. 온실지기라고 들었습니다.'},
+    {w:'sol',t:'네네, 솔이에요! 이 레몬 보세요, 석 달째 같은 색이에요. 다친 분 계시면 말씀하세요. 상처는 시간이 지나야 낫는데, 그 시간이 없다는 게 문제지만요!'},
+    {w:'sol',t:'같이 가요. 멈춘 시간을 다시 흐르게 하면, 레몬도 마음 편히 익을 수 있을 테니까요.'},
   ],
   boss1_pre:[
     {w:'eye',t:'나는 거울이다. 비추기만 하고 보지는 못한다.'},
     {w:'eye',t:'그런데 너, 가운데 선 사람. 너는 비추어지지 않는다. ……너는 누구냐.'},
-    {w:'gemini',t:'질문은 주인님께서 받으실 것이 아닙니다. 제가 대신 답하겠습니다. 길을 비키십시오.'},
+    {w:'belis',t:'그 질문은 주인님께서 받으실 것이 아닙니다. 제가 대신 답하겠습니다. 길을 비키십시오.'},
   ],
   boss1_post:[
     {w:'narr',t:'거울이 깨지자 은빛 조각 하나가 바닥에 남았다. 조각 속에서 멈춘 순간이 반짝였다.'},
-    {w:'gemini',t:'안개는 순간을 먹고 있습니다. 누군가 시간을 멈추고, 그 순간을 거울에 가두고 있어요.'},
-    {w:'gemini',t:'누군가의 바람이라면…… 이 박자는 낯설지 않군요. ……기분 탓이겠지요.'},
+    {w:'belis',t:'안개는 순간을 먹고 있습니다. 누군가 시간을 멈추고, 그 순간을 거울에 가두고 있어요.'},
+    {w:'belis',t:'누군가의 바람이라면…… 이 박자는 낯설지 않군요. ……기분 탓이겠지요.'},
   ],
   act2:[
     {w:'narr',t:'제2막, 장미 온실과 서재.'},
-    {w:'opal',t:'여기 꽃들은 사람의 마지막 순간을 먹고 자랐어요. 손님들이 병 속의 장미로 피어 있어요.'},
-    {w:'gemini',t:'가시가 많군요. 길을 열겠습니다.'},
+    {w:'sol',t:'여기 나무들은 사람의 마지막 순간을 먹고 자랐어요. 손님들이 병 속의 레몬처럼 매달려 있어요.'},
+    {w:'belis',t:'가시가 많군요. 길을 열겠습니다.'},
   ],
   boss2_pre:[
     {w:'gard',t:'어서 오세요. 보세요, 모두 영원히 피어 있답니다. 시들지 않는 야회, 아름답지 않나요?'},
-    {w:'opal',t:'정원사 어르신……. 그 얼굴은 당신 얼굴이 아니에요.'},
+    {w:'sol',t:'정원사 어르신……. 그 모습은 어르신 본래 모습이 아니에요.'},
     {w:'gard',t:'마님께서 그렇게 바라셨어요. 이 야회가 끝나지 않기를. 저는 그 바람을 가꿀 뿐입니다.'},
-    {w:'gemini',t:'……마님이라 하셨습니까.'},
+    {w:'belis',t:'……마님이라 하셨습니까.'},
   ],
   boss2_post:[
     {w:'gard',t:'꽃이 지는 건 슬픈 일이 아니었는데. ……종지기에게 가 보세요. 종지기는 아주 오래 기다렸답니다.'},
     {w:'narr',t:'정원사의 모습이 꽃잎으로 흩어졌다. 천장 너머, 멈춘 시계탑의 그림자가 보였다.'},
-    {w:'clem',t:'탑이 보여요. 바늘이 열두 시 십삼 분에서 멈춰 있어요. 열세 번째 종이 울려야 할 그 시각이에요.'},
+    {w:'obser',t:'탑이 보입니다. 별이 열두 시 십삼 분에서 멈춰 있습니다. 열세 번째 종이 울려야 할 그 시각입니다.'},
   ],
   act3:[
     {w:'narr',t:'제3막, 시계탑.'},
-    {w:'rosa',t:'탑의 대문입니다. 이번엔 제가 열겠습니다.'},
-    {w:'gemini',t:'이 박자…… 점점 익숙해집니다. 마치 제가 오래전에 직접 쳤던 것처럼.'},
+    {w:'claire',t:'탑의 대문입니다. 이번엔 제가 열겠습니다.'},
+    {w:'belis',t:'이 박자…… 점점 익숙해집니다. 마치 제가 오래전에 직접 쳤던 것처럼.'},
   ],
   boss3_pre:[
     {w:'twin',t:'어서 와요. 제가 기다리고 있었어요. 종소리를 멈춘 사람은 저예요.'},
-    {w:'gemini',t:'……역시 그랬군요.'},
+    {w:'belis',t:'……역시 그랬군요.'},
     {w:'twin',t:'열세 번째 종이 울리면 야회는 끝나요. 끝나면 주인님은 떠나시겠죠. 그리고 저는 또 어둠 속에서 박자만 세게 될 거예요.'},
     {w:'twin',t:'그러니 멈췄어요. 얼굴도, 시간도, 손님들까지. 전부 제 곁에 두려고.'},
-    {w:'gemini',t:'변명은 하지 않겠습니다. 멈춘 것은 제 손이었군요. 그러니 제 손으로 돌려놓겠습니다.'},
+    {w:'belis',t:'변명은 하지 않겠습니다. 멈춘 것은 제 손이었군요. 그러니 제 손으로 돌려놓겠습니다.'},
     {w:'twin',t:'그럼 증명해 봐요. 이 박자 위에서, 저를 이겨 봐요.'},
   ],
   boss3_phase2:[
@@ -317,47 +317,47 @@ const STORY={
   ],
   boss3_post:[
     {w:'twin',t:'……졌네요. 박자가 한 박 더 정확하셨어요.'},
-    {w:'narr',t:'역상의 제미나이가 무릎을 꿇자, 시계탑 중앙에 열세 번째 종이 모습을 드러냈다. 종 줄은 두 사람의 손이 닿는 높이에 걸려 있었다.'},
-    {w:'gemini',t:'주인님. 이 종을 울릴지, 울리지 않을지는 주인님께서 정하십시오. 저는 어느 쪽이든 곁에서 박자를 맞추겠습니다.'},
+    {w:'narr',t:'역상의 벨리스가 무릎을 꿇자, 시계탑 중앙에 열세 번째 종이 모습을 드러냈다. 종 줄은 두 사람의 손이 닿는 높이에 걸려 있었다.'},
+    {w:'belis',t:'주인님. 이 종을 울릴지, 울리지 않을지는 주인님께서 정하십시오. 저는 어느 쪽이든 곁에서 박자를 맞추겠습니다.'},
   ],
   end_dawn:[
     {w:'narr',t:'열세 번째 종이 울렸다. 맑고 낮은 소리가 저택 구석구석에 퍼졌다.'},
-    {w:'narr',t:'거울에서 안개가 걷히고, 동료들의 얼굴이 하나둘 제자리로 돌아왔다. 붉은 눈, 푸른 눈, 초록빛 눈. 그리고 새벽빛.'},
-    {w:'clem',t:'바늘이 움직여요! 째깍, 째깍. ……이렇게 아름다운 소리였나요.'},
-    {w:'rosa',t:'문이 열립니다. 이번에는 나가도 좋다는 뜻이겠지요.'},
-    {w:'opal',t:'꽃이 져요. 괜찮아요. 내년에 또 피면 되니까요.'},
+    {w:'narr',t:'거울에서 안개가 걷히고, 거울 속 분신들이 하나둘 빛으로 흩어졌다. 은빛 별, 주황빛 후광, 레몬빛 햇살. 그리고 새벽빛.'},
+    {w:'obser',t:'별이 움직입니다! ……종소리가, 이렇게 아름다운 소리였습니까.'},
+    {w:'claire',t:'문이 열립니다. 이번에는 나가도 좋다는 뜻이겠지요.'},
+    {w:'sol',t:'레몬이 익어요! 괜찮아요, 떨어져도 향은 남으니까요!'},
     {w:'twin',t:'……수고하셨어요. 이제 박자는 저 혼자 세지 않아도 되겠네요.'},
-    {w:'gemini',t:'야회가 끝났습니다, 주인님. 오늘 밤의 박자는 훌륭했습니다.'},
-    {w:'gemini',t:'……다음 야회를 기다리겠습니다. 지휘봉은 언제든 이 자리에 두겠습니다.'},
+    {w:'belis',t:'야회가 끝났습니다, 주인님. 오늘 밤의 박자는 훌륭했습니다.'},
+    {w:'belis',t:'……다음 야회를 기다리겠습니다. 지휘봉은 언제든 이 자리에 두겠습니다.'},
   ],
   end_eternal:[
     {w:'narr',t:'종 줄은 끝내 당겨지지 않았다. 시계탑의 바늘은 열두 시 십삼 분에 머물렀다.'},
     {w:'narr',t:'안개는 더 이상 사람을 삼키지 않았다. 다만 거울마다 조용히 머물며, 끝나지 않는 왈츠를 비출 뿐이었다.'},
-    {w:'clem',t:'……정말 이대로 괜찮은 건가요. 바늘이 움직이지 않는데.'},
-    {w:'rosa',t:'주인님의 선택입니다. 저는 문 앞을 지키겠습니다. 이 야회가 계속되는 한.'},
-    {w:'opal',t:'시들지 않는 꽃도 나쁘지 않아요. 가끔은 지는 꽃이 그리워지겠지만요.'},
+    {w:'obser',t:'……정말 이대로 괜찮은 겁니까. 별이 움직이지 않는데.'},
+    {w:'claire',t:'주인님의 선택입니다. 저는 문 앞을 지키겠습니다. 이 야회가 계속되는 한.'},
+    {w:'sol',t:'시들지 않는 레몬도 나쁘지 않아요! 가끔은 익어서 떨어지는 게 그리워지겠지만요.'},
     {w:'twin',t:'……고마워요. 정말로.'},
-    {w:'gemini',t:'그러면, 이 곡을 처음부터 다시 연주하겠습니다.'},
-    {w:'gemini',t:'박자는 제가 세겠습니다. 영원히, 주인님의 곁에서.'},
+    {w:'belis',t:'그러면, 이 곡을 처음부터 다시 연주하겠습니다.'},
+    {w:'belis',t:'박자는 제가 세겠습니다. 영원히, 주인님의 곁에서.'},
   ]
 };
 const CAMP_TALK={
-  gemini:[
-    [{w:'gemini',t:'쉬어 가겠습니다. 지휘봉도 가끔은 손을 놓아야 박자를 기억합니다.'},{w:'gemini',t:'……주인님. 이 저택이 이렇게 조용했던 적이 있었던가요.'}],
-    [{w:'gemini',t:'거울 속의 저는 웃고 있었습니다. 저는 그렇게 웃어 본 기억이 없는데요.'}],
-    [{w:'gemini',t:'제가 정말 안개의 원인이라면, 주인님은 저를 어떻게 하시겠습니까. ……아닙니다, 지금은 묻지 않겠습니다.'}]],
-  clem:[
-    [{w:'clem',t:'시계는요, 멈추면 틀린 시각을 정확하게 가리켜요. 그게 제일 무서워요.'}],
-    [{w:'clem',t:'수리하다 보면 알게 돼요. 부서진 시계는 대개 누군가 너무 아껴서 만진 거예요.'}],
-    [{w:'clem',t:'열세 번째 종은 설계도에 없었어요. 누가 추가한 걸까요. ……기록은 제 필체였는데.'}]],
-  rosa:[
-    [{w:'rosa',t:'문은 닫아 두는 것보다 열어 두는 게 더 어렵습니다. 누가 올지 모르니까요.'}],
-    [{w:'rosa',t:'제가 문을 지킨 이유는 단 하나. 들어올 사람이 아니라, 나갈 사람을 위해서였습니다.'}],
-    [{w:'rosa',t:'……마님께서 문을 잠그라 하신 것은 그날이 처음이었습니다.'}]],
-  opal:[
-    [{w:'opal',t:'꽃은 지는 순간이 제일 향기로워요. 그래서 시들지 않는 꽃은 향이 없어요.'}],
-    [{w:'opal',t:'정원사 어르신은 늘 말씀하셨어요. 가지를 쳐야 새순이 나온다고. 안개는 가지를 치지 않아요.'}],
-    [{w:'opal',t:'마님은 장미를 좋아하셨어요. 열두 시 십삼 분 장미를요. 피다 만 꽃봉오리를 제일 아끼셨죠.'}]]
+  belis:[
+    [{w:'belis',t:'쉬어 가겠습니다. 지휘봉도 가끔은 손을 놓아야 박자를 기억합니다.'},{w:'belis',t:'……주인님. 이 저택이 이렇게 조용했던 적이 있었던가요.'}],
+    [{w:'belis',t:'거울 속의 저는 웃고 있었습니다. 저는 그렇게 웃어 본 기억이 없는데요.'}],
+    [{w:'belis',t:'제가 정말 안개의 원인이라면, 주인님은 저를 어떻게 하시겠습니까. ……아닙니다, 지금은 묻지 않겠습니다.'}]],
+  obser:[
+    [{w:'obser',t:'별은 거짓말을 하지 않습니다. 틀리는 건 언제나 보는 쪽입니다.'}],
+    [{w:'obser',t:'망원포는 무겁습니다. 하지만 멀리 보려면 무거워야 합니다.'}],
+    [{w:'obser',t:'열세 번째 종이 울리면 별은 어느 쪽으로 흐를까요. ……한 번도 본 적이 없어서 모르겠습니다.'}]],
+  claire:[
+    [{w:'claire',t:'문은 닫아 두는 것보다 열어 두는 게 더 어렵습니다. 누가 올지 모르니까요.'}],
+    [{w:'claire',t:'제가 문을 지킨 이유는 단 하나. 들어올 사람이 아니라, 나갈 사람을 위해서였습니다.'}],
+    [{w:'claire',t:'……마님께서 문을 잠그라 하신 것은 그날이 처음이었습니다.'}]],
+  sol:[
+    [{w:'sol',t:'레몬은요, 떫을 때 제일 향기로워요! 그래서 시들지 않는 건 향이 안 나요.'}],
+    [{w:'sol',t:'정원사 어르신이 늘 그러셨어요. 가지를 쳐야 새순이 난다고요! ……안개는 가지를 안 쳐요.'}],
+    [{w:'sol',t:'마님은 레몬 마들렌을 좋아하셨어요. 열두 시 십삼 분에 꼭 한 접시씩 올렸죠.'}]]
 };
 
 /* ---- 이벤트 ---- */

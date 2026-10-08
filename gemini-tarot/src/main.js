@@ -1,15 +1,26 @@
 /* ================= 시작 ================= */
 const IMG_B64="__IMG__";
+const CHAR_B64={belis:"__CH_belis__",obser:"__CH_obser__",sol:"__CH_sol__",claire:"__CH_claire__"};
+async function loadImg(b64){const bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);const url=URL.createObjectURL(new Blob([u8],{type:'image/webp'}));const img=new Image();img.src=url;await img.decode();return{img,url}}
 let userStarted=false;
 async function boot(){
-  const bin=atob(IMG_B64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
-  const url=URL.createObjectURL(new Blob([u8],{type:'image/webp'}));
-  document.documentElement.style.setProperty('--img',`url(${url})`);
-  const img=new Image();img.src=url;await img.decode();
-  buildSprites(img);
+  const base=await loadImg(IMG_B64);
+  document.documentElement.style.setProperty('--img',`url(${base.url})`);
+  const chs={};for(const k in CHAR_B64)chs[k]=(await loadImg(CHAR_B64[k])).img;
+  buildSprites(base.img);buildChars(chs);
+  await buildHeroes();
   initStars();resize();requestAnimationFrame(loop);
   $('#loading').style.display='none';
   bindEvents();
+}
+async function buildHeroes(){
+  const box=$('#heroes');if(!box)return;box.innerHTML='';
+  const cfg=[['belis',{left:'24%',h:'92%',z:1,flip:0}],['obser',{left:'-2%',h:'72%',z:2,flip:0}],['claire',{right:'-2%',h:'74%',z:2,flip:1}],['sol',{left:'35%',h:'50%',z:3,flip:0}]];
+  for(const [k,c] of cfg){
+    const im=new Image();im.src=await toURL(CH_SPR[k]);im.className='hp hp-'+k;
+    im.style.cssText=`height:${c.h};z-index:${c.z};${c.left?'left:'+c.left:'right:'+c.right};${c.flip?'transform:scaleX(-1)':''}`;
+    box.appendChild(im);
+  }
 }
 function firstGesture(){
   if(userStarted)return;userStarted=true;

@@ -102,6 +102,7 @@ function statHtml(X,isAlly){
 const KIND_H={figure:1,eye:.4,wand:.64,shoes:.28,skirt:.58,hand:.36,cape:.72,head:.5,orn:.74};
 function makeAllyFig(u){
   const fig=el('div','fig');
+  if(CH_SPR[u.pal]){const cv=cloneCanvas(CH_SPR[u.pal]);cv.className='body';fig.appendChild(cv);fig.style.aspectRatio=`${cv.width}/${cv.height}`;return fig}
   const bodySrc=paletteBody(u.pal),body=cloneCanvas(bodySrc);body.className='body';
   const w=cloneCanvas(paletteWand(u.pal));w.className='wand';
   const r=SP.wandRect;
@@ -279,6 +280,52 @@ function updateBattleHud(){
   $('#endBtn').disabled=!B.playerTurn||B.busy||B.over;
   $('#turnLbl').textContent=`TURN ${B.turn}`;
 }
+/* ---- 동료별 공격 연출 ---- */
+const CHFX={
+  belis:{org:[.80,.17],col:['#c89bff','#ff6ad5','#ffffff','#7b45d6'],kind:'bolt'},
+  obser:{org:[.97,.20],col:['#9fc0ff','#e8f0ff','#ffffff','#5a82ff'],kind:'beam'},
+  sol:{org:[.90,.46],col:['#ffe45a','#fff6a0','#ffb300','#ffffff'],kind:'lemon'},
+  claire:{org:[.97,.92],col:['#ffb347','#fff0b0','#ffffff','#ff7a00'],kind:'slash'}
+};
+function figRect(src){const f=src.el.querySelector('.fig');return f.getBoundingClientRect()}
+function charAttack(src,tnode){
+  const cfg=CHFX[src.u.id];if(!cfg||FAST||!tnode)return;
+  const fig=src.el.querySelector('.fig'),r=fig.getBoundingClientRect(),t=center(tnode);
+  const ox=r.left+r.width*cfg.org[0],oy=r.top+r.height*cfg.org[1];
+  const dx=t.x-ox,dy=t.y-oy,dist=Math.hypot(dx,dy),ang=Math.atan2(dy,dx)*180/Math.PI;
+  if(cfg.kind==='slash'){
+    const go=Math.max(0,(t.x-(r.left+r.width/2))*.62);
+    fig.animate([{transform:'translateX(0) rotate(0)'},{transform:`translateX(${go}px) rotate(8deg) scale(1.07)`,offset:.42},{transform:'translateX(0) rotate(0)'}],{duration:520,easing:'cubic-bezier(.3,.7,.3,1)'});
+    setTimeout(()=>{for(let i=0;i<3;i++)setTimeout(()=>{const s=el('div','slash gold');s.style.left=(t.x+rnd(-22,22))+'px';s.style.top=(t.y+rnd(-60,60))+'px';s.style.setProperty('--r',(i%2?-1:1)*rnd(18,50)+'deg');document.body.appendChild(s);setTimeout(()=>s.remove(),360)},i*90);
+      burst(t.x,t.y,{n:30,sp:9,col:cfg.col,size:12});Mus.sfx('big')},210);
+  }else if(cfg.kind==='beam'){
+    fig.animate([{transform:'translateX(0)'},{transform:'translateX(-16px) rotate(-2deg)',offset:.18},{transform:'translateX(0)'}],{duration:420,easing:'ease-out'});
+    burst(ox,oy,{n:18,sp:6,col:cfg.col,size:10,life:500});
+    const b=el('div','beam');b.style.left=ox+'px';b.style.top=oy+'px';b.style.width=dist+'px';b.style.transform=`rotate(${ang}deg) scaleX(0)`;document.body.appendChild(b);
+    b.animate([{transform:`rotate(${ang}deg) scaleX(0)`,opacity:1},{transform:`rotate(${ang}deg) scaleX(1)`,opacity:1,offset:.45},{transform:`rotate(${ang}deg) scaleX(1)`,opacity:0}],{duration:360,easing:'ease-out'}).onfinish=()=>b.remove();
+    for(let i=0;i<8;i++)setTimeout(()=>burst(ox+dx*i/8,oy+dy*i/8,{n:3,sp:2,col:cfg.col,size:8,life:450}),i*28);
+    setTimeout(()=>burst(t.x,t.y,{n:26,sp:8,col:cfg.col,size:11}),170);
+  }else if(cfg.kind==='lemon'){
+    fig.animate([{transform:'scale(1)'},{transform:'scale(1.06) translateY(-6px)',offset:.3},{transform:'scale(1)'}],{duration:420});
+    for(let i=0;i<3;i++){
+      const p=el('div','proj','🍋');p.style.left=ox+'px';p.style.top=oy+'px';document.body.appendChild(p);
+      const mid={x:dx*.5,y:dy*.5-70-i*14};
+      p.animate([{transform:'translate(0,0) rotate(0) scale(.6)',opacity:1},{transform:`translate(${mid.x}px,${mid.y}px) rotate(300deg) scale(1.2)`,offset:.5,opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(640deg) scale(.9)`,opacity:1}],{duration:320,delay:i*70,easing:'ease-in-out',fill:'both'}).onfinish=()=>{p.remove();burst(t.x+rnd(-14,14),t.y+rnd(-14,14),{n:14,sp:7,col:cfg.col,size:10})};
+    }
+    burst(ox,oy,{n:16,sp:5,col:cfg.col,size:9,life:500});
+  }else{ /* bolt: 마법진 + 보라색 탄 */
+    const rg=el('div','ring');rg.style.left=ox+'px';rg.style.top=oy+'px';document.body.appendChild(rg);
+    rg.animate([{transform:'scale(.2) rotate(0)',opacity:0},{transform:'scale(1.1) rotate(120deg)',opacity:1,offset:.45},{transform:'scale(1.3) rotate(240deg)',opacity:0}],{duration:420,easing:'ease-out'}).onfinish=()=>rg.remove();
+    fig.animate([{transform:'translateX(0)'},{transform:'translateX(10px) rotate(2deg)',offset:.3},{transform:'translateX(0)'}],{duration:420});
+    for(let i=0;i<10;i++)setTimeout(()=>burst(ox+dx*i/10,oy+dy*i/10,{n:4,sp:2.2,col:cfg.col,size:9,life:520}),120+i*26);
+    setTimeout(()=>burst(t.x,t.y,{n:32,sp:9,col:cfg.col,size:12}),400);
+  }
+}
+function muzzleFx(src){
+  const cfg=CHFX[src.u.id];if(!cfg||FAST)return;
+  const fig=src.el.querySelector('.fig'),r=fig.getBoundingClientRect();
+  burst(r.left+r.width*cfg.org[0],r.top+r.height*cfg.org[1],{n:8,sp:4,col:cfg.col,size:8,life:420});
+}
 /* ---- 엔진이 호출하는 UI 콜백 ---- */
 const UI={
   refresh(){
@@ -331,16 +378,16 @@ const UI={
       cl.querySelectorAll('.kb').forEach(k=>k.remove());document.body.appendChild(cl);
       cl.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${(t.x-r.left-r.width/2)*.5}px,${(t.y-r.top-r.height/2)*.5-60}px) scale(1.25) rotate(${att?10:-8}deg)`,opacity:1,offset:.45},{transform:`translate(${t.x-r.left-r.width/2}px,${t.y-r.top-r.height/2}px) scale(.45) rotate(${att?30:-18}deg)`,opacity:0}],{duration:430,easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish=()=>cl.remove();
     }
-    if(att&&src.el){animCls(src.el,'lunge-r',450)}
+    if(att&&src.el)charAttack(src,tnode);
     if(inst.rev)floatAt(src.el,'逆位置','sys');
     renderHand();updateBattleHud();
   },
-  swing(src){if(src&&src.el){animCls(src.el.querySelector('.fig'),'swinging',500)}},
+  swing(src){if(src&&src.el)muzzleFx(src)},
   mana(n){const o=$('#orb');o.classList.remove('pop');void o.offsetWidth;o.classList.add('pop');Mus.sfx('buff')},
   drawn(n){if(n)Mus.sfx('draw');renderHand();updateBattleHud()},
   shuffle(){toast('더미를 섞는다…')},
   turnStart(){banner('당신의 차례');const o=$('#orb');o.classList.remove('pop');void o.offsetWidth;o.classList.add('pop');UI.refresh()},
-  conduct(){Mus.sfx('buff');const g=B.allies.find(a=>a.id==='gemini');if(g&&g.el){animCls(g.el.querySelector('.fig'),'swinging',500);floatAt(g.el,'지휘','buff');const c=center(g.el);burst(c.x,c.y,{n:24,col:['#ffe29a','#ff4fa8']})}renderHand();updateBattleHud()},
+  conduct(){Mus.sfx('buff');const g=B.allies.find(a=>a.id==='belis');if(g&&g.el){floatAt(g.el,'지휘','buff');const c=center(g.el);burst(c.x,c.y,{n:24,col:['#ffe29a','#ff4fa8']})}renderHand();updateBattleHud()},
   banner,
   float(X,t,c){floatAt(X.el,t,c)},
   enemyLunge(e){animCls(e.el,'lunge-l',450)},
