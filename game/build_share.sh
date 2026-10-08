@@ -26,7 +26,7 @@ cat <<'HEAD'
 </div>
 <ul class="keys">
 <li><kbd>←</kbd><kbd>→</kbd> 이동</li><li><kbd>Space</kbd> 점프</li><li><kbd>Shift</kbd> 대시</li>
-<li><kbd>Z</kbd> 나이프</li><li><kbd>X</kbd> 포물선</li><li><kbd>Q</kbd> 시간 감속장</li><li><kbd>R</kbd> 재시작</li>
+<li><kbd>↓</kbd> 앉기</li><li><kbd>Z</kbd> 나이프</li><li><kbd>X</kbd> 포물선</li><li><kbd>Q</kbd> 시간 감속장</li><li><kbd>↑</kbd> 저장 지점에서 저장</li><li><kbd>R</kbd> 마지막 저장으로 복귀</li>
 </ul>
 <div id="pad">
 <div><button data-k="left">◀</button><button data-k="right">▶</button></div>

@@ -1,4 +1,4 @@
-// 월식록 외전 — 1~2단계: 기반 엔진 + 전투 코어
+// 월식록 외전 — 엔진, 전투, 시간 감속장, 방 이동·저장
 (() => {
   const T = 32;                 // 타일 크기
   const W = 960, H = 540;       // 화면 크기
@@ -15,37 +15,74 @@
     dashSpeed: 560, dashTime: 0.17, dashCooldown: 0.45,
     maxHp: 5, iframes: 1.2,
     knifeCd: 0.22, lobCd: 0.5,
-    maxMana: 100, manaRegen: 14, fieldCost: 40, fieldR: 130, fieldLife: 4, slow: 0.25,
+    maxMana: 100, manaRegen: 14, crouchH: 28, crouchRun: 90, fieldCost: 40, fieldR: 130, fieldLife: 4, slow: 0.25,
   };
 
-  let map, grid, mapW, mapH, player, enemies, knives, particles, fields, bullets, camX, camY, time;
+  let map, roomId, grid, mapW, mapH, player, enemies, knives, particles, fields, bullets, camX, camY, time;
+  let portals, saves, items, signs, msgText = '', msgT = 0;
 
-  function loadMap(id) {
-    map = MAPS[id];
+  // 진행 상황 (저장됨)
+  const SAVE_KEY = 'gesshokuroku_gaiden_save_v1';
+  const world = { abil: { double: false }, got: {}, visited: { start: true }, save: null };
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) Object.assign(world, JSON.parse(raw));
+  } catch (e) { /* 저장소를 못 쓰는 환경이면 무시 */ }
+  const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(world)); } catch (e) { /* 무시 */ } };
+  const say = t => { msgText = t; msgT = 3; };
+
+  // spawn: undefined = 방의 P / {tile:'b'} = 이동구 옆 / {pos:{x,y}} = 좌표
+  function loadMap(id, spawn) {
+    const prev = spawn && spawn.keep ? player : null;
+    roomId = id; map = MAPS[id]; world.visited[id] = true;
     grid = map.rows.map(r => r.split(''));
     mapH = grid.length; mapW = grid[0].length;
     enemies = []; knives = []; particles = []; fields = []; bullets = [];
+    portals = []; saves = []; items = []; signs = [];
     let start = { x: 2 * T, y: 2 * T };
     for (let y = 0; y < mapH; y++) for (let x = 0; x < mapW; x++) {
       const c = grid[y][x];
-      if (c === 'P') { start = { x: x * T + (T - P.w) / 2, y: (y + 1) * T - P.h }; grid[y][x] = '.'; }
-      else if (c === 'w') { enemies.push(makeEnemy('walker', x * T + 4, (y + 1) * T - 28)); grid[y][x] = '.'; }
-      else if (c === 't') { enemies.push(makeEnemy('turret', x * T + 4, y * T + 4)); grid[y][x] = '.'; }
-      else if (c === 'f') { enemies.push(makeEnemy('flyer', x * T, y * T)); grid[y][x] = '.'; }
+      if (c === '#' || c === '.') continue;
+      grid[y][x] = '.';
+      if (c === 'P') start = { x: x * T + (T - P.w) / 2, y: (y + 1) * T - P.h };
+      else if (c === 'w') enemies.push(makeEnemy('walker', x * T + 4, (y + 1) * T - 28));
+      else if (c === 't') enemies.push(makeEnemy('turret', x * T + 4, (y + 1) * T - 28));
+      else if (c === 'f') enemies.push(makeEnemy('flyer', x * T, y * T));
+      else if (c === 'S') saves.push({ x, y });
+      else if (c === 'B') signs.push({ x, y, text: '제1보스: 홍 메이링 (다음 단계에서 구현)' });
+      else if (c === 'j') { if (!world.got[id + ':' + x + ',' + y]) items.push({ x, y, kind: 'double' }); }
+      else if ('abcde'.includes(c)) portals.push({ x, y, ch: c });
     }
+    if (spawn && spawn.tile) {
+      const ps = portals.filter(q => q.ch === spawn.tile);
+      const q = ps[0], low = Math.max(...ps.map(p => p.y));
+      const dx = q.x === 0 ? 1 : (q.x === mapW - 1 ? -1 : 0);
+      start = { x: (q.x + dx) * T + (T - P.w) / 2, y: (low + 1) * T - P.h };
+    } else if (spawn && spawn.pos) start = { x: spawn.pos.x, y: spawn.pos.y };
     player = {
       x: start.x, y: start.y, vx: 0, vy: 0, w: P.w, h: P.h,
-      face: 1, onGround: false, coyote: 0, buffer: 0,
+      face: 1, crouch: false, onGround: false, coyote: 0, buffer: 0, airJump: true, portalLock: true,
       dashT: 0, dashCd: 0, airDash: true,
-      hp: P.maxHp, mana: P.maxMana, inv: 0, knifeCd: 0, dead: false, deadT: 0,
-      start,
+      hp: prev ? prev.hp : P.maxHp, mana: prev ? prev.mana : P.maxMana, inv: prev ? prev.inv : 0,
+      knifeCd: 0, dead: false, deadT: 0, start,
     };
-    camX = 0; camY = 0; time = 0;
+    camX = Math.max(0, Math.min(mapW * T - W, player.x - W / 2));
+    camY = Math.max(0, Math.min(mapH * T - H, player.y - H / 2));
+    time = 0;
+  }
+
+  // 사망·재시작: 마지막 저장 지점에서 부활
+  function respawn() {
+    if (world.save) loadMap(world.save.room, { pos: world.save.pos });
+    else loadMap('start');
   }
 
   function makeEnemy(type, x, y) {
+    const e = makeEnemyBase(type, x, y); e.maxHp = e.hp; return e;
+  }
+  function makeEnemyBase(type, x, y) {
     if (type === 'walker') return { type, x, y, w: 24, h: 28, vx: -60, vy: 0, hp: 3, flash: 0, dir: -1 };
-    if (type === 'turret') return { type, x, y, w: 24, h: 24, vx: 0, vy: 0, hp: 4, flash: 0, cd: 1.2 };
+    if (type === 'turret') return { type, x, y, w: 24, h: 28, vx: 0, vy: 0, hp: 4, flash: 0, cd: 1.2 };
     return { type, x, y, baseY: y, w: 24, h: 20, vx: 0, vy: 0, hp: 2, flash: 0, t: Math.random() * 6 };
   }
 
@@ -100,7 +137,7 @@
 
   function throwKnife(lob) {
     const dir = player.face;
-    const cx = player.x + player.w / 2 + dir * 12, cy = player.y + 16;
+    const cx = player.x + player.w / 2 + dir * 12, cy = player.y + (player.crouch ? 8 : 24);
     if (lob) knives.push({ x: cx, y: cy, w: 10, h: 6, vx: dir * 360, vy: -440, g: 1300, life: 1.6, spin: 0 });
     else {
       const up = Input.held('up');
@@ -113,7 +150,7 @@
     const p = player;
     if (p.dead) {
       p.deadT -= dt;
-      if (p.deadT <= 0) loadMap('test');
+      if (p.deadT <= 0) respawn();
       return;
     }
     const dirIn = (Input.held('right') ? 1 : 0) - (Input.held('left') ? 1 : 0);
@@ -123,6 +160,13 @@
     p.coyote = p.onGround ? P.coyote : Math.max(0, p.coyote - dt);
     p.buffer = Input.pressed('jump') ? P.buffer : Math.max(0, p.buffer - dt);
     if (dirIn) p.face = dirIn;
+
+    // 앉기: 키 높이 44 -> 28, 발 위치 유지. 천장이 막혀 있으면 일어서지 못함
+    const wantCrouch = Input.held('down') && p.onGround && p.dashT <= 0;
+    if (wantCrouch && !p.crouch) { p.crouch = true; p.y += P.h - P.crouchH; p.h = P.crouchH; }
+    else if (!wantCrouch && p.crouch && !rectSolid(p.x, p.y - (P.h - P.crouchH), p.w, P.h)) {
+      p.crouch = false; p.y -= P.h - P.crouchH; p.h = P.h;
+    }
 
     // 대시
     if (Input.pressed('dash') && p.dashCd <= 0 && p.dashT <= 0 && (p.onGround || p.airDash)) {
@@ -135,12 +179,16 @@
       p.dashT -= dt; p.vy = 0;
     } else {
       // 수평 이동
-      const target = dirIn * P.run;
+      const target = dirIn * (p.crouch ? P.crouchRun : P.run);
       const a = dirIn === 0 ? P.friction : (p.onGround ? P.accel : P.airAccel);
       if (p.vx < target) p.vx = Math.min(target, p.vx + a * dt);
       else if (p.vx > target) p.vx = Math.max(target, p.vx - a * dt);
       // 점프
       if (p.buffer > 0 && p.coyote > 0) { p.vy = -P.jump; p.buffer = 0; p.coyote = 0; p.onGround = false; }
+      else if (p.buffer > 0 && !p.onGround && world.abil.double && p.airJump) {
+        p.vy = -P.jump * 0.92; p.buffer = 0; p.airJump = false;
+        burst(p.x + p.w / 2, p.y + p.h, '#9cf', 8);
+      }
       if (!Input.held('jump') && p.vy < -120) p.vy += (P.gravity * 2.2) * dt;   // 점프 컷
       p.vy = Math.min(P.maxFall, p.vy + P.gravity * dt);
     }
@@ -160,7 +208,30 @@
 
     const r = moveBody(p, dt);
     p.onGround = r.ground || (p.vy === 0 && rectSolid(p.x, p.y + 1, p.w, p.h));
-    if (p.onGround) p.airDash = true;
+    if (p.onGround) { p.airDash = true; p.airJump = true; }
+
+    // 이동구·저장·아이템
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+    const tileHit = q => cx > q.x * T && cx < (q.x + 1) * T && cy > q.y * T && cy < (q.y + 1) * T;
+    const door = portals.find(tileHit);
+    if (!door) p.portalLock = false;
+    else if (!p.portalLock) {
+      const link = map.links[door.ch];
+      if (link) { loadMap(link[0], { tile: link[1], keep: true }); persist(); return; }
+    }
+    if (Input.pressed('up')) {
+      const sv = saves.find(q => Math.abs(cx - (q.x + 0.5) * T) < 28 && Math.abs(p.y + p.h - (q.y + 1) * T) < 8);
+      if (sv) {
+        world.save = { room: roomId, pos: { x: sv.x * T + (T - P.w) / 2, y: (sv.y + 1) * T - P.h } };
+        p.hp = P.maxHp; p.mana = P.maxMana; persist(); say('저장했습니다');
+        burst(cx, p.y, '#8fd', 10);
+      }
+    }
+    for (const it of items) if (tileHit(it)) {
+      if (it.kind === 'double') { world.abil.double = true; say('이단 점프 획득! 공중에서 점프를 한 번 더 누르세요'); }
+      world.got[roomId + ':' + it.x + ',' + it.y] = true; it.taken = true; persist();
+    }
+    items = items.filter(it => !it.taken);
 
     // 낙사
     if (p.y > mapH * T + 80) {
@@ -204,10 +275,8 @@
 
   function updateKnives(dt) {
     for (const k of knives) {
-      const full = dt; dt = full * slowAt(k.x, k.y);
       k.life -= dt; k.vy += k.g * dt; k.spin += dt * 20;
       k.x += k.vx * dt; k.y += k.vy * dt;
-      dt = full;
       if (rectSolid(k.x, k.y, k.w, k.h)) { k.life = 0; burst(k.x, k.y, '#ccd', 3); continue; }
       for (const e of enemies) {
         if (e.hp > 0 && overlap(k, e)) {
@@ -234,8 +303,8 @@
   }
 
   function update(dt) {
-    time += dt;
-    if (Input.pressed('restart')) loadMap('test');
+    time += dt; msgT = Math.max(0, msgT - dt);
+    if (Input.pressed('restart')) respawn();
     updatePlayer(dt);
     updateEnemies(dt);
     updateKnives(dt);
@@ -258,6 +327,14 @@
       ctx.fillStyle = '#3a3358'; ctx.fillRect(x * T, y * T, T, T);
       ctx.fillStyle = '#4c446f'; ctx.fillRect(x * T, y * T, T, 3);
     }
+    // 이동구·저장·아이템·표지
+    for (const q of portals) { ctx.fillStyle = `rgba(140,170,255,${0.12 + 0.08 * Math.sin(time * 3)})`; ctx.fillRect(q.x * T, q.y * T, T, T); }
+    for (const q of saves) {
+      ctx.fillStyle = '#4fd'; ctx.beginPath(); ctx.moveTo((q.x + .5) * T, q.y * T + 6); ctx.lineTo((q.x + .85) * T, (q.y + .6) * T);
+      ctx.lineTo((q.x + .5) * T, (q.y + 1) * T - 2); ctx.lineTo((q.x + .15) * T, (q.y + .6) * T); ctx.fill();
+    }
+    for (const q of items) { ctx.fillStyle = '#fd5'; const bob = Math.sin(time * 4) * 3; ctx.fillRect(q.x * T + 9, q.y * T + 9 + bob, 14, 14); }
+    for (const q of signs) { ctx.fillStyle = '#c9a'; ctx.fillRect(q.x * T + 14, q.y * T - 8, 4, 40); ctx.font = '13px sans-serif'; ctx.fillText(q.text, q.x * T - 150, q.y * T - 14); }
     // 감속장
     for (const f of fields) {
       const a = Math.min(1, f.life) * 0.5;
@@ -274,6 +351,10 @@
     }
     ctx.fillStyle = '#f84';
     for (const b of bullets) { ctx.beginPath(); ctx.arc(b.x + 4, b.y + 4, 5, 0, 7); ctx.fill(); }
+    for (const e of enemies) if (e.hp < e.maxHp) {
+      ctx.fillStyle = '#300'; ctx.fillRect(e.x, e.y - 8, e.w, 4);
+      ctx.fillStyle = '#f55'; ctx.fillRect(e.x, e.y - 8, e.w * e.hp / e.maxHp, 4);
+    }
     // 나이프
     ctx.fillStyle = '#dfe6ff';
     for (const k of knives) ctx.fillRect(k.x, k.y, k.w, k.h);
@@ -288,6 +369,13 @@
     for (const q of particles) { ctx.fillStyle = q.color; ctx.fillRect(q.x, q.y, 3, 3); }
     ctx.restore();
 
+    // 미니맵
+    for (const id in world.visited) {
+      const r = MAPS[id]; if (!r) continue;
+      ctx.fillStyle = id === roomId ? '#8fb4ff' : '#4a4468';
+      ctx.fillRect(W - 110 + r.gx * 30, 16 + r.gy * 18, 26, 14);
+    }
+    if (msgT > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(1, msgT)})`; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(msgText, W / 2, 90); ctx.textAlign = 'left'; }
     // HUD
     for (let i = 0; i < P.maxHp; i++) {
       ctx.fillStyle = i < p.hp ? '#e44' : '#422'; ctx.fillRect(16 + i * 26, 16, 20, 20);
@@ -295,7 +383,7 @@
     ctx.fillStyle = '#123'; ctx.fillRect(16, 42, 130, 8);
     ctx.fillStyle = p.mana >= P.fieldCost ? '#6af' : '#358'; ctx.fillRect(16, 42, 130 * p.mana / P.maxMana, 8);
     ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
-    ctx.fillText(map.name, 16, 70);
+    ctx.fillText(map.name + (world.abil.double ? ' · 이단 점프' : ''), 16, 70);
     if (p.dead) {
       ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#fff'; ctx.font = '32px sans-serif'; ctx.fillText('— 시간이 멈췄다 —', W / 2 - 150, H / 2);
@@ -310,8 +398,8 @@
     requestAnimationFrame(frame);
   }
 
-  loadMap('test');
+  if (world.save) loadMap(world.save.room, { pos: world.save.pos }); else loadMap('start');
   requestAnimationFrame(frame);
   // 테스트/디버그용 훅
-  window.__game = { get player() { return player; }, get enemies() { return enemies; }, get knives() { return knives; }, step: n => { for (let i = 0; i < n; i++) { update(DT); Input.endFrame(); } }, Input };
+  window.__game = { get room() { return roomId; }, world, get player() { return player; }, get enemies() { return enemies; }, get knives() { return knives; }, step: n => { for (let i = 0; i < n; i++) { update(DT); Input.endFrame(); } }, Input };
 })();
