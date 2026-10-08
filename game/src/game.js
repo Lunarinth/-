@@ -20,10 +20,11 @@
 
   let map, roomId, grid, mapW, mapH, player, enemies, knives, particles, fields, bullets, camX, camY, time;
   let portals, saves, items, signs, msgText = '', msgT = 0;
+  let boss = null, lockedPortals = [], dlg = null, banner = { text: '', t: 0 };
 
   // 진행 상황 (저장됨)
   const SAVE_KEY = 'gesshokuroku_gaiden_save_v1';
-  const world = { abil: { double: false }, got: {}, visited: { start: true }, save: null };
+  const world = { abil: { double: false }, got: {}, visited: { start: true }, save: null, bosses: {}, intro: false };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) Object.assign(world, JSON.parse(raw));
@@ -38,7 +39,7 @@
     grid = map.rows.map(r => r.split(''));
     mapH = grid.length; mapW = grid[0].length;
     enemies = []; knives = []; particles = []; fields = []; bullets = [];
-    portals = []; saves = []; items = []; signs = [];
+    portals = []; saves = []; items = []; signs = []; boss = null; lockedPortals = [];
     let start = { x: 2 * T, y: 2 * T };
     for (let y = 0; y < mapH; y++) for (let x = 0; x < mapW; x++) {
       const c = grid[y][x];
@@ -49,7 +50,7 @@
       else if (c === 't') enemies.push(makeEnemy('turret', x * T + 4, (y + 1) * T - 28));
       else if (c === 'f') enemies.push(makeEnemy('flyer', x * T, y * T));
       else if (c === 'S') saves.push({ x, y });
-      else if (c === 'B') signs.push({ x, y, text: '제1보스: 홍 메이링 (다음 단계에서 구현)' });
+      else if (c === 'B') { if (!world.bosses.meiling) boss = makeBoss(x * T + 3, (y + 1) * T - 46); }
       else if (c === 'j') { if (!world.got[id + ':' + x + ',' + y]) items.push({ x, y, kind: 'double' }); }
       else if ('abcde'.includes(c)) portals.push({ x, y, ch: c });
     }
@@ -84,6 +85,95 @@
     if (type === 'walker') return { type, x, y, w: 24, h: 28, vx: -60, vy: 0, hp: 3, flash: 0, dir: -1 };
     if (type === 'turret') return { type, x, y, w: 24, h: 28, vx: 0, vy: 0, hp: 4, flash: 0, cd: 1.2 };
     return { type, x, y, baseY: y, w: 24, h: 20, vx: 0, vy: 0, hp: 2, flash: 0, t: Math.random() * 6 };
+  }
+
+  // ---------- 보스 ----------
+  const BOSS_PHASES = [
+    { name: '정권 연무', at: 0.65, spell: false },
+    { name: '기공 「채광 난무」', at: 0.30, spell: true },
+    { name: '굉권 「홍염의 비」', at: 0, spell: true },
+  ];
+  function makeBoss(x, y) {
+    return { name: '홍 메이링', x, y, w: 26, h: 46, vx: 0, vy: 0, hp: 70, maxHp: 70, phase: 0, t: 0,
+      inv: 0, active: false, intro: false, dir: -1, cd: 1.2, dashCd: 3, dashT: 0, tele: 0, flash: 0,
+      rain: 0, wave: 2, hop: 1, ang: 0, onGround: false };
+  }
+  const addBullet = (x, y, vx, vy) => bullets.push({ x, y, w: 8, h: 8, vx, vy, life: 7 });
+
+  function startDlg(lines, done) { dlg = { lines, i: 0, done }; }
+  function advanceDlg() {
+    dlg.i++;
+    if (dlg.i >= dlg.lines.length) { const d = dlg.done; dlg = null; if (d) d(); }
+  }
+
+  function damageBoss() {
+    const b = boss;
+    if (!b || !b.active || b.inv > 0) return;
+    b.hp--; b.flash = 0.1;
+    const ph = BOSS_PHASES[b.phase];
+    if (b.hp > b.maxHp * ph.at) return;
+    if (b.phase >= BOSS_PHASES.length - 1) { defeatBoss(); return; }
+    b.phase++; b.inv = 1.6; b.cd = 1.2; b.hop = 1; b.rain = 0.5; b.vx = 0; b.dashT = 0; b.tele = 0;
+    for (const bl of bullets) burst(bl.x, bl.y, '#fc6', 2);
+    bullets = [];
+    banner = { text: BOSS_PHASES[b.phase].name, t: 2.4 };
+    b.hp = Math.min(b.hp, Math.floor(b.maxHp * BOSS_PHASES[b.phase - 1].at));
+  }
+
+  function defeatBoss() {
+    burst(boss.x + boss.w / 2, boss.y + boss.h / 2, '#fc6', 30);
+    bullets = []; boss = null;
+    world.bosses.meiling = true;
+    portals = lockedPortals; lockedPortals = [];
+    player.hp = P.maxHp; player.mana = P.maxMana; persist();
+    startDlg([
+      ['홍 메이링', '……참 많이 늘으셨네요. 오늘은 제가 졌습니다.'],
+      ['사쿠야', '당신이 봐줬을 뿐이에요. 다음에는 정말로 상대해 드리죠.'],
+      ['홍 메이링', '아가씨가 찾으세요. 도서관 쪽에서 이상한 소리가 났다고 하시더군요.'],
+    ], () => say('연무장 승리! (이후 구역은 다음 단계에서 이어집니다)'));
+  }
+
+  function updateBoss(dt) {
+    const b = boss;
+    if (!b || !b.active) return;
+    b.flash = Math.max(0, b.flash - dt);
+    b.vy = Math.min(P.maxFall, b.vy + P.gravity * dt);
+    if (b.inv > 0) { b.inv -= dt; b.vx = 0; const r = moveBody(b, dt); b.onGround = r.ground; return; }
+    const s = dt * slowAt(b.x + b.w / 2, b.y + b.h / 2);
+    b.t += s;
+    const cx = b.x + b.w / 2, cy = b.y + 14;
+    const px = player.x + player.w / 2, py = player.y + player.h / 2;
+    b.dir = px < cx ? -1 : 1;
+    if (b.phase === 0) {
+      if (b.dashT > 0) { b.dashT -= s; b.vx = b.dir * 430; }
+      else if (b.tele > 0) { b.tele -= s; b.vx = 0; if (b.tele <= 0) b.dashT = 0.5; }
+      else {
+        b.vx = b.dir * 75; b.cd -= s; b.dashCd -= s;
+        if (b.cd <= 0) {
+          b.cd = 1.5;
+          const a0 = Math.atan2(py - cy, px - cx);
+          for (const da of [-0.3, 0, 0.3]) addBullet(cx - 4, cy - 4, Math.cos(a0 + da) * 230, Math.sin(a0 + da) * 230);
+        }
+        if (b.dashCd <= 0) { b.dashCd = 4; b.tele = 0.55; }
+      }
+    } else if (b.phase === 1) {
+      b.vx = 0; b.cd -= s;
+      if (b.cd <= 0) {
+        b.cd = 0.6; b.ang += 0.27;
+        for (let i = 0; i < 12; i++) { const a = b.ang + i * Math.PI / 6; addBullet(cx - 4, cy - 4, Math.cos(a) * 150, Math.sin(a) * 150); }
+      }
+    } else {
+      b.vx = 0; b.hop -= s; b.rain -= s; b.wave -= s;
+      if (b.hop <= 0 && b.onGround) { b.vy = -760; b.hop = 2.6; }
+      if (b.rain <= 0) { b.rain = 0.16; addBullet(2 * T + Math.random() * (mapW - 4) * T, T + 4, 0, 210); }
+      if (b.wave <= 0) {
+        b.wave = 2.8;
+        const d = px < cx ? -1 : 1;
+        bullets.push({ x: cx - 5, y: (mapH - 2) * T - 12, w: 12, h: 12, vx: d * 250, vy: 0, life: 6 });
+      }
+    }
+    const r = moveBody(b, s); b.onGround = r.ground;
+    if (!player.dead && overlap(player, b)) hurtPlayer(cx);
   }
 
   const solidAt = (tx, ty) => {
@@ -278,6 +368,7 @@
       k.life -= dt; k.vy += k.g * dt; k.spin += dt * 20;
       k.x += k.vx * dt; k.y += k.vy * dt;
       if (rectSolid(k.x, k.y, k.w, k.h)) { k.life = 0; burst(k.x, k.y, '#ccd', 3); continue; }
+      if (boss && boss.active && overlap(k, boss)) { k.life = 0; burst(k.x, k.y, boss.inv > 0 ? '#ccd' : '#fc6', 4); damageBoss(); continue; }
       for (const e of enemies) {
         if (e.hp > 0 && overlap(k, e)) {
           e.hp--; e.flash = 0.12; k.life = 0;
@@ -303,9 +394,19 @@
   }
 
   function update(dt) {
-    time += dt; msgT = Math.max(0, msgT - dt);
+    time += dt; msgT = Math.max(0, msgT - dt); banner.t = Math.max(0, banner.t - dt);
+    if (dlg) { if (Input.pressed('throw') || Input.pressed('jump') || Input.pressed('up')) advanceDlg(); return; }
     if (Input.pressed('restart')) respawn();
     updatePlayer(dt);
+    if (boss && !boss.active && !boss.intro && player.onGround && player.x > 6 * T) {
+      boss.intro = true;
+      startDlg([
+        ['홍 메이링', '사쿠야 씨, 오늘도 한 수 부탁드립니다.'],
+        ['사쿠야', '순찰 중이에요. ……뭐, 잠깐이라면.'],
+        ['홍 메이링', '봐주시면 안 됩니다! 저도 오늘은 진심이에요!'],
+      ], () => { boss.active = true; lockedPortals = portals; portals = []; banner = { text: BOSS_PHASES[0].name, t: 2 }; });
+    }
+    updateBoss(dt);
     updateEnemies(dt);
     updateKnives(dt);
     const tx = player.x + player.w / 2 - W / 2, ty = player.y + player.h / 2 - H / 2;
@@ -355,6 +456,12 @@
       ctx.fillStyle = '#300'; ctx.fillRect(e.x, e.y - 8, e.w, 4);
       ctx.fillStyle = '#f55'; ctx.fillRect(e.x, e.y - 8, e.w * e.hp / e.maxHp, 4);
     }
+    if (boss) {
+      const cA = boss.inv > 0 && Math.floor(time * 16) % 2 === 0;
+      ctx.fillStyle = boss.flash > 0 ? '#fff' : (boss.tele > 0 ? '#fd5' : '#c33'); if (!cA) ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+      ctx.fillStyle = '#2a7a4a'; if (!cA) ctx.fillRect(boss.x - 2, boss.y, boss.w + 4, 9);
+      ctx.fillStyle = '#000'; ctx.fillRect(boss.x + (boss.dir > 0 ? 16 : 5), boss.y + 14, 4, 4);
+    }
     // 나이프
     ctx.fillStyle = '#dfe6ff';
     for (const k of knives) ctx.fillRect(k.x, k.y, k.w, k.h);
@@ -374,6 +481,25 @@
       const r = MAPS[id]; if (!r) continue;
       ctx.fillStyle = id === roomId ? '#8fb4ff' : '#4a4468';
       ctx.fillRect(W - 110 + r.gx * 30, 16 + r.gy * 18, 26, 14);
+    }
+    if (boss && boss.active) {
+      const bw = 420, bx = (W - bw) / 2, by = H - 40;
+      ctx.fillStyle = '#211'; ctx.fillRect(bx, by, bw, 10);
+      ctx.fillStyle = BOSS_PHASES[boss.phase].spell ? '#e8a' : '#e55'; ctx.fillRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 10);
+      ctx.fillStyle = '#fff'; for (const ph of BOSS_PHASES.slice(0, -1)) ctx.fillRect(bx + bw * ph.at - 1, by - 3, 2, 16);
+      ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(boss.name, W / 2, by - 8); ctx.textAlign = 'left';
+    }
+    if (banner.t > 0) {
+      ctx.globalAlpha = Math.min(1, banner.t); ctx.fillStyle = 'rgba(30,10,40,.65)'; ctx.fillRect(0, 118, W, 46);
+      ctx.fillStyle = '#ffe6f2'; ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(banner.text, W / 2, 150); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+    if (dlg) {
+      const l = dlg.lines[dlg.i];
+      ctx.fillStyle = 'rgba(8,6,16,.88)'; ctx.fillRect(40, 70, W - 80, 120);
+      ctx.strokeStyle = '#4c446f'; ctx.lineWidth = 2; ctx.strokeRect(40, 70, W - 80, 120);
+      ctx.fillStyle = '#8fb4ff'; ctx.font = '16px sans-serif'; ctx.fillText(l[0], 64, 102);
+      ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.fillText(l[1], 64, 142);
+      ctx.fillStyle = '#9a93b8'; ctx.font = '12px sans-serif'; ctx.fillText('Z / Space 로 넘기기', W - 190, 172);
     }
     if (msgT > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(1, msgT)})`; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(msgText, W / 2, 90); ctx.textAlign = 'left'; }
     // HUD
@@ -399,7 +525,15 @@
   }
 
   if (world.save) loadMap(world.save.room, { pos: world.save.pos }); else loadMap('start');
+  if (!world.intro) {
+    world.intro = true;
+    startDlg([
+      ['', '홍마관의 평온한 밤. 사쿠야는 평소처럼 순찰을 돌고 있다.'],
+      ['', '달은 맑고, 아가씨의 홍차는 아직 식지 않았다.'],
+      ['', '(←→ 이동 · Space 점프 · Z 나이프 · Q 시간 감속장 · ↑ 저장)'],
+    ]);
+  }
   requestAnimationFrame(frame);
   // 테스트/디버그용 훅
-  window.__game = { get room() { return roomId; }, world, get player() { return player; }, get enemies() { return enemies; }, get knives() { return knives; }, step: n => { for (let i = 0; i < n; i++) { update(DT); Input.endFrame(); } }, Input };
+  window.__game = { loadMap, get boss() { return boss; }, get bullets() { return bullets; }, get dlg() { return dlg; }, get room() { return roomId; }, world, get player() { return player; }, get enemies() { return enemies; }, get knives() { return knives; }, step: n => { for (let i = 0; i < n; i++) { update(DT); Input.endFrame(); } }, Input };
 })();

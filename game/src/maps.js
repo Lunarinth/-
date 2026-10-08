@@ -17,7 +17,7 @@ function makeRoom(w, h, name, gx, gy, links, edit) {
 
 const MAPS = {
   start: {
-    name: '월광의 입구', gx: 0, gy: 0,
+    name: '홍마관 정원', gx: 0, gy: 0,
     links: { a: ['hall', 'b'] },
     rows: [
       '################################################################',
@@ -46,7 +46,7 @@ const MAPS = {
   MAPS.start.rows = r.map(a => a.join(''));
 })();
 
-MAPS.hall = makeRoom(40, 16, '회랑', 1, 0, { b: ['start', 'a'], c: ['trial', 'd'] }, (put, rect) => {
+MAPS.hall = makeRoom(40, 16, '홍마관 회랑', 1, 0, { b: ['start', 'a'], c: ['trial', 'd'] }, (put, rect) => {
   rect(0, 12, 0, 13, 'b');            // 왼쪽 이동구
   rect(39, 12, 39, 13, 'c');          // 오른쪽 이동구
   put(5, 13, 'S');                    // 저장 지점
@@ -56,10 +56,16 @@ MAPS.hall = makeRoom(40, 16, '회랑', 1, 0, { b: ['start', 'a'], c: ['trial', '
   put(20, 13, 'w'); put(33, 8, 'f'); put(35, 13, 't');
 });
 
-MAPS.trial = makeRoom(30, 16, '시련의 방', 2, 0, { d: ['hall', 'c'] }, (put, rect) => {
+MAPS.trial = makeRoom(30, 16, '정문 앞마당', 2, 0, { d: ['hall', 'c'], e: ['arena', 'a'] }, (put, rect) => {
   rect(0, 12, 0, 13, 'd');
   put(4, 13, 'S');
   rect(9, 11, 12, 11, '#'); rect(17, 9, 20, 9, '#');
   put(12, 13, 'w'); put(18, 13, 'w'); put(24, 13, 't'); put(15, 6, 'f');
-  put(27, 13, 'B');                   // 보스 자리 (메이링: 다음 단계)
+  rect(29, 12, 29, 13, 'e');          // 연무장으로
+});
+
+MAPS.arena = makeRoom(30, 16, '연무장', 3, 0, { a: ['trial', 'e'] }, (put, rect) => {
+  rect(0, 12, 0, 13, 'a');
+  put(3, 13, 'S');
+  put(24, 13, 'B');                   // 홍 메이링
 });
