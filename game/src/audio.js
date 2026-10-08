@@ -35,31 +35,31 @@ const Sound = (() => {
     d: [0, 3, 6, 4, 0, 3, 4, 4], e: [0, 1, 0, 6, 0, 4, 1, 0], f: [5, 3, 0, 4, 5, 3, 4, 4],
   };
   const TRACKS = {
-    field1: { bpm: 92, root: 57, scale: 'minor', seed: 11, form: ['A', 'A', 'B', 'C'], progs: { A: P.a, B: P.b, C: P.f },
+    field1: { bpm: 92, root: 57, scale: 'minor', seed: 11, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.a, B: P.b, C: P.f },
       inst: { lead: 'flute', lead2: 'strings', arp: 'piano', pad: 'strings', spark: 'bell' }, energy: { A: 0, B: 1, C: 0 } },
-    field2: { bpm: 100, root: 50, scale: 'dorian', seed: 23, form: ['A', 'A', 'B', 'C'], progs: { A: P.d, B: P.b, C: P.f },
+    field2: { bpm: 100, root: 50, scale: 'dorian', seed: 23, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.d, B: P.b, C: P.f },
       inst: { lead: 'flute', lead2: 'strings', arp: 'harp', pad: 'strings', spark: 'bell' }, energy: { A: 0, B: 1, C: 0 } },
-    field3: { bpm: 84, root: 52, scale: 'phryg', seed: 37, form: ['A', 'A', 'B', 'C'], progs: { A: P.e, B: P.e, C: P.f },
+    field3: { bpm: 84, root: 52, scale: 'phryg', seed: 37, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.e, B: P.e, C: P.f },
       inst: { lead: 'bell', lead2: 'organ', arp: 'pluck', pad: 'organ', spark: 'bell' }, energy: { A: 0, B: 1, C: 0 } },
-    field4: { bpm: 108, root: 59, scale: 'harm', seed: 41, form: ['A', 'A', 'B', 'C'], progs: { A: P.a, B: P.c, C: P.f },
+    field4: { bpm: 108, root: 59, scale: 'harm', seed: 41, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.a, B: P.c, C: P.f },
       inst: { lead: 'piano', lead2: 'strings', arp: 'harp', pad: 'strings', spark: 'bell', hit: 'brass' }, energy: { A: 0, B: 2, C: 0 } },
-    boss_meiling: { bpm: 150, root: 50, scale: 'minor', seed: 101, form: ['A', 'A', 'B', 'C'], progs: { A: P.b, B: P.c, C: P.f },
+    boss_meiling: { bpm: 150, root: 50, scale: 'minor', seed: 101, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.b, B: P.c, C: P.f },
       inst: { lead: 'lead', lead2: 'guitar', arp: 'piano', pad: 'strings', hit: 'brass', gtr: true }, energy: { A: 2, B: 3, C: 1 } },
-    boss_patchouli: { bpm: 132, root: 52, scale: 'phryg', seed: 211, form: ['A', 'A', 'B', 'C'], progs: { A: P.e, B: P.c, C: P.f },
+    boss_patchouli: { bpm: 132, root: 52, scale: 'phryg', seed: 211, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.e, B: P.c, C: P.f },
       inst: { lead: 'saw', lead2: 'organ', arp: 'pluck', pad: 'organ', hit: 'brass', gtr: true }, energy: { A: 2, B: 3, C: 1 } },
-    boss_flandre: { bpm: 172, root: 54, scale: 'harm', seed: 307, form: ['A', 'A', 'B', 'C'], progs: { A: P.c, B: P.a, C: P.e },
+    boss_flandre: { bpm: 172, root: 54, scale: 'harm', seed: 307, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.c, B: P.a, C: P.e },
       inst: { lead: 'lead', lead2: 'guitar', arp: 'pluck', pad: 'strings', hit: 'brass', gtr: true }, energy: { A: 3, B: 3, C: 2 } },
-    boss_remilia: { bpm: 140, root: 49, scale: 'harm', seed: 409, form: ['A', 'A', 'B', 'C'], progs: { A: P.a, B: P.c, C: P.f },
+    boss_remilia: { bpm: 140, root: 49, scale: 'harm', seed: 409, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.a, B: P.c, C: P.f },
       inst: { lead: 'saw', lead2: 'strings', arp: 'piano', pad: 'strings', hit: 'brass', gtr: true }, energy: { A: 2, B: 3, C: 1 } },
-    boss_youmu: { bpm: 160, root: 55, scale: 'dorian', seed: 503, form: ['A', 'A', 'B', 'C'], progs: { A: P.d, B: P.b, C: P.e },
+    boss_youmu: { bpm: 160, root: 55, scale: 'dorian', seed: 503, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.d, B: P.b, C: P.e },
       inst: { lead: 'lead', lead2: 'guitar', arp: 'harp', pad: 'strings', hit: 'brass', gtr: true }, energy: { A: 3, B: 3, C: 2 } },
-    boss_yuyuko: { bpm: 118, root: 57, scale: 'dorian', seed: 601, form: ['A', 'A', 'B', 'C'], progs: { A: P.d, B: P.f, C: P.b },
+    boss_yuyuko: { bpm: 118, root: 57, scale: 'dorian', seed: 601, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.d, B: P.f, C: P.b },
       inst: { lead: 'flute', lead2: 'strings', arp: 'harp', pad: 'strings', spark: 'bell', hit: 'brass' }, energy: { A: 1, B: 2, C: 0 } },
-    boss_reisen: { bpm: 168, root: 54, scale: 'phryg', seed: 701, form: ['A', 'A', 'B', 'C'], progs: { A: P.e, B: P.c, C: P.e },
+    boss_reisen: { bpm: 168, root: 54, scale: 'phryg', seed: 701, mod: 2, form: ['I', 'A', 'A', 'B', 'C', 'A2'], progs: { A: P.e, B: P.c, C: P.e },
       inst: { lead: 'saw', lead2: 'guitar', arp: 'pluck', pad: 'strings', hit: 'brass', gtr: true }, energy: { A: 3, B: 3, C: 2 } },
-    boss_kaguya: { bpm: 152, root: 47, scale: 'harm', seed: 809, form: ['A', 'B', 'A', 'C', 'B'], progs: { A: P.c, B: P.a, C: P.f },
+    boss_kaguya: { bpm: 152, root: 47, scale: 'harm', seed: 809, mod: 2, form: ['I', 'A', 'B', 'A', 'C', 'B', 'A2'], progs: { A: P.c, B: P.a, C: P.f },
       inst: { lead: 'saw', lead2: 'guitar', arp: 'piano', pad: 'strings', spark: 'bell', hit: 'brass', gtr: true }, energy: { A: 3, B: 3, C: 1 } },
-    ending: { bpm: 64, root: 50, scale: 'minor', seed: 907, form: ['A', 'C'], progs: { A: P.a, C: P.f },
+    ending: { bpm: 64, root: 50, scale: 'minor', seed: 907, form: ['I', 'A', 'C'], progs: { A: P.a, C: P.f },
       inst: { lead: 'piano', lead2: 'strings', arp: 'harp', pad: 'strings', spark: 'bell' }, energy: { A: 0, C: 0 } },
   };
 
@@ -144,95 +144,97 @@ const Sound = (() => {
   }
 
   // ---------- 작곡 ----------
+  // ZUN 곡의 문법을 따른 오리지널 작곡: 2마디 모티프의 시퀀스 전개, 박 머리의 코드톤, 장식음(앗치아카투라),
+  // 마디 끝 16분음표 런, 옥타브로 튀는 8분 베이스, 4마디마다 드럼 필인, 마지막 바퀴 전조.
   function compose(tr) {
     const R = rng(tr.seed), sc = SCALES[tr.scale], I = tr.inst, ev = [];
-    const deg = d => tr.root + sc[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7);
-    const nearestChordTone = (target, chord) => {
-      let best = target, bd = 99;
-      for (let k = -2; k <= 2; k++) for (const c of [0, 2, 4]) { const d = chord + c + 7 * k; if (Math.abs(d - target) < bd) { bd = Math.abs(d - target); best = d; } }
-      return best;
-    };
-    const rhythms = [
-      [0, 3, 6, 8, 10, 12, 14], [0, 2, 4, 6, 8, 12], [0, 4, 6, 8, 11, 14], [0, 3, 6, 10, 12, 14],
-      [0, 2, 4, 8, 10, 12], [0, 4, 8, 12], [0, 3, 6, 8, 11, 14],
+    const deg = (d, sh = 0) => tr.root + sh + sc[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7);
+    const nearest = (target, chord) => { let best = target, bd = 99; for (let k = -2; k <= 2; k++) for (const c of [0, 2, 4]) { const d = chord + c + 7 * k; if (Math.abs(d - target) < bd) { bd = Math.abs(d - target); best = d; } } return best; };
+    const cells = [
+      [0, 3, 6, 8, 10, 12, 14, 16, 19, 22, 24, 26, 28, 30], [0, 2, 4, 6, 8, 12, 14, 16, 18, 20, 22, 24, 28],
+      [0, 4, 6, 8, 11, 14, 16, 20, 22, 24, 27, 30], [0, 3, 6, 10, 12, 14, 16, 19, 22, 26, 28, 30],
+      [0, 2, 3, 6, 8, 10, 12, 14, 16, 18, 19, 22, 24, 26, 28, 30],
     ];
-    const secInfo = {}; let step = 0;
-    const secs = [];
+    const moves = [-3, -2, -1, -1, 0, 1, 1, 2, 3];
+    const info = {};
+    let step = 0; const mod = tr.mod ?? 0;
     for (const name of tr.form) {
-      const e = tr.energy[name], prog = tr.progs[name];
-      // 구간별 모티프(2마디): 리듬 + 윤곽
-      const key = name + (secs.filter(s => s === name).length);
-      secs.push(name);
-      if (!secInfo[name]) {
-        const hi = name === 'B' ? 5 : name === 'C' ? 2 : 0;
-        const mot = [];
-        for (let h = 0; h < 2; h++) {
-          const rh = rhythms[Math.floor(R() * rhythms.length)];
-          mot.push(rh.map(s => ({ s, mv: [-2, -1, -1, 0, 1, 1, 2, 3][Math.floor(R() * 8)] })));
-        }
-        secInfo[name] = { hi, mot };
-      }
-      const { hi, mot } = secInfo[name], rep = secs.filter(s => s === name).length - 1;
-      let cur = 7 + hi + 2;
-      for (let bar = 0; bar < 8; bar++) {
-        const base = step + bar * 16, ch = prog[bar], last = bar === 7;
-        const nx = prog[(bar + 1) % 8];
-        const root = deg(ch), third = deg(ch + 2), fifth = deg(ch + 4), seventh = deg(ch + 6);
-        // 패드 (스트링/오르간): 코드 길게
-        if (I.pad && name !== 'C' || (I.pad && R() < 1)) for (const m of [root, third, fifth]) ev.push({ s: base, inst: I.pad, midi: m, len: 15, vol: e >= 2 ? 0.1 : 0.12 });
+      const letter = name[0], intro = name === 'I', bars = intro ? 2 : 8;
+      const progKey = intro ? 'A' : letter, prog = tr.progs[progKey], e = tr.energy[progKey] ?? 0;
+      const sh = name === 'A2' ? mod : 0;
+      if (!info[letter]) info[letter] = { hi: letter === 'B' ? 5 : letter === 'C' ? 2 : 0, cell: cells[Math.floor(R() * cells.length)], mv: Array.from({ length: 16 }, () => moves[Math.floor(R() * moves.length)]) };
+      const sec = info[letter], rep = tr.form.slice(0, tr.form.indexOf(name)).filter(n => n[0] === letter).length;
+      let cur = 7 + sec.hi + 2;
+      const E = intro ? 0 : (letter === 'C' ? Math.min(e, 1) : e);
+      for (let bar = 0; bar < bars; bar++) {
+        const base = step + bar * 16, ch = prog[bar % 8], nx = prog[(bar + 1) % 8], last = bar === bars - 1, phraseEnd = bar % 4 === 3;
+        const root = deg(ch, sh), third = deg(ch + 2, sh), fifth = deg(ch + 4, sh), seventh = deg(ch + 6, sh);
+        // 패드
+        if (I.pad) for (const m of [root, third, fifth]) ev.push({ s: base, inst: I.pad, midi: m, len: 15, vol: E >= 2 ? 0.09 : 0.115 });
         // 베이스
-        if (e === 0) { ev.push({ s: base, inst: 'bass', midi: root - 12, len: 14, vol: 0.2 }); ev.push({ s: base + 8, inst: 'bass', midi: fifth - 12, len: 6, vol: 0.14 }); }
-        else {
-          const gallop = e >= 3;
-          for (let k = 0; k < 16; k += gallop ? 2 : 4) {
-            const m = (k % 8 === 4 || (gallop && k % 8 === 6)) ? (k % 8 === 6 ? fifth - 12 : root) : root - 12;
-            ev.push({ s: base + k, inst: 'bass', midi: m - (m === root ? 12 : 0), len: gallop ? 1.6 : 3.5, vol: 0.2 });
+        if (!intro) {
+          if (E === 0) { ev.push({ s: base, inst: 'bass', midi: root - 12, len: 14, vol: 0.2 }); ev.push({ s: base + 8, inst: 'bass', midi: fifth - 12, len: 6, vol: 0.14 }); }
+          else {
+            const gallop = E >= 3, pat = gallop ? [0, 0, 12, 0, 7, 0, 12, 0] : [0, 12, 0, 7, 0, 12, 0, 5];
+            for (let k = 0; k < 16; k += gallop ? 2 : 2) ev.push({ s: base + k, inst: 'bass', midi: root - 12 + pat[(k / 2) % 8], len: gallop ? 1.6 : 1.8, vol: 0.19 });
           }
         }
-        // 아르페지오/화음 (피아노·하프·플럭)
+        // 아르페지오/피아노
         if (I.arp) {
           const tones = [root, third, fifth, seventh, root + 12, third + 12];
-          const pat = e === 0 ? [0, 1, 2, 4, 2, 1, 2, 1] : [0, 2, 1, 3, 2, 4, 3, 5];
-          for (let k = 0; k < 16; k += 2) ev.push({ s: base + k, inst: I.arp, midi: tones[pat[(k / 2) % 8]] + 12, len: 2, vol: e >= 2 ? 0.1 : 0.13 });
+          const pat = intro || E === 0 ? [0, 1, 2, 4, 2, 1, 2, 1] : [0, 2, 1, 3, 2, 4, 3, 5];
+          for (let k = 0; k < 16; k += 2) ev.push({ s: base + k, inst: I.arp, midi: tones[pat[(k / 2) % 8]] + 12, len: 2, vol: E >= 2 ? 0.1 : 0.13 });
         }
-        // 리드 멜로디: 2마디 모티프를 코드톤에 맞춰 전개
-        const mm = mot[bar % 2];
-        const lead = (rep >= 1 && name !== 'C' && I.lead2 && bar % 2 === 0) ? I.lead2 : I.lead;
-        mm.forEach((n, i) => {
-          if (name === 'C' && i % 2 === 1) return;                   // 브리지: 성기게
-          cur += n.mv + (last && i === mm.length - 1 ? 0 : 0);
-          cur = Math.max(5 + hi, Math.min(15 + hi, cur));
-          if (n.s % 8 === 0) cur = nearestChordTone(cur, ch);
-          if (last && i === mm.length - 1) cur = nearestChordTone(cur, ch);
-          const nextS = i + 1 < mm.length ? mm[i + 1].s : 16;
-          const len = Math.min(8, nextS - n.s);
-          const midi = deg(cur);
-          ev.push({ s: base + n.s, inst: I.lead, midi, len: len * 0.95, vol: 0.2 });
-          // 2회차 이후: 3도 아래 하모니 (스트링/기타)
-          if (rep >= 1 && I.lead2) ev.push({ s: base + n.s, inst: I.lead2, midi: deg(cur - 2) - (I.lead2 === 'guitar' ? 12 : 0), len: len * 0.95, vol: I.lead2 === 'guitar' ? 0.11 : 0.1 });
-        });
-        // 스파클 (벨): 각 마디 첫 박 위 옥타브
-        if (I.spark && (bar % 2 === 0)) ev.push({ s: base, inst: I.spark, midi: deg(ch + 7 * 2 + 2), len: 8, vol: 0.09 });
-        // 기타 파워 코드(팜뮤트 8분)
-        if (I.gtr && e >= 2) for (let k = 0; k < 16; k += 2) { if (e === 2 && k % 4) continue; ev.push({ s: base + k, inst: 'guitar', midi: root - 12, len: 1.4, vol: 0.12 }); ev.push({ s: base + k, inst: 'guitar', midi: fifth - 12, len: 1.4, vol: 0.1 }); }
-        // 브라스 히트: 구간 첫 마디, 마디 마지막 8분
-        if (I.hit && e >= 2 && (bar === 0 || bar === 4)) for (const m of [root, third, fifth]) ev.push({ s: base, inst: I.hit, midi: m, len: 3, vol: 0.1 });
+        if (intro) { if (last) for (let k = 0; k < 16; k += 2) ev.push({ s: base + k, drum: k < 8 ? 'snare' : 'snare' }); step; }
+        // 리드: 모티프를 시퀀스로 전개 (마디마다 도수를 옮김)
+        if (!intro) {
+          const seq = [0, -1, 1, -2][bar % 4] + (rep > 0 && bar >= 4 ? 1 : 0);
+          const onsets = sec.cell.filter(s => s >= (bar % 2) * 16 && s < (bar % 2) * 16 + 16).map(s => s - (bar % 2) * 16);
+          const lead = letter === 'C' ? (I.spark ? I.lead : I.arp || I.lead) : I.lead;
+          onsets.forEach((o, i) => {
+            if (letter === 'C' && i % 2) return;
+            cur += sec.mv[(i + bar * 3) % 16] + (i === 0 ? seq : 0);
+            cur = Math.max(5 + sec.hi, Math.min(15 + sec.hi, cur));
+            if (o % 8 === 0) cur = nearest(cur, ch);
+            const nextS = i + 1 < onsets.length ? onsets[i + 1] : 16, len = Math.min(8, nextS - o);
+            // 마디 끝: 다음 코드로 연결하는 16분 런
+            if (phraseEnd && o >= 12 && !last) return;
+            ev.push({ s: base + o, inst: lead, midi: deg(cur, sh), len: len * 0.95, vol: 0.2 });
+            if (R() < 0.28 && o % 4 === 0) ev.push({ s: base + o - 1, inst: lead, midi: deg(cur + 1, sh), len: 1, vol: 0.09 });        // 장식음
+            if (rep >= 1 && I.lead2 && letter !== 'C') ev.push({ s: base + o, inst: I.lead2, midi: deg(cur - 2, sh) - (I.lead2 === 'guitar' ? 12 : 0), len: len * 0.95, vol: I.lead2 === 'guitar' ? 0.11 : 0.1 });
+            if (letter === 'B' && I.gtr) ev.push({ s: base + o, inst: 'guitar', midi: deg(cur, sh) - 12, len: len * 0.9, vol: 0.09 });
+          });
+          // 런: 마디 끝 3~4박을 16분음표로 하행/상행
+          if (phraseEnd) {
+            const up = last && R() < 0.5, from = cur + (up ? -3 : 4), n = last ? 8 : 4, start = last ? 8 : 12;
+            for (let k = 0; k < n; k++) { const d = up ? from + k : from - k; ev.push({ s: base + start + k * (last ? 1 : 1), inst: lead, midi: deg(k === n - 1 ? nearest(d, nx) : d, sh), len: 1.1, vol: 0.17 }); }
+            cur = nearest(cur, nx);
+          }
+        }
+        // 벨 스파클
+        if (I.spark && bar % 2 === 0) ev.push({ s: base, inst: I.spark, midi: deg(ch + 14 + 2, sh), len: 8, vol: 0.085 });
+        // 기타 팜뮤트
+        if (I.gtr && E >= 2 && !intro) for (let k = 0; k < 16; k += 2) { if (E === 2 && k % 4) continue; ev.push({ s: base + k, inst: 'guitar', midi: root - 12, len: 1.4, vol: 0.12 }); ev.push({ s: base + k, inst: 'guitar', midi: fifth - 12, len: 1.4, vol: 0.1 }); }
+        // 브라스 히트
+        if (I.hit && E >= 2 && !intro && (bar === 0 || bar === 4)) for (const m of [root, third, fifth]) ev.push({ s: base, inst: I.hit, midi: m, len: 3, vol: 0.1 });
+        if (I.hit && E >= 3 && !intro && bar % 4 === 2) for (const m of [root, fifth]) ev.push({ s: base + 6, inst: I.hit, midi: m, len: 2, vol: 0.09 });
         // 드럼
-        if (e >= 1) {
+        if (E >= 1) {
           for (let k = 0; k < 16; k++) {
-            if (e === 1) { if (k === 0 || k === 10) ev.push({ s: base + k, drum: 'kick' }); if (k === 8) ev.push({ s: base + k, drum: 'snare' }); if (k % 4 === 2) ev.push({ s: base + k, drum: 'hat' }); }
+            if (E === 1) { if (k === 0 || k === 10) ev.push({ s: base + k, drum: 'kick' }); if (k === 8) ev.push({ s: base + k, drum: 'snare' }); if (k % 4 === 2) ev.push({ s: base + k, drum: 'hat' }); }
             else {
-              if (k === 0 || k === 8 || (e === 3 && (k === 6 || k === 14 || k === 3))) ev.push({ s: base + k, drum: 'kick' });
+              if (k === 0 || k === 8 || (E === 3 && (k === 6 || k === 14 || k === 3))) ev.push({ s: base + k, drum: 'kick' });
               if (k === 4 || k === 12) ev.push({ s: base + k, drum: 'snare' });
               if (k % 2 === 0) ev.push({ s: base + k, drum: k === 14 ? 'ohat' : 'hat' });
-              if (e === 3 && k % 2 === 1 && k > 8) ev.push({ s: base + k, drum: 'hat' });
+              if (E === 3 && k % 2 === 1 && k > 8) ev.push({ s: base + k, drum: 'hat' });
             }
           }
-          if (last) for (let k = 12; k < 16; k++) ev.push({ s: base + k, drum: k % 2 ? 'snare' : 'tom' });   // 필인
-          if (bar === 0 && e >= 2) ev.push({ s: base, drum: 'crash' });
+          if (phraseEnd) for (let k = 12; k < 16; k++) ev.push({ s: base + k, drum: k % 2 ? 'snare' : 'tom' });
+          if (bar === 0 && E >= 2) ev.push({ s: base, drum: 'crash' });
         }
+        if (letter === 'C' && last) for (let k = 0; k < 16; k += k < 8 ? 2 : 1) ev.push({ s: base + k, drum: 'snare' });   // 브리지 끝 스네어 롤
       }
-      step += 128;
+      step += bars * 16;
     }
     return { ev, steps: step };
   }

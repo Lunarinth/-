@@ -99,20 +99,24 @@ const Sprites = (() => {
       g.nrect(Math.round(cx) - 2, ey + 8, 5, 3, '#7a2a3a'); g.nrect(Math.round(cx) - 1, ey + 9, 3, 1, '#d86a7a');
       return;
     }
+    const tw = (G.pose.tq || 0) % 2 === 0;                                   // 반짝임 깜빡이
     for (const side of [-1, 1]) {
-      const ex = Math.round(cx + side * 6.5 - 3);
-      g.nrect(ex, ey, 6, 7, '#ffffff');
+      const ex = Math.round(cx + side * 7.4 - 3.5);                              // 큰 눈: 폭 7, 높이 8
+      g.nrect(ex, ey, 7, 8, '#ffffff');
       const ir = ramp4(eye);
-      g.nrect(ex + 1, ey + 1, 4, 6, ir[2]); g.nrect(ex + 1, ey + 1, 4, 2, ir[3]); g.nrect(ex + 1, ey + 5, 4, 2, ir[1]);
-      g.nrect(ex + 2, ey + 2, 2, 3, '#1a1220');
-      g.nrect(ex + 1, ey + 1, 2, 2, '#ffffff'); g.dot(ex + 4, ey + 5, '#ffffff');
-      g.nrect(ex - 1, ey - 1, 8, 2, OUT);
-      g.dot(ex + (side < 0 ? -1 : 6), ey, OUT); g.dot(ex + (side < 0 ? -2 : 7), ey + 1, OUT);
-      g.nrect(ex, ey - 3, 6, 1, mix(o.brow || '#6a4a3a', '#000000', 0.1));
-      g.nrect(ex - 1, ey + 9, 3, 1, '#f4a8a8'); g.nrect(ex, ey + 10, 2, 1, '#f4a8a8');
+      g.nrect(ex + 1, ey + 1, 5, 7, ir[2]); g.nrect(ex + 1, ey + 1, 5, 2, ir[3]); g.nrect(ex + 1, ey + 5, 5, 2, ir[1]);
+      g.nrect(ex + 1, ey + 7, 5, 1, mix(eye, '#ffffff', 0.7));                    // 아래쪽 반사광 띠
+      g.nrect(ex + 2, ey + 2, 3, 4, '#1a1220');
+      g.nrect(ex + 1, ey + 1, 3, 2, '#ffffff');                                   // 큰 하이라이트
+      g.nrect(ex + 4, ey + 5, 2, 2, '#ffffff');                                   // 보조 하이라이트
+      g.dot(ex + 1, ey + 4, '#ffffff');
+      if (tw) { for (const [dx, dy] of [[5, -1], [4, 0], [6, 0], [5, 1]]) g.dot(ex + dx, ey + dy, '#fff2b0'); g.dot(ex + 5, ey, '#ffffff'); }   // 별빛
+      g.nrect(ex - 1, ey - 1, 9, 2, OUT);
+      g.dot(ex + (side < 0 ? -1 : 7), ey, OUT); g.dot(ex + (side < 0 ? -2 : 8), ey + 1, OUT);
+      g.nrect(ex, ey - 3, 7, 1, mix(o.brow || '#6a4a3a', '#000000', 0.1));
+      g.nrect(ex, ey + 9, 3, 1, '#f4a8a8'); g.nrect(ex + 1, ey + 10, 2, 1, '#f4a8a8');
     }
-    g.dot(Math.round(cx), ey + 8, skin[3]);
-    g.nrect(Math.round(cx) - 1, ey + 11, 3, 1, '#c85a6a'); g.dot(Math.round(cx), ey + 12, '#e88a96');
+    // 입과 코는 그리지 않는다 (눈 중심의 표정)
   }
 
   // ---------- 휴머노이드 리그 ----------
