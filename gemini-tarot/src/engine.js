@@ -153,6 +153,7 @@ function cureAlly(A,n){const w=Math.min(A.u.wound,n);if(w>0){A.u.wound-=w;UI.cur
 /* ---- 피해 ---- */
 async function hurtEnemy(e,amount,srcA,opt={}){
   if(e.dead)return 0;
+  if(e.st.evade>0&&amount>0&&!opt.pierce&&!opt.poison&&!opt.thorns){e.st.evade--;UI.float(e,'빗나감','sys');UI.status(e);await sleep(200);return 0}
   const absorbed=opt.pierce?0:Math.min(e.block,amount);e.block-=absorbed;
   const real=amount-absorbed;e.hp=Math.max(0,e.hp-real);
   UI.hitEnemy(e,amount,absorbed,real,opt);

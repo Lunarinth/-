@@ -357,3 +357,25 @@ body.targeting .unit:not(.tgtable){opacity:.55}
 .proj{position:fixed;z-index:256;pointer-events:none;font-size:34px;margin:-17px 0 0 -17px;filter:drop-shadow(0 0 10px #ffe45a)}
 .ring{position:fixed;z-index:256;pointer-events:none;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:3px solid #d9b8ff;box-shadow:0 0 30px #b98cff,inset 0 0 30px #b98cff;background:radial-gradient(circle,rgba(200,150,255,.45),transparent 70%)}
 .slash.gold{width:380px;margin-left:-190px;height:11px;background:linear-gradient(90deg,transparent,#fff 25%,#ffd27a 60%,transparent);box-shadow:0 0 24px #ffa43a,0 0 54px #ff7a00}
+
+/* ---- 안개에 먹힌 분신: 테마별 연출 ---- */
+.unit.enemy .fig canvas.main{position:relative}
+.sty-horror .fig{animation:hjit 3.1s steps(1) infinite !important}
+.sty-horror .fig canvas.main{filter:drop-shadow(0 0 18px rgba(190,0,24,.75)) contrast(1.12)}
+.sty-horror::before{content:"";position:absolute;inset:-10% -20%;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 55%,transparent 30%,rgba(60,0,8,.55) 100%);animation:hflick 2.2s steps(1) infinite}
+@keyframes hjit{0%,100%{transform:none}7%{transform:translate(-4px,0) skewX(2deg)}8%{transform:translate(5px,0) skewX(-3deg);filter:brightness(1.7)}9%{transform:none}51%{transform:translateX(2px)}52%{transform:translate(-6px,0) skewX(5deg) scaleY(1.03)}53%{transform:none}78%{transform:scale(1.02,.98)}79%{transform:none}}
+@keyframes hflick{0%,100%{opacity:1}6%{opacity:.2}8%{opacity:1}57%{opacity:.5}59%{opacity:1}}
+.sty-twist .fig{animation:twr 1.7s ease-in-out infinite !important}
+@keyframes twr{0%,100%{transform:scale(1,1) skewX(0)}30%{transform:scale(1.04,.96) skewX(3deg)}65%{transform:scale(.96,1.05) skewX(-3deg)}}
+.sty-over .fig{animation:slump 3.4s ease-in-out infinite !important;transform-origin:50% 100%}
+.sty-over .fig canvas.main{filter:drop-shadow(0 0 10px rgba(80,60,120,.6))}
+@keyframes slump{0%,100%{transform:rotate(-9deg) translateY(2%)}50%{transform:rotate(-11deg) translateY(4%)}}
+.sty-over .soul{opacity:.0;animation:soulrise 3.4s ease-in infinite}
+@keyframes soulrise{0%{opacity:0;transform:translateY(0)}30%{opacity:.4}100%{opacity:0;transform:translateY(-24%) scale(1.04)}}
+.sty-trick .fig{animation:trk 2.2s ease-in-out infinite !important}
+@keyframes trk{0%,100%{transform:rotate(5deg) translateY(0)}50%{transform:rotate(-5deg) translateY(-3%)}}
+.deco{position:absolute;pointer-events:none;font-size:calc(var(--uh)*.1);z-index:3;text-shadow:0 0 10px #000}
+.d-trick{left:50%;top:40%;animation:orbit 3.4s linear infinite;animation-delay:calc(var(--i)*-3.4s/var(--n))}
+@keyframes orbit{from{transform:rotate(0) translateX(calc(var(--uh)*.42)) rotate(0)}to{transform:rotate(360deg) translateX(calc(var(--uh)*.42)) rotate(-360deg)}}
+.d-over{left:calc(10% + var(--i)*30%);top:20%;animation:drift 3s ease-in-out infinite;animation-delay:calc(var(--i)*-1s)}
+@keyframes drift{0%,100%{transform:translateY(0) rotate(-12deg)}50%{transform:translateY(-14%) rotate(14deg)}}

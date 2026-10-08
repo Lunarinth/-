@@ -7,7 +7,7 @@ async function boot(){
   const base=await loadImg(IMG_B64);
   document.documentElement.style.setProperty('--img',`url(${base.url})`);
   const chs={};for(const k in CHAR_B64)chs[k]=(await loadImg(CHAR_B64[k])).img;
-  buildSprites(base.img);buildChars(chs);
+  buildSprites(base.img);buildChars(chs);buildVariants();
   await buildHeroes();
   initStars();resize();requestAnimationFrame(loop);
   $('#loading').style.display='none';

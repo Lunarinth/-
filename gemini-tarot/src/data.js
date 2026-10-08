@@ -99,7 +99,7 @@ const STARTERS={};for(const k in CH)STARTERS[k]=CH[k].basics;
 const SKILL_POOL=Object.values(CARD).filter(c=>['c','u','r'].includes(c.rar));
 
 /* ---- 카드 설명문 자동 생성 ---- */
-const STN={str:'힘',weak:'약화',vuln:'취약',poison:'독',regen:'재생',taunt:'도발',thorns:'가시',stun:'기절'};
+const STN={str:'힘',weak:'약화',vuln:'취약',poison:'독',regen:'재생',taunt:'도발',thorns:'가시',stun:'기절',evade:'회피'};
 function stTxt(st){return Object.entries(st).map(([k,v])=>`${STN[k]}${k==='taunt'||k==='stun'?'':' '+v}`).join('·')}
 function fxText(f,t){
   const p=[];
@@ -204,7 +204,7 @@ const EN={
   mask:{n:'장미 가면',spr:{kind:'head',pal:'maid',scale:.85},hp:38,pat:[{curse:2,name:'꽃가루'},A(10),A(4,1,{st:{vuln:2},name:'매혹'})]},
   crimson:{n:'붉은 분신',elite:1,spr:{kind:'figure',pal:'maid',scale:1.02,flip:1},hp:108,
     pat:[A(13),A(5,3),D(12,{sst:{str:2},name:'맹세'}),{curse:2,st:{weak:1},atk:6,name:'붉은 안개'}]},
-  gardener:{n:'가시의 정원사',boss:1,spr:{kind:'orn',color:'#5a1030',scale:1.9,pal2:'ghost'},hp:172,
+  gardener:{n:'뒤틀린 정원사',boss:1,spr:{kind:'ch',key:'sol_twist',frames:6,sty:'twist',scale:1.1},hp:172,
     pat:[A(12),{aoeSt:{poison:2},name:'독 안개',atk:4,all:1},A(6,3),D(14,{summon:'vine',name:'덩굴 소환'})],
     ph2:{at:.5,pat:[A(17),{aoeSt:{poison:3},name:'만개',atk:6,all:1},A(8,3),{heal:15,name:'재생'},A(10,1,{all:1,name:'가시 폭풍'})],str:1}},
   hourhand:{n:'시침',spr:{kind:'wand',pal:'ghost',scale:1.35,filter:'grayscale(1) brightness(1.3)'},hp:51,pat:[A(14),D(10,{atk:4}),A(7,2)]},
@@ -216,11 +216,25 @@ const EN={
   finalmirror:{n:'역상의 벨리스',boss:1,spr:{kind:'figure',pal:'belis_inv',scale:1.1},hp:235,
     pat:[A(14),{atk:5,hits:3,all:1,name:'역방향 박자'},{curse:3,name:'안개 지휘'},D(16,{sst:{str:2},name:'정지의 박자'}),{atk:11,all:1,name:'열두 번째 종',st:{weak:1}}],
     ph2:{at:.5,pat:[A(19),{atk:7,hits:3,all:1,name:'역방향 박자'},{summon:'hourhand',name:'시침 소환'},{atk:14,all:1,name:'열세 번째 종',st:{vuln:2}},{curse:4,atk:10,name:'정지된 야회'},D(20,{sst:{str:3}})],str:3}}
+  ,trickster:{n:'트릭스터 벨리스',spr:{kind:'ch',key:'belis_trick',sty:'trick',scale:.92,after:[{dx:-16,f:'hue-rotate(150deg)'},{dx:16,f:'hue-rotate(-70deg)'}],deco:['♠','♥','♦','♣']},hp:34,
+    pat:[{sst:{evade:1},name:'바꿔치기'},A(8,1,{name:'깜짝 상자'}),{curse:1,name:'조커 카드'},A(4,2,{name:'장난'}),A(5,1,{st:{vuln:1},name:'놀림'})]},
+  jester:{n:'광대 왕 벨리스',elite:1,spr:{kind:'ch',key:'belis_trick',sty:'trick',scale:1.08,after:[{dx:-20,f:'hue-rotate(150deg)'},{dx:20,f:'hue-rotate(-70deg)'}],deco:['♠','♥','♦','♣','🃏']},hp:112,
+    pat:[{sst:{evade:1},def:8,name:'바꿔치기'},A(11),{curse:2,atk:4,name:'조커 폭죽'},A(5,3,{name:'저글링'}),A(7,1,{all:1,st:{weak:1},name:'박수갈채'})]},
+  twistedsol:{n:'뒤틀린 솔',spr:{kind:'ch',key:'sol_twist',frames:6,sty:'twist',scale:1.0},hp:52,
+    pat:[A(5,1,{st:{poison:3},name:'썩은 레몬'}),{heal:12,def:6,name:'일그러짐'},A(11,1,{name:'신맛 폭발'}),{aoeSt:{poison:2},atk:4,all:1,name:'산성 안개'}]},
+  overworked:{n:'과로한 옵서',spr:{kind:'ch',key:'obser_over',sty:'over',scale:.95,deco:['📄','☕','💤']},hp:46,
+    pat:[A(12,1,{name:'마지막 힘'}),{sst:{vuln:2},name:'졸도'},A(5,3,{name:'야근 사격'}),{sst:{str:2},name:'야근 수당'}]},
+  stalker:{n:'문 뒤의 클레르',elite:1,spr:{kind:'ch',key:'claire_horror',sty:'horror',scale:1.04,after:[{dx:10,f:'brightness(.4) sepia(1) hue-rotate(-40deg) saturate(5)'}]},hp:104,
+    pat:[D(10,{name:'숨죽임'}),A(15,1,{name:'등 뒤에서'}),{atk:6,all:1,st:{weak:1},name:'비명'},A(7,2,{name:'문을 두드림'}),A(9,1,{st:{stun:1},name:'눈이 마주침'})]},
+  stalkerS:{n:'문 뒤의 클레르',spr:{kind:'ch',key:'claire_horror',sty:'horror',scale:.92},hp:60,
+    pat:[D(8,{name:'숨죽임'}),A(13,1,{name:'등 뒤에서'}),A(6,2),A(6,1,{st:{stun:1},name:'눈이 마주침'})]},
+  doorknock:{n:'문을 두드리는 클레르',elite:1,spr:{kind:'ch',key:'claire_horror',sty:'horror',scale:1.12,after:[{dx:12,f:'brightness(.4) sepia(1) hue-rotate(-40deg) saturate(5)'}]},hp:150,
+    pat:[A(15),{atk:7,all:1,st:{stun:1},name:'비명'},D(14,{sst:{str:3},name:'문 너머'}),A(6,3,{name:'두드림'}),A(20,1,{name:'등 뒤에서'})]}
 };
 const ENC={
-  1:{normal:[['mirror'],['eye','eye'],['mirror','eye'],['wand','wand'],['shoes','eye'],['mirror','wand'],['eye','eye','eye']],elite:[['twisted']],boss:['blindeye']},
-  2:{normal:[['vine','vine'],['ghost'],['hand','vine'],['mask','hand'],['ghost','mask'],['vine','hand','hand'],['mask','vine']],elite:[['crimson']],boss:['gardener']},
-  3:{normal:[['hourhand'],['bat','moment'],['second','hourhand'],['moment','moment'],['bat','bat'],['second','moment'],['hourhand','hourhand','moment']],elite:[['bellkeeper']],boss:['finalmirror']}
+  1:{normal:[['trickster'],['eye','eye'],['trickster','eye'],['wand','wand'],['shoes','eye'],['trickster','wand'],['eye','eye','eye']],elite:[['stalker']],boss:['blindeye']},
+  2:{normal:[['vine','vine'],['twistedsol'],['hand','vine'],['overworked','hand'],['twistedsol','overworked'],['vine','hand','hand'],['overworked','vine']],elite:[['jester']],boss:['gardener']},
+  3:{normal:[['hourhand'],['overworked','stalkerS'],['trickster','hourhand'],['stalkerS','stalkerS'],['bat','bat'],['twistedsol','stalkerS'],['hourhand','hourhand','overworked']],elite:[['doorknock']],boss:['finalmirror']}
 };
 const ACTS=[
   {n:'거울 회랑',sub:'모든 거울이 같은 얼굴을 하고 있다',scene:'map1',battle:'battle1',boss:'boss1',colors:{a:'#d64fa0',b:'#7b45d6',c:'#ffd27a'}},
@@ -233,7 +247,7 @@ const SPK={
   belis:{n:'벨리스',pal:'belis',color:'#c89bff'},obser:{n:'옵서',pal:'obser',color:'#9fc0ff'},
   claire:{n:'클레르',pal:'claire',color:'#ffa43a'},sol:{n:'솔',pal:'sol',color:'#ffd93d'},
   mirror:{n:'거울 속의 벨리스',pal:'belis_inv',color:'#b8c8ff'},eye:{n:'눈먼 거울',pal:'mirror',color:'#b8c8ff',kind:'eye'},
-  gard:{n:'정원사',pal:'ghost',color:'#e08aa0'},master:{n:'주인님',pal:null,color:'#ffe29a'},narr:{n:'',pal:null,color:'#c9b8e0'},
+  gard:{n:'뒤틀린 정원사',pal:'sol_twist',color:'#a8e05a'},master:{n:'주인님',pal:null,color:'#ffe29a'},narr:{n:'',pal:null,color:'#c9b8e0'},
   twin:{n:'역상의 벨리스',pal:'belis_inv',color:'#b8c8ff'}
 };
 const STORY={
@@ -290,7 +304,7 @@ const STORY={
   ],
   boss2_pre:[
     {w:'gard',t:'어서 오세요. 보세요, 모두 영원히 피어 있답니다. 시들지 않는 야회, 아름답지 않나요?'},
-    {w:'sol',t:'정원사 어르신……. 그 모습은 어르신 본래 모습이 아니에요.'},
+    {w:'sol',t:'……그 모습, 어르신이 아니에요. 저예요. 안개가 제 얼굴을 거울에 비춰서, 시들지 못하게 비틀어 놓은 거예요.'},
     {w:'gard',t:'마님께서 그렇게 바라셨어요. 이 야회가 끝나지 않기를. 저는 그 바람을 가꿀 뿐입니다.'},
     {w:'belis',t:'……마님이라 하셨습니까.'},
   ],

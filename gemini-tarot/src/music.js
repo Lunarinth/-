@@ -8,9 +8,7 @@ const Mus=(()=>{
   const deg=(sc,key,d)=>key+SC[sc][((d%7)+7)%7]+12*Math.floor(d/7);
   const rand=seed=>{let s=seed>>>0||1;return()=>{s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296}};
 
-  function init(){
-    if(ac)return true;
-    try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return false}
+  function buildGraph(){
     comp=ac.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;comp.attack.value=.01;comp.release.value=.3;
     master=ac.createGain();master.gain.value=muted?0:1;master.connect(comp);comp.connect(ac.destination);
     musicBus=ac.createGain();musicBus.gain.value=musVol;musicBus.connect(master);
@@ -20,7 +18,12 @@ const Mus=(()=>{
     for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++){const t=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-t,2.6)*(1-.55*t)}}
     const cv=ac.createConvolver();cv.buffer=ir;revIn=ac.createGain();revIn.gain.value=.55;revIn.connect(cv);
     const rg=ac.createGain();rg.gain.value=.8;cv.connect(rg);rg.connect(master);
-        noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  }
+  function init(){
+    if(ac)return true;
+    try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return false}
+    buildGraph();
     return true;
   }
   /* 파이프 오르간: 배음 합성 파형 + 서브 옥타브 */
@@ -247,9 +250,7 @@ const Mus=(()=>{
     die(){tone(180,.8,'sawtooth',.1,.3);noise(.5,.12)},
     open(){tone(300,.4,'sine',.08,1.6)}
   };
-  function jingle(kind){
-    if(!ac||muted)return;
-    const t=ac.currentTime+.05,old=musicBus;
+  function playJingle(kind,t){
     if(kind==='win'){
       [[0,62],[.18,66],[.36,69],[.54,74]].forEach(([d,n])=>{I.organ(t+d,mtof(n),1.6-d,.09,musicBus);I.bell(t+d,mtof(n+12),.06,2.4)});
       [50,57,62,66].forEach(n=>I.choir(t,mtof(n),2.2,.04));I.timp(t,.5,70);
@@ -262,8 +263,34 @@ const Mus=(()=>{
       for(let i=0;i<12;i++)I.tick(t+i*.18,.1,i%2===0);
     }
   }
+  function jingle(kind){if(!ac||muted)return;playJingle(kind,ac.currentTime+.05)}
+  /* ---- 파일 내보내기: 오프라인으로 곡을 렌더링한다 ---- */
+  async function renderOffline(build,sec){
+    const saved={ac,master,comp,musicBus,sfxBus,revIn,noiseBuf,organWave,state,sceneGain};
+    try{
+      ac=new OfflineAudioContext(2,Math.ceil(44100*sec),44100);organWave=null;buildGraph();
+      build();
+      return await ac.startRendering();
+    }finally{({ac,master,comp,musicBus,sfxBus,revIn,noiseBuf,organWave,state,sceneGain}=saved)}
+  }
+  function sceneBars(id,minSec){
+    const s=SCENES[id],beat=s.steps===12?3:4,barDur=60/s.bpm*beat;
+    const unit=8;const bars=unit*Math.max(1,Math.ceil(minSec/(barDur*unit)));
+    return{bars,barDur,sec:bars*barDur};
+  }
+  async function renderScene(id,minSec=60,tail=3.5){
+    const s=SCENES[id],info=sceneBars(id,minSec),sec=info.sec+tail;
+    const buf=await renderOffline(()=>{
+      sceneGain=ac.createGain();sceneGain.connect(musicBus);
+      const st={s,bar:0,step:0,t:0,mel:makeMelody(s.mode,s),gain:sceneGain,R:rand(s.seed)};
+      const sd=60/s.bpm/(s.steps===12?3:4);
+      while(st.t<info.sec-1e-6){scheduleStep(st);st.t+=sd;st.step++;if(st.step>=s.steps){st.step=0;st.bar++}}
+    },sec);
+    return{buf,info};
+  }
+  async function renderJingle(kind,sec=9){return renderOffline(()=>playJingle(kind,.05),sec)}
   return{
-    init,play:startScene,jingle,sfx:n=>{try{SFX[n]&&SFX[n]()}catch(e){}},
+    init,play:startScene,jingle,renderScene,renderJingle,sceneIds:()=>Object.keys(SCENES),sfx:n=>{try{SFX[n]&&SFX[n]()}catch(e){}},
     get scene(){return sceneId},
     stop(){if(sceneGain){const g=sceneGain,t=ac.currentTime;g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.6)}sceneId=null;state=null},
     setMuted(m){muted=m;if(master)master.gain.value=m?0:1},get muted(){return muted},

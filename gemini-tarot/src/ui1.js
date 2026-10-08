@@ -89,8 +89,8 @@ document.addEventListener('mousemove',e=>{
 });
 
 /* ---- 상태 아이콘 ---- */
-const STINFO={str:'힘: 공격 피해가 증가한다',weak:'약화: 주는 피해 25% 감소 (턴이 지나면 줄어든다)',vuln:'취약: 받는 피해 50% 증가',poison:'독: 턴 시작 시 피해를 입고 1 감소',regen:'재생: 턴 시작 시 HP 3 회복',taunt:'도발: 적의 단일 공격이 이 유닛에게 집중된다',thorns:'가시: 공격받으면 반격 피해',stun:'기절: 다음 턴 행동할 수 없다'};
-const BUFFK=['str','regen','taunt','thorns'];
+const STINFO={evade:'회피: 다음 공격 한 번을 완전히 피한다',str:'힘: 공격 피해가 증가한다',weak:'약화: 주는 피해 25% 감소 (턴이 지나면 줄어든다)',vuln:'취약: 받는 피해 50% 증가',poison:'독: 턴 시작 시 피해를 입고 1 감소',regen:'재생: 턴 시작 시 HP 3 회복',taunt:'도발: 적의 단일 공격이 이 유닛에게 집중된다',thorns:'가시: 공격받으면 반격 피해',stun:'기절: 다음 턴 행동할 수 없다'};
+const BUFFK=['str','regen','taunt','thorns','evade'];
 function statHtml(X,isAlly){
   return Object.entries(X.st).filter(([k,v])=>v>0).map(([k,v])=>{
     const good=BUFFK.includes(k)===isAlly;
@@ -99,7 +99,7 @@ function statHtml(X,isAlly){
 }
 
 /* ================= 유닛 요소 ================= */
-const KIND_H={figure:1,eye:.4,wand:.64,shoes:.28,skirt:.58,hand:.36,cape:.72,head:.5,orn:.74};
+const KIND_H={ch:1,figure:1,eye:.4,wand:.64,shoes:.28,skirt:.58,hand:.36,cape:.72,head:.5,orn:.74};
 function makeAllyFig(u){
   const fig=el('div','fig');
   if(CH_SPR[u.pal]){const cv=cloneCanvas(CH_SPR[u.pal]);cv.className='body';fig.appendChild(cv);fig.style.aspectRatio=`${cv.width}/${cv.height}`;return fig}
@@ -121,17 +121,33 @@ function buildAlly(a){
   a.el=root;return root;
 }
 function buildEnemy(e){
-  const sp=e.def.spr,root=el('div','unit enemy'+(e.boss?' bossu':'')+` k-${sp.kind}`);root.dataset.key=e.key;
+  const sp=e.def.spr,root=el('div','unit enemy'+(e.boss?' bossu':'')+` k-${sp.kind}`+(sp.sty?' sty-'+sp.sty:''));root.dataset.key=e.key;
   root.innerHTML=`<div class="intent"></div><div class="blk"></div><div class="uname">${e.n}${e.boss?' <small>BOSS</small>':e.elite?' <small>ELITE</small>':''}</div>`;
   const fig=el('div','fig');
-  const cv=cloneCanvas(enemyCanvas(sp));
-  fig.style.height=`calc(var(--uh)*${(KIND_H[sp.kind]||1)*(sp.scale||1)})`;
+  const src=enemyCanvas(sp),cv=cloneCanvas(src);cv.className='main';
+  fig.style.height=`calc(var(--uh)*var(--es,1)*${(KIND_H[sp.kind]||1)*(sp.scale||1)})`;
   fig.style.aspectRatio=`${cv.width}/${cv.height}`;
+  const flip=(sp.kind==='figure'||sp.kind==='ch')?'scaleX(-1) ':'';
   if(sp.filter)cv.style.filter=sp.filter+' drop-shadow(0 0 12px rgba(0,0,0,.7))';
-  if(sp.kind==='figure')cv.style.transform='scaleX(-1)';
-  fig.appendChild(cv);root.appendChild(fig);
-  const idle=sp.kind==='eye'?`pulseEye ${2+Math.random()}s ease-in-out infinite`:sp.kind==='wand'?`sway ${2.4+Math.random()}s ease-in-out infinite`:`float ${3.8+Math.random()*1.2}s ease-in-out ${Math.random()*2}s infinite`;
-  fig.style.animation=idle;
+  if(flip)cv.style.transform='scaleX(-1)';
+  /* 잔상(분신술) */
+  for(const a of(sp.after||[])){const g=cloneCanvas(src);g.className='after';g.style.cssText=`transform:${flip}translateX(${a.dx}%);filter:${a.f};opacity:.38;position:absolute;inset:0;mix-blend-mode:screen`;fig.appendChild(g)}
+  fig.appendChild(cv);
+  /* 뒤틀림: 프레임을 돌려 가며 끓어오르는 느낌 */
+  if(sp.frames){
+    const fr=[];for(let i=0;i<sp.frames;i++)fr.push(variantCanvas(sp.key.split('_')[0],'twist',i));
+    let k=0;const ctx=cv.getContext('2d');
+    const iv=setInterval(()=>{if(!cv.isConnected&&k>3){clearInterval(iv);return}k=(k+1)%fr.length;ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(fr[k],0,0)},110);
+  }
+  /* 과로사: 몸에서 빠져나가는 영혼 */
+  if(sp.sty==='over'){const s=cloneCanvas(src);s.className='soul';s.style.cssText=`position:absolute;inset:0;transform:${flip};filter:brightness(3) saturate(0) blur(1px);`;fig.insertBefore(s,cv)}
+  root.appendChild(fig);
+  /* 떠다니는 장식 */
+  (sp.deco||[]).forEach((d,i)=>{const n=el('div','deco d-'+sp.sty,d);n.style.setProperty('--i',i);n.style.setProperty('--n',sp.deco.length);fig.appendChild(n)});
+  if(!sp.sty){
+    const idle=sp.kind==='eye'?`pulseEye ${2+Math.random()}s ease-in-out infinite`:sp.kind==='wand'?`sway ${2.4+Math.random()}s ease-in-out infinite`:`float ${3.8+Math.random()*1.2}s ease-in-out ${Math.random()*2}s infinite`;
+    fig.style.animation=idle;
+  }
   root.appendChild(el('div','hpb','<i class="g"></i><i class="h"></i><span></span>'));
   root.appendChild(el('div','stat'));
   root.addEventListener('click',()=>onUnitClick(e));
@@ -211,6 +227,7 @@ async function onUnitClick(X){
 function setupBattleUI(){
   const al=$('#allies'),en=$('#enemies');al.innerHTML='';en.innerHTML='';
   for(const a of B.allies)al.appendChild(buildAlly(a));
+  en.style.setProperty('--es',B.enemies.length>=3?.72:B.enemies.length===2?.9:1);
   for(const e of B.enemies)en.appendChild(buildEnemy(e));
   B.allies.concat(B.enemies).forEach(renderUnit);
   setDial();

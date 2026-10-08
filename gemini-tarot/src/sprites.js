@@ -160,7 +160,7 @@ function buildChars(imgs){
 /* 상반신·얼굴 크롭 (반전 후 좌표, 비율) */
 const CH_BUST={belis:[.02,0,.54,.46],obser:[0,0,.6,.46],sol:[.1,0,.7,.46],claire:[.04,0,.76,.43]};
 const CH_FACE={belis:[.04,.0,.52],obser:[.0,.0,.58],sol:[.08,.0,.56],claire:[.06,.0,.62]};
-function chBase(k){return k==='belis_inv'?'belis':k}
+function chBase(k){return String(k).split('_')[0]}
 /* 지휘봉까지 합친 전신 */
 function fullFigure(pal){
   if(CH_SPR[pal])return CH_SPR[pal];
@@ -195,11 +195,12 @@ function iconCanvas(pal){
 }
 /* 적 스프라이트 명세 → 캔버스 */
 function enemyCanvas(spec){
-  const pal=spec.pal||'gemini',k='en|'+spec.kind+'|'+pal+'|'+(spec.color||'');
+  const pal=spec.pal||'gemini',k='en|'+spec.kind+'|'+pal+'|'+(spec.color||'')+'|'+(spec.key||'');
   if(_cache[k])return _cache[k];
   let c;
   switch(spec.kind){
     case'figure':c=fullFigure(pal);break;
+    case'ch':c=spec.frames?variantCanvas(spec.key.split('_')[0],'twist',0):CH_SPR[spec.key];break;
     case'eye':c=SP.eye;break;
     case'wand':c=paletteWand(pal);break;
     case'shoes':c=paint(SP.shoes,pal,'shoes');break;
@@ -215,3 +216,62 @@ function enemyCanvas(spec){
   return(_cache[k]=c);
 }
 function cloneCanvas(src){const o=mkc(src.width,src.height);o.getContext('2d').drawImage(src,0,0);return o}
+
+/* ================= 안개에 먹힌 분신: 4장의 일러스트를 변형해 적 스프라이트로 ================= */
+function mapPix(src,fn){
+  const o=mkc(src.width,src.height),c=o.getContext('2d',{willReadFrequently:true});c.drawImage(src,0,0);
+  const id=c.getImageData(0,0,o.width,o.height),d=id.data,W=o.width;
+  for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const p=i>>2,r=fn(d[i],d[i+1],d[i+2],p%W,(p/W)|0);if(r){d[i]=r[0];d[i+1]=r[1];d[i+2]=r[2]}}
+  c.putImageData(id,0,0);return o;
+}
+const EYEPOS={claire:[[.335,.215],[.46,.21]],obser:[[.33,.325],[.46,.33]],sol:[[.345,.285],[.47,.28]],belis:[[.255,.205],[.37,.21]]};
+function dripEyes(c,w,h,pts,col,len){
+  for(const [fx,fy] of pts){
+    const x=fx*w,y=fy*h,g=c.createLinearGradient(x,y,x,y+len*h);g.addColorStop(0,col);g.addColorStop(1,'rgba(90,0,10,0)');
+    c.fillStyle=g;c.beginPath();c.moveTo(x-3,y);c.lineTo(x+3,y);c.lineTo(x+1.5,y+len*h);c.lineTo(x-1.5,y+len*h);c.fill();
+    c.beginPath();c.arc(x,y+len*h*.92,3.4,0,6.3);c.fillStyle='#7a0010';c.fill();
+  }
+}
+function variantCanvas(ch,style,frame=0){
+  const k='var|'+ch+'|'+style+'|'+frame;if(_cache[k])return _cache[k];
+  const base=CH_SPR[ch],W=base.width,H=base.height;let o;
+  if(style==='horror'){
+    /* 클레르: 창백한 회청색 + 녹슨 붉은 금속, 검게 빈 눈, 흘러내리는 피 */
+    o=mapPix(base,(r,g,b,x,y)=>{
+      const [hh,ss,vv]=rgb2hsv(r,g,b),l=.3*r+.59*g+.11*b;
+      const amber=hh>12&&hh<55&&ss>.5&&vv>.55;
+      if(amber){const eye=y>H*.17&&y<H*.28&&x>W*.25&&x<W*.58;return eye?[8,0,0]:[Math.min(255,vv*150+20),vv*18,vv*20]}
+      const m=.72;return[l*.9+(r-l)*(1-m)*.4,l*.92+(g-l)*(1-m)*.4,l*1.06+(b-l)*(1-m)*.4].map(v=>Math.max(0,Math.min(255,v*.86)));
+    });
+    const c=o.getContext('2d');c.save();c.globalCompositeOperation='source-atop';
+    for(const [fx,fy] of EYEPOS.claire){const x=fx*W,y=fy*H,rg=c.createRadialGradient(x,y,0,x,y,W*.05);rg.addColorStop(0,'rgba(255,40,40,.95)');rg.addColorStop(.25,'rgba(120,0,0,.85)');rg.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=rg;c.fillRect(x-W*.06,y-W*.06,W*.12,W*.12)}
+    dripEyes(c,W,H,EYEPOS.claire,'rgba(150,0,16,.95)',.11);
+    let sd=11;const R=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
+    for(let i=0;i<26;i++){const x=W*(.1+.8*R()),y=H*(.34+.58*R()),rr=W*(.012+.03*R());c.fillStyle=`rgba(${100+R()*50|0},0,${R()*14|0},${.5+R()*.4})`;c.beginPath();c.ellipse(x,y,rr,rr*(1+R()*1.6),R()*3,0,6.3);c.fill()}
+    c.restore();
+  }else if(style==='twist'){
+    /* 솔: 산성 녹색으로 썩은 색, 줄마다 어긋나는 물결 왜곡 (프레임마다 위상이 다르다) */
+    const col=mapPix(base,(r,g,b)=>{const [hh,ss,vv]=rgb2hsv(r,g,b);if(ss>.35&&hh>20&&hh<70){const [nr,ng,nb]=hsv2rgb(hh+62,Math.min(1,ss*1.1),vv*.9);return[nr,ng,nb]}if(ss<.2&&vv>.8)return[r*.86,g*.97,b*.8];return null});
+    o=mkc(W*1.25,H);const c=o.getContext('2d'),ph=frame*1.05,amp=W*.045;
+    c.globalAlpha=.32;c.save();c.translate(W*.1,0);c.drawImage(col,W*.08,0,W,H);c.restore();c.globalAlpha=1;
+    for(let y=0;y<H;y++){const t=y/H,dx=Math.sin(y*.05+ph)*amp*(.4+t)+Math.sin(y*.013-ph*.7)*amp*.8;c.drawImage(col,0,y,W,1,W*.12+dx,y,W,1)}
+  }else if(style==='overwork'){
+    /* 옵서: 핏기 없는 회녹색, 짙은 다크서클 */
+    o=mapPix(base,(r,g,b)=>{const l=.3*r+.59*g+.11*b;return[l*.86+(r-l)*.3,l*.94+(g-l)*.3,l*.88+(b-l)*.3].map(v=>Math.max(0,Math.min(255,v*.9)))});
+    const c=o.getContext('2d');c.save();c.globalCompositeOperation='source-atop';
+    for(const [fx,fy] of EYEPOS.obser){const x=fx*W,y=fy*H+H*.02,rg=c.createRadialGradient(x,y,0,x,y,W*.045);rg.addColorStop(0,'rgba(60,30,90,.85)');rg.addColorStop(1,'rgba(60,30,90,0)');c.fillStyle=rg;c.beginPath();c.ellipse(x,y,W*.05,W*.028,0,0,6.3);c.fill()}
+    c.restore();
+  }else{ /* trick: 벨리스를 반쪽씩 다른 색으로 (어릿광대) */
+    const alt=tint(base,150,1.1,1.05),cut=mkc(W,H),x=cut.getContext('2d');
+    o=mkc(W,H);const c=o.getContext('2d');c.drawImage(base,0,0);
+    x.drawImage(alt,0,0);x.globalCompositeOperation='destination-in';x.fillStyle='#000';x.beginPath();x.moveTo(0,0);x.lineTo(W*.52,0);x.lineTo(W*.42,H);x.lineTo(0,H);x.fill();
+    c.drawImage(cut,0,0);
+  }
+  return(_cache[k]=o);
+}
+function buildVariants(){
+  CH_SPR.claire_horror=variantCanvas('claire','horror');
+  CH_SPR.sol_twist=variantCanvas('sol','twist',0);
+  CH_SPR.obser_over=variantCanvas('obser','overwork');
+  CH_SPR.belis_trick=variantCanvas('belis','trick');
+}

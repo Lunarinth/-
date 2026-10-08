@@ -365,6 +365,28 @@ body.targeting .unit:not(.tgtable){opacity:.55}
 .ring{position:fixed;z-index:256;pointer-events:none;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:3px solid #d9b8ff;box-shadow:0 0 30px #b98cff,inset 0 0 30px #b98cff;background:radial-gradient(circle,rgba(200,150,255,.45),transparent 70%)}
 .slash.gold{width:380px;margin-left:-190px;height:11px;background:linear-gradient(90deg,transparent,#fff 25%,#ffd27a 60%,transparent);box-shadow:0 0 24px #ffa43a,0 0 54px #ff7a00}
 
+/* ---- 안개에 먹힌 분신: 테마별 연출 ---- */
+.unit.enemy .fig canvas.main{position:relative}
+.sty-horror .fig{animation:hjit 3.1s steps(1) infinite !important}
+.sty-horror .fig canvas.main{filter:drop-shadow(0 0 18px rgba(190,0,24,.75)) contrast(1.12)}
+.sty-horror::before{content:"";position:absolute;inset:-10% -20%;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 55%,transparent 30%,rgba(60,0,8,.55) 100%);animation:hflick 2.2s steps(1) infinite}
+@keyframes hjit{0%,100%{transform:none}7%{transform:translate(-4px,0) skewX(2deg)}8%{transform:translate(5px,0) skewX(-3deg);filter:brightness(1.7)}9%{transform:none}51%{transform:translateX(2px)}52%{transform:translate(-6px,0) skewX(5deg) scaleY(1.03)}53%{transform:none}78%{transform:scale(1.02,.98)}79%{transform:none}}
+@keyframes hflick{0%,100%{opacity:1}6%{opacity:.2}8%{opacity:1}57%{opacity:.5}59%{opacity:1}}
+.sty-twist .fig{animation:twr 1.7s ease-in-out infinite !important}
+@keyframes twr{0%,100%{transform:scale(1,1) skewX(0)}30%{transform:scale(1.04,.96) skewX(3deg)}65%{transform:scale(.96,1.05) skewX(-3deg)}}
+.sty-over .fig{animation:slump 3.4s ease-in-out infinite !important;transform-origin:50% 100%}
+.sty-over .fig canvas.main{filter:drop-shadow(0 0 10px rgba(80,60,120,.6))}
+@keyframes slump{0%,100%{transform:rotate(-9deg) translateY(2%)}50%{transform:rotate(-11deg) translateY(4%)}}
+.sty-over .soul{opacity:.0;animation:soulrise 3.4s ease-in infinite}
+@keyframes soulrise{0%{opacity:0;transform:translateY(0)}30%{opacity:.4}100%{opacity:0;transform:translateY(-24%) scale(1.04)}}
+.sty-trick .fig{animation:trk 2.2s ease-in-out infinite !important}
+@keyframes trk{0%,100%{transform:rotate(5deg) translateY(0)}50%{transform:rotate(-5deg) translateY(-3%)}}
+.deco{position:absolute;pointer-events:none;font-size:calc(var(--uh)*.1);z-index:3;text-shadow:0 0 10px #000}
+.d-trick{left:50%;top:40%;animation:orbit 3.4s linear infinite;animation-delay:calc(var(--i)*-3.4s/var(--n))}
+@keyframes orbit{from{transform:rotate(0) translateX(calc(var(--uh)*.42)) rotate(0)}to{transform:rotate(360deg) translateX(calc(var(--uh)*.42)) rotate(-360deg)}}
+.d-over{left:calc(10% + var(--i)*30%);top:20%;animation:drift 3s ease-in-out infinite;animation-delay:calc(var(--i)*-1s)}
+@keyframes drift{0%,100%{transform:translateY(0) rotate(-12deg)}50%{transform:translateY(-14%) rotate(14deg)}}
+
 </style></head><body>
 <canvas id="bg"></canvas>
 <div class="vig"></div>
@@ -635,7 +657,7 @@ function buildChars(imgs){
 /* 상반신·얼굴 크롭 (반전 후 좌표, 비율) */
 const CH_BUST={belis:[.02,0,.54,.46],obser:[0,0,.6,.46],sol:[.1,0,.7,.46],claire:[.04,0,.76,.43]};
 const CH_FACE={belis:[.04,.0,.52],obser:[.0,.0,.58],sol:[.08,.0,.56],claire:[.06,.0,.62]};
-function chBase(k){return k==='belis_inv'?'belis':k}
+function chBase(k){return String(k).split('_')[0]}
 /* 지휘봉까지 합친 전신 */
 function fullFigure(pal){
   if(CH_SPR[pal])return CH_SPR[pal];
@@ -670,11 +692,12 @@ function iconCanvas(pal){
 }
 /* 적 스프라이트 명세 → 캔버스 */
 function enemyCanvas(spec){
-  const pal=spec.pal||'gemini',k='en|'+spec.kind+'|'+pal+'|'+(spec.color||'');
+  const pal=spec.pal||'gemini',k='en|'+spec.kind+'|'+pal+'|'+(spec.color||'')+'|'+(spec.key||'');
   if(_cache[k])return _cache[k];
   let c;
   switch(spec.kind){
     case'figure':c=fullFigure(pal);break;
+    case'ch':c=spec.frames?variantCanvas(spec.key.split('_')[0],'twist',0):CH_SPR[spec.key];break;
     case'eye':c=SP.eye;break;
     case'wand':c=paletteWand(pal);break;
     case'shoes':c=paint(SP.shoes,pal,'shoes');break;
@@ -691,6 +714,65 @@ function enemyCanvas(spec){
 }
 function cloneCanvas(src){const o=mkc(src.width,src.height);o.getContext('2d').drawImage(src,0,0);return o}
 
+/* ================= 안개에 먹힌 분신: 4장의 일러스트를 변형해 적 스프라이트로 ================= */
+function mapPix(src,fn){
+  const o=mkc(src.width,src.height),c=o.getContext('2d',{willReadFrequently:true});c.drawImage(src,0,0);
+  const id=c.getImageData(0,0,o.width,o.height),d=id.data,W=o.width;
+  for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const p=i>>2,r=fn(d[i],d[i+1],d[i+2],p%W,(p/W)|0);if(r){d[i]=r[0];d[i+1]=r[1];d[i+2]=r[2]}}
+  c.putImageData(id,0,0);return o;
+}
+const EYEPOS={claire:[[.335,.215],[.46,.21]],obser:[[.33,.325],[.46,.33]],sol:[[.345,.285],[.47,.28]],belis:[[.255,.205],[.37,.21]]};
+function dripEyes(c,w,h,pts,col,len){
+  for(const [fx,fy] of pts){
+    const x=fx*w,y=fy*h,g=c.createLinearGradient(x,y,x,y+len*h);g.addColorStop(0,col);g.addColorStop(1,'rgba(90,0,10,0)');
+    c.fillStyle=g;c.beginPath();c.moveTo(x-3,y);c.lineTo(x+3,y);c.lineTo(x+1.5,y+len*h);c.lineTo(x-1.5,y+len*h);c.fill();
+    c.beginPath();c.arc(x,y+len*h*.92,3.4,0,6.3);c.fillStyle='#7a0010';c.fill();
+  }
+}
+function variantCanvas(ch,style,frame=0){
+  const k='var|'+ch+'|'+style+'|'+frame;if(_cache[k])return _cache[k];
+  const base=CH_SPR[ch],W=base.width,H=base.height;let o;
+  if(style==='horror'){
+    /* 클레르: 창백한 회청색 + 녹슨 붉은 금속, 검게 빈 눈, 흘러내리는 피 */
+    o=mapPix(base,(r,g,b,x,y)=>{
+      const [hh,ss,vv]=rgb2hsv(r,g,b),l=.3*r+.59*g+.11*b;
+      const amber=hh>12&&hh<55&&ss>.5&&vv>.55;
+      if(amber){const eye=y>H*.17&&y<H*.28&&x>W*.25&&x<W*.58;return eye?[8,0,0]:[Math.min(255,vv*150+20),vv*18,vv*20]}
+      const m=.72;return[l*.9+(r-l)*(1-m)*.4,l*.92+(g-l)*(1-m)*.4,l*1.06+(b-l)*(1-m)*.4].map(v=>Math.max(0,Math.min(255,v*.86)));
+    });
+    const c=o.getContext('2d');c.save();c.globalCompositeOperation='source-atop';
+    for(const [fx,fy] of EYEPOS.claire){const x=fx*W,y=fy*H,rg=c.createRadialGradient(x,y,0,x,y,W*.05);rg.addColorStop(0,'rgba(255,40,40,.95)');rg.addColorStop(.25,'rgba(120,0,0,.85)');rg.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=rg;c.fillRect(x-W*.06,y-W*.06,W*.12,W*.12)}
+    dripEyes(c,W,H,EYEPOS.claire,'rgba(150,0,16,.95)',.11);
+    let sd=11;const R=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
+    for(let i=0;i<26;i++){const x=W*(.1+.8*R()),y=H*(.34+.58*R()),rr=W*(.012+.03*R());c.fillStyle=`rgba(${100+R()*50|0},0,${R()*14|0},${.5+R()*.4})`;c.beginPath();c.ellipse(x,y,rr,rr*(1+R()*1.6),R()*3,0,6.3);c.fill()}
+    c.restore();
+  }else if(style==='twist'){
+    /* 솔: 산성 녹색으로 썩은 색, 줄마다 어긋나는 물결 왜곡 (프레임마다 위상이 다르다) */
+    const col=mapPix(base,(r,g,b)=>{const [hh,ss,vv]=rgb2hsv(r,g,b);if(ss>.35&&hh>20&&hh<70){const [nr,ng,nb]=hsv2rgb(hh+62,Math.min(1,ss*1.1),vv*.9);return[nr,ng,nb]}if(ss<.2&&vv>.8)return[r*.86,g*.97,b*.8];return null});
+    o=mkc(W*1.25,H);const c=o.getContext('2d'),ph=frame*1.05,amp=W*.045;
+    c.globalAlpha=.32;c.save();c.translate(W*.1,0);c.drawImage(col,W*.08,0,W,H);c.restore();c.globalAlpha=1;
+    for(let y=0;y<H;y++){const t=y/H,dx=Math.sin(y*.05+ph)*amp*(.4+t)+Math.sin(y*.013-ph*.7)*amp*.8;c.drawImage(col,0,y,W,1,W*.12+dx,y,W,1)}
+  }else if(style==='overwork'){
+    /* 옵서: 핏기 없는 회녹색, 짙은 다크서클 */
+    o=mapPix(base,(r,g,b)=>{const l=.3*r+.59*g+.11*b;return[l*.86+(r-l)*.3,l*.94+(g-l)*.3,l*.88+(b-l)*.3].map(v=>Math.max(0,Math.min(255,v*.9)))});
+    const c=o.getContext('2d');c.save();c.globalCompositeOperation='source-atop';
+    for(const [fx,fy] of EYEPOS.obser){const x=fx*W,y=fy*H+H*.02,rg=c.createRadialGradient(x,y,0,x,y,W*.045);rg.addColorStop(0,'rgba(60,30,90,.85)');rg.addColorStop(1,'rgba(60,30,90,0)');c.fillStyle=rg;c.beginPath();c.ellipse(x,y,W*.05,W*.028,0,0,6.3);c.fill()}
+    c.restore();
+  }else{ /* trick: 벨리스를 반쪽씩 다른 색으로 (어릿광대) */
+    const alt=tint(base,150,1.1,1.05),cut=mkc(W,H),x=cut.getContext('2d');
+    o=mkc(W,H);const c=o.getContext('2d');c.drawImage(base,0,0);
+    x.drawImage(alt,0,0);x.globalCompositeOperation='destination-in';x.fillStyle='#000';x.beginPath();x.moveTo(0,0);x.lineTo(W*.52,0);x.lineTo(W*.42,H);x.lineTo(0,H);x.fill();
+    c.drawImage(cut,0,0);
+  }
+  return(_cache[k]=o);
+}
+function buildVariants(){
+  CH_SPR.claire_horror=variantCanvas('claire','horror');
+  CH_SPR.sol_twist=variantCanvas('sol','twist',0);
+  CH_SPR.obser_over=variantCanvas('obser','overwork');
+  CH_SPR.belis_trick=variantCanvas('belis','trick');
+}
+
 /* ================= 브금 엔진: 파이프 오르간 · 현악 · 합창 · 종 · 팀파니를 코드로 합성 ================= */
 const Mus=(()=>{
   let ac=null,master,comp,musicBus,sfxBus,revIn,noiseBuf;
@@ -701,9 +783,7 @@ const Mus=(()=>{
   const deg=(sc,key,d)=>key+SC[sc][((d%7)+7)%7]+12*Math.floor(d/7);
   const rand=seed=>{let s=seed>>>0||1;return()=>{s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296}};
 
-  function init(){
-    if(ac)return true;
-    try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return false}
+  function buildGraph(){
     comp=ac.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;comp.attack.value=.01;comp.release.value=.3;
     master=ac.createGain();master.gain.value=muted?0:1;master.connect(comp);comp.connect(ac.destination);
     musicBus=ac.createGain();musicBus.gain.value=musVol;musicBus.connect(master);
@@ -713,7 +793,12 @@ const Mus=(()=>{
     for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++){const t=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-t,2.6)*(1-.55*t)}}
     const cv=ac.createConvolver();cv.buffer=ir;revIn=ac.createGain();revIn.gain.value=.55;revIn.connect(cv);
     const rg=ac.createGain();rg.gain.value=.8;cv.connect(rg);rg.connect(master);
-        noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  }
+  function init(){
+    if(ac)return true;
+    try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return false}
+    buildGraph();
     return true;
   }
   /* 파이프 오르간: 배음 합성 파형 + 서브 옥타브 */
@@ -940,9 +1025,7 @@ const Mus=(()=>{
     die(){tone(180,.8,'sawtooth',.1,.3);noise(.5,.12)},
     open(){tone(300,.4,'sine',.08,1.6)}
   };
-  function jingle(kind){
-    if(!ac||muted)return;
-    const t=ac.currentTime+.05,old=musicBus;
+  function playJingle(kind,t){
     if(kind==='win'){
       [[0,62],[.18,66],[.36,69],[.54,74]].forEach(([d,n])=>{I.organ(t+d,mtof(n),1.6-d,.09,musicBus);I.bell(t+d,mtof(n+12),.06,2.4)});
       [50,57,62,66].forEach(n=>I.choir(t,mtof(n),2.2,.04));I.timp(t,.5,70);
@@ -955,8 +1038,34 @@ const Mus=(()=>{
       for(let i=0;i<12;i++)I.tick(t+i*.18,.1,i%2===0);
     }
   }
+  function jingle(kind){if(!ac||muted)return;playJingle(kind,ac.currentTime+.05)}
+  /* ---- 파일 내보내기: 오프라인으로 곡을 렌더링한다 ---- */
+  async function renderOffline(build,sec){
+    const saved={ac,master,comp,musicBus,sfxBus,revIn,noiseBuf,organWave,state,sceneGain};
+    try{
+      ac=new OfflineAudioContext(2,Math.ceil(44100*sec),44100);organWave=null;buildGraph();
+      build();
+      return await ac.startRendering();
+    }finally{({ac,master,comp,musicBus,sfxBus,revIn,noiseBuf,organWave,state,sceneGain}=saved)}
+  }
+  function sceneBars(id,minSec){
+    const s=SCENES[id],beat=s.steps===12?3:4,barDur=60/s.bpm*beat;
+    const unit=8;const bars=unit*Math.max(1,Math.ceil(minSec/(barDur*unit)));
+    return{bars,barDur,sec:bars*barDur};
+  }
+  async function renderScene(id,minSec=60,tail=3.5){
+    const s=SCENES[id],info=sceneBars(id,minSec),sec=info.sec+tail;
+    const buf=await renderOffline(()=>{
+      sceneGain=ac.createGain();sceneGain.connect(musicBus);
+      const st={s,bar:0,step:0,t:0,mel:makeMelody(s.mode,s),gain:sceneGain,R:rand(s.seed)};
+      const sd=60/s.bpm/(s.steps===12?3:4);
+      while(st.t<info.sec-1e-6){scheduleStep(st);st.t+=sd;st.step++;if(st.step>=s.steps){st.step=0;st.bar++}}
+    },sec);
+    return{buf,info};
+  }
+  async function renderJingle(kind,sec=9){return renderOffline(()=>playJingle(kind,.05),sec)}
   return{
-    init,play:startScene,jingle,sfx:n=>{try{SFX[n]&&SFX[n]()}catch(e){}},
+    init,play:startScene,jingle,renderScene,renderJingle,sceneIds:()=>Object.keys(SCENES),sfx:n=>{try{SFX[n]&&SFX[n]()}catch(e){}},
     get scene(){return sceneId},
     stop(){if(sceneGain){const g=sceneGain,t=ac.currentTime;g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.6)}sceneId=null;state=null},
     setMuted(m){muted=m;if(master)master.gain.value=m?0:1},get muted(){return muted},
@@ -1066,7 +1175,7 @@ const STARTERS={};for(const k in CH)STARTERS[k]=CH[k].basics;
 const SKILL_POOL=Object.values(CARD).filter(c=>['c','u','r'].includes(c.rar));
 
 /* ---- 카드 설명문 자동 생성 ---- */
-const STN={str:'힘',weak:'약화',vuln:'취약',poison:'독',regen:'재생',taunt:'도발',thorns:'가시',stun:'기절'};
+const STN={str:'힘',weak:'약화',vuln:'취약',poison:'독',regen:'재생',taunt:'도발',thorns:'가시',stun:'기절',evade:'회피'};
 function stTxt(st){return Object.entries(st).map(([k,v])=>`${STN[k]}${k==='taunt'||k==='stun'?'':' '+v}`).join('·')}
 function fxText(f,t){
   const p=[];
@@ -1171,7 +1280,7 @@ const EN={
   mask:{n:'장미 가면',spr:{kind:'head',pal:'maid',scale:.85},hp:38,pat:[{curse:2,name:'꽃가루'},A(10),A(4,1,{st:{vuln:2},name:'매혹'})]},
   crimson:{n:'붉은 분신',elite:1,spr:{kind:'figure',pal:'maid',scale:1.02,flip:1},hp:108,
     pat:[A(13),A(5,3),D(12,{sst:{str:2},name:'맹세'}),{curse:2,st:{weak:1},atk:6,name:'붉은 안개'}]},
-  gardener:{n:'가시의 정원사',boss:1,spr:{kind:'orn',color:'#5a1030',scale:1.9,pal2:'ghost'},hp:172,
+  gardener:{n:'뒤틀린 정원사',boss:1,spr:{kind:'ch',key:'sol_twist',frames:6,sty:'twist',scale:1.1},hp:172,
     pat:[A(12),{aoeSt:{poison:2},name:'독 안개',atk:4,all:1},A(6,3),D(14,{summon:'vine',name:'덩굴 소환'})],
     ph2:{at:.5,pat:[A(17),{aoeSt:{poison:3},name:'만개',atk:6,all:1},A(8,3),{heal:15,name:'재생'},A(10,1,{all:1,name:'가시 폭풍'})],str:1}},
   hourhand:{n:'시침',spr:{kind:'wand',pal:'ghost',scale:1.35,filter:'grayscale(1) brightness(1.3)'},hp:51,pat:[A(14),D(10,{atk:4}),A(7,2)]},
@@ -1183,11 +1292,25 @@ const EN={
   finalmirror:{n:'역상의 벨리스',boss:1,spr:{kind:'figure',pal:'belis_inv',scale:1.1},hp:235,
     pat:[A(14),{atk:5,hits:3,all:1,name:'역방향 박자'},{curse:3,name:'안개 지휘'},D(16,{sst:{str:2},name:'정지의 박자'}),{atk:11,all:1,name:'열두 번째 종',st:{weak:1}}],
     ph2:{at:.5,pat:[A(19),{atk:7,hits:3,all:1,name:'역방향 박자'},{summon:'hourhand',name:'시침 소환'},{atk:14,all:1,name:'열세 번째 종',st:{vuln:2}},{curse:4,atk:10,name:'정지된 야회'},D(20,{sst:{str:3}})],str:3}}
+  ,trickster:{n:'트릭스터 벨리스',spr:{kind:'ch',key:'belis_trick',sty:'trick',scale:.92,after:[{dx:-16,f:'hue-rotate(150deg)'},{dx:16,f:'hue-rotate(-70deg)'}],deco:['♠','♥','♦','♣']},hp:34,
+    pat:[{sst:{evade:1},name:'바꿔치기'},A(8,1,{name:'깜짝 상자'}),{curse:1,name:'조커 카드'},A(4,2,{name:'장난'}),A(5,1,{st:{vuln:1},name:'놀림'})]},
+  jester:{n:'광대 왕 벨리스',elite:1,spr:{kind:'ch',key:'belis_trick',sty:'trick',scale:1.08,after:[{dx:-20,f:'hue-rotate(150deg)'},{dx:20,f:'hue-rotate(-70deg)'}],deco:['♠','♥','♦','♣','🃏']},hp:112,
+    pat:[{sst:{evade:1},def:8,name:'바꿔치기'},A(11),{curse:2,atk:4,name:'조커 폭죽'},A(5,3,{name:'저글링'}),A(7,1,{all:1,st:{weak:1},name:'박수갈채'})]},
+  twistedsol:{n:'뒤틀린 솔',spr:{kind:'ch',key:'sol_twist',frames:6,sty:'twist',scale:1.0},hp:52,
+    pat:[A(5,1,{st:{poison:3},name:'썩은 레몬'}),{heal:12,def:6,name:'일그러짐'},A(11,1,{name:'신맛 폭발'}),{aoeSt:{poison:2},atk:4,all:1,name:'산성 안개'}]},
+  overworked:{n:'과로한 옵서',spr:{kind:'ch',key:'obser_over',sty:'over',scale:.95,deco:['📄','☕','💤']},hp:46,
+    pat:[A(12,1,{name:'마지막 힘'}),{sst:{vuln:2},name:'졸도'},A(5,3,{name:'야근 사격'}),{sst:{str:2},name:'야근 수당'}]},
+  stalker:{n:'문 뒤의 클레르',elite:1,spr:{kind:'ch',key:'claire_horror',sty:'horror',scale:1.04,after:[{dx:10,f:'brightness(.4) sepia(1) hue-rotate(-40deg) saturate(5)'}]},hp:104,
+    pat:[D(10,{name:'숨죽임'}),A(15,1,{name:'등 뒤에서'}),{atk:6,all:1,st:{weak:1},name:'비명'},A(7,2,{name:'문을 두드림'}),A(9,1,{st:{stun:1},name:'눈이 마주침'})]},
+  stalkerS:{n:'문 뒤의 클레르',spr:{kind:'ch',key:'claire_horror',sty:'horror',scale:.92},hp:60,
+    pat:[D(8,{name:'숨죽임'}),A(13,1,{name:'등 뒤에서'}),A(6,2),A(6,1,{st:{stun:1},name:'눈이 마주침'})]},
+  doorknock:{n:'문을 두드리는 클레르',elite:1,spr:{kind:'ch',key:'claire_horror',sty:'horror',scale:1.12,after:[{dx:12,f:'brightness(.4) sepia(1) hue-rotate(-40deg) saturate(5)'}]},hp:150,
+    pat:[A(15),{atk:7,all:1,st:{stun:1},name:'비명'},D(14,{sst:{str:3},name:'문 너머'}),A(6,3,{name:'두드림'}),A(20,1,{name:'등 뒤에서'})]}
 };
 const ENC={
-  1:{normal:[['mirror'],['eye','eye'],['mirror','eye'],['wand','wand'],['shoes','eye'],['mirror','wand'],['eye','eye','eye']],elite:[['twisted']],boss:['blindeye']},
-  2:{normal:[['vine','vine'],['ghost'],['hand','vine'],['mask','hand'],['ghost','mask'],['vine','hand','hand'],['mask','vine']],elite:[['crimson']],boss:['gardener']},
-  3:{normal:[['hourhand'],['bat','moment'],['second','hourhand'],['moment','moment'],['bat','bat'],['second','moment'],['hourhand','hourhand','moment']],elite:[['bellkeeper']],boss:['finalmirror']}
+  1:{normal:[['trickster'],['eye','eye'],['trickster','eye'],['wand','wand'],['shoes','eye'],['trickster','wand'],['eye','eye','eye']],elite:[['stalker']],boss:['blindeye']},
+  2:{normal:[['vine','vine'],['twistedsol'],['hand','vine'],['overworked','hand'],['twistedsol','overworked'],['vine','hand','hand'],['overworked','vine']],elite:[['jester']],boss:['gardener']},
+  3:{normal:[['hourhand'],['overworked','stalkerS'],['trickster','hourhand'],['stalkerS','stalkerS'],['bat','bat'],['twistedsol','stalkerS'],['hourhand','hourhand','overworked']],elite:[['doorknock']],boss:['finalmirror']}
 };
 const ACTS=[
   {n:'거울 회랑',sub:'모든 거울이 같은 얼굴을 하고 있다',scene:'map1',battle:'battle1',boss:'boss1',colors:{a:'#d64fa0',b:'#7b45d6',c:'#ffd27a'}},
@@ -1200,7 +1323,7 @@ const SPK={
   belis:{n:'벨리스',pal:'belis',color:'#c89bff'},obser:{n:'옵서',pal:'obser',color:'#9fc0ff'},
   claire:{n:'클레르',pal:'claire',color:'#ffa43a'},sol:{n:'솔',pal:'sol',color:'#ffd93d'},
   mirror:{n:'거울 속의 벨리스',pal:'belis_inv',color:'#b8c8ff'},eye:{n:'눈먼 거울',pal:'mirror',color:'#b8c8ff',kind:'eye'},
-  gard:{n:'정원사',pal:'ghost',color:'#e08aa0'},master:{n:'주인님',pal:null,color:'#ffe29a'},narr:{n:'',pal:null,color:'#c9b8e0'},
+  gard:{n:'뒤틀린 정원사',pal:'sol_twist',color:'#a8e05a'},master:{n:'주인님',pal:null,color:'#ffe29a'},narr:{n:'',pal:null,color:'#c9b8e0'},
   twin:{n:'역상의 벨리스',pal:'belis_inv',color:'#b8c8ff'}
 };
 const STORY={
@@ -1257,7 +1380,7 @@ const STORY={
   ],
   boss2_pre:[
     {w:'gard',t:'어서 오세요. 보세요, 모두 영원히 피어 있답니다. 시들지 않는 야회, 아름답지 않나요?'},
-    {w:'sol',t:'정원사 어르신……. 그 모습은 어르신 본래 모습이 아니에요.'},
+    {w:'sol',t:'……그 모습, 어르신이 아니에요. 저예요. 안개가 제 얼굴을 거울에 비춰서, 시들지 못하게 비틀어 놓은 거예요.'},
     {w:'gard',t:'마님께서 그렇게 바라셨어요. 이 야회가 끝나지 않기를. 저는 그 바람을 가꿀 뿐입니다.'},
     {w:'belis',t:'……마님이라 하셨습니까.'},
   ],
@@ -1516,6 +1639,7 @@ function cureAlly(A,n){const w=Math.min(A.u.wound,n);if(w>0){A.u.wound-=w;UI.cur
 /* ---- 피해 ---- */
 async function hurtEnemy(e,amount,srcA,opt={}){
   if(e.dead)return 0;
+  if(e.st.evade>0&&amount>0&&!opt.pierce&&!opt.poison&&!opt.thorns){e.st.evade--;UI.float(e,'빗나감','sys');UI.status(e);await sleep(200);return 0}
   const absorbed=opt.pierce?0:Math.min(e.block,amount);e.block-=absorbed;
   const real=amount-absorbed;e.hp=Math.max(0,e.hp-real);
   UI.hitEnemy(e,amount,absorbed,real,opt);
@@ -1918,8 +2042,8 @@ document.addEventListener('mousemove',e=>{
 });
 
 /* ---- 상태 아이콘 ---- */
-const STINFO={str:'힘: 공격 피해가 증가한다',weak:'약화: 주는 피해 25% 감소 (턴이 지나면 줄어든다)',vuln:'취약: 받는 피해 50% 증가',poison:'독: 턴 시작 시 피해를 입고 1 감소',regen:'재생: 턴 시작 시 HP 3 회복',taunt:'도발: 적의 단일 공격이 이 유닛에게 집중된다',thorns:'가시: 공격받으면 반격 피해',stun:'기절: 다음 턴 행동할 수 없다'};
-const BUFFK=['str','regen','taunt','thorns'];
+const STINFO={evade:'회피: 다음 공격 한 번을 완전히 피한다',str:'힘: 공격 피해가 증가한다',weak:'약화: 주는 피해 25% 감소 (턴이 지나면 줄어든다)',vuln:'취약: 받는 피해 50% 증가',poison:'독: 턴 시작 시 피해를 입고 1 감소',regen:'재생: 턴 시작 시 HP 3 회복',taunt:'도발: 적의 단일 공격이 이 유닛에게 집중된다',thorns:'가시: 공격받으면 반격 피해',stun:'기절: 다음 턴 행동할 수 없다'};
+const BUFFK=['str','regen','taunt','thorns','evade'];
 function statHtml(X,isAlly){
   return Object.entries(X.st).filter(([k,v])=>v>0).map(([k,v])=>{
     const good=BUFFK.includes(k)===isAlly;
@@ -1928,7 +2052,7 @@ function statHtml(X,isAlly){
 }
 
 /* ================= 유닛 요소 ================= */
-const KIND_H={figure:1,eye:.4,wand:.64,shoes:.28,skirt:.58,hand:.36,cape:.72,head:.5,orn:.74};
+const KIND_H={ch:1,figure:1,eye:.4,wand:.64,shoes:.28,skirt:.58,hand:.36,cape:.72,head:.5,orn:.74};
 function makeAllyFig(u){
   const fig=el('div','fig');
   if(CH_SPR[u.pal]){const cv=cloneCanvas(CH_SPR[u.pal]);cv.className='body';fig.appendChild(cv);fig.style.aspectRatio=`${cv.width}/${cv.height}`;return fig}
@@ -1950,17 +2074,33 @@ function buildAlly(a){
   a.el=root;return root;
 }
 function buildEnemy(e){
-  const sp=e.def.spr,root=el('div','unit enemy'+(e.boss?' bossu':'')+` k-${sp.kind}`);root.dataset.key=e.key;
+  const sp=e.def.spr,root=el('div','unit enemy'+(e.boss?' bossu':'')+` k-${sp.kind}`+(sp.sty?' sty-'+sp.sty:''));root.dataset.key=e.key;
   root.innerHTML=`<div class="intent"></div><div class="blk"></div><div class="uname">${e.n}${e.boss?' <small>BOSS</small>':e.elite?' <small>ELITE</small>':''}</div>`;
   const fig=el('div','fig');
-  const cv=cloneCanvas(enemyCanvas(sp));
-  fig.style.height=`calc(var(--uh)*${(KIND_H[sp.kind]||1)*(sp.scale||1)})`;
+  const src=enemyCanvas(sp),cv=cloneCanvas(src);cv.className='main';
+  fig.style.height=`calc(var(--uh)*var(--es,1)*${(KIND_H[sp.kind]||1)*(sp.scale||1)})`;
   fig.style.aspectRatio=`${cv.width}/${cv.height}`;
+  const flip=(sp.kind==='figure'||sp.kind==='ch')?'scaleX(-1) ':'';
   if(sp.filter)cv.style.filter=sp.filter+' drop-shadow(0 0 12px rgba(0,0,0,.7))';
-  if(sp.kind==='figure')cv.style.transform='scaleX(-1)';
-  fig.appendChild(cv);root.appendChild(fig);
-  const idle=sp.kind==='eye'?`pulseEye ${2+Math.random()}s ease-in-out infinite`:sp.kind==='wand'?`sway ${2.4+Math.random()}s ease-in-out infinite`:`float ${3.8+Math.random()*1.2}s ease-in-out ${Math.random()*2}s infinite`;
-  fig.style.animation=idle;
+  if(flip)cv.style.transform='scaleX(-1)';
+  /* 잔상(분신술) */
+  for(const a of(sp.after||[])){const g=cloneCanvas(src);g.className='after';g.style.cssText=`transform:${flip}translateX(${a.dx}%);filter:${a.f};opacity:.38;position:absolute;inset:0;mix-blend-mode:screen`;fig.appendChild(g)}
+  fig.appendChild(cv);
+  /* 뒤틀림: 프레임을 돌려 가며 끓어오르는 느낌 */
+  if(sp.frames){
+    const fr=[];for(let i=0;i<sp.frames;i++)fr.push(variantCanvas(sp.key.split('_')[0],'twist',i));
+    let k=0;const ctx=cv.getContext('2d');
+    const iv=setInterval(()=>{if(!cv.isConnected&&k>3){clearInterval(iv);return}k=(k+1)%fr.length;ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(fr[k],0,0)},110);
+  }
+  /* 과로사: 몸에서 빠져나가는 영혼 */
+  if(sp.sty==='over'){const s=cloneCanvas(src);s.className='soul';s.style.cssText=`position:absolute;inset:0;transform:${flip};filter:brightness(3) saturate(0) blur(1px);`;fig.insertBefore(s,cv)}
+  root.appendChild(fig);
+  /* 떠다니는 장식 */
+  (sp.deco||[]).forEach((d,i)=>{const n=el('div','deco d-'+sp.sty,d);n.style.setProperty('--i',i);n.style.setProperty('--n',sp.deco.length);fig.appendChild(n)});
+  if(!sp.sty){
+    const idle=sp.kind==='eye'?`pulseEye ${2+Math.random()}s ease-in-out infinite`:sp.kind==='wand'?`sway ${2.4+Math.random()}s ease-in-out infinite`:`float ${3.8+Math.random()*1.2}s ease-in-out ${Math.random()*2}s infinite`;
+    fig.style.animation=idle;
+  }
   root.appendChild(el('div','hpb','<i class="g"></i><i class="h"></i><span></span>'));
   root.appendChild(el('div','stat'));
   root.addEventListener('click',()=>onUnitClick(e));
@@ -2040,6 +2180,7 @@ async function onUnitClick(X){
 function setupBattleUI(){
   const al=$('#allies'),en=$('#enemies');al.innerHTML='';en.innerHTML='';
   for(const a of B.allies)al.appendChild(buildAlly(a));
+  en.style.setProperty('--es',B.enemies.length>=3?.72:B.enemies.length===2?.9:1);
   for(const e of B.enemies)en.appendChild(buildEnemy(e));
   B.allies.concat(B.enemies).forEach(renderUnit);
   setDial();
@@ -2796,7 +2937,7 @@ async function boot(){
   const base=await loadImg(IMG_B64);
   document.documentElement.style.setProperty('--img',`url(${base.url})`);
   const chs={};for(const k in CHAR_B64)chs[k]=(await loadImg(CHAR_B64[k])).img;
-  buildSprites(base.img);buildChars(chs);
+  buildSprites(base.img);buildChars(chs);buildVariants();
   await buildHeroes();
   initStars();resize();requestAnimationFrame(loop);
   $('#loading').style.display='none';
