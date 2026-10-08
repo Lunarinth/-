@@ -26,7 +26,7 @@ cat <<'HEAD'
 </div>
 <ul class="keys">
 <li><kbd>←</kbd><kbd>→</kbd> 이동</li><li><kbd>Space</kbd> 점프</li><li><kbd>Shift</kbd> 대시</li>
-<li><kbd>↓</kbd> 앉기</li><li><kbd>Z</kbd> 나이프</li><li><kbd>X</kbd> 포물선</li><li><kbd>Q</kbd> 시간 감속장</li><li><kbd>↑</kbd> 저장 지점에서 저장</li><li><kbd>R</kbd> 마지막 저장으로 복귀</li>
+<li><kbd>↓</kbd> 앉기</li><li><kbd>Z</kbd> 나이프</li><li><kbd>X</kbd> 포물선</li><li><kbd>Q</kbd> 시간 감속장</li><li><kbd>↑</kbd> 저장 지점에서 저장</li><li><kbd>M</kbd> 음소거</li><li><kbd>R</kbd> 마지막 저장으로 복귀</li>
 </ul>
 <div id="pad">
 <div><button data-k="left">◀</button><button data-k="right">▶</button></div>
@@ -34,10 +34,11 @@ cat <<'HEAD'
 </div>
 HEAD
 echo '<script>'
-cat src/input.js src/maps.js src/game.js
+cat src/input.js src/audio.js src/bosses.js src/maps.js src/game.js
 cat <<'TAIL'
 
-document.getElementById('start').addEventListener('click',function(){this.hidden=true;window.focus();});
+document.getElementById('start').addEventListener('click',function(){this.hidden=true;window.focus();Sound.init();});
+window.addEventListener('keydown',function(){Sound.init();});
 document.querySelectorAll('#pad button').forEach(function(b){
   var k=b.dataset.k;
   b.addEventListener('pointerdown',function(e){e.preventDefault();window.__game.Input._set(k,true);});

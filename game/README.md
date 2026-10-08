@@ -17,3 +17,9 @@
 - `src/maps.js` — 맵 정의 (`#` 벽, `P` 시작, `w` 지상 적, `f` 비행 적)
 - `src/game.js` — 물리, 전투, 렌더링
 - `assets/bgm`, `assets/img` — BGM/이미지 슬롯 (아직 미연결)
+
+## 구성
+- `src/audio.js` — 효과음과 BGM(WebAudio 합성, 곡은 시드로 생성한 오리지널)
+- `src/bosses.js` — 보스 8명의 대사·스펠카드 패턴
+- `sh game/build_share.sh > out.html` — 공유용 단일 HTML 생성
+- M 키: 소리 켜기/끄기, ↑+Z: 위로 던지기 (방향키 없이는 수직)

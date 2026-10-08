@@ -10,6 +10,7 @@ const Input = (() => {
     KeyZ: 'throw', KeyJ: 'throw',
     KeyX: 'lob', KeyK: 'lob',
     KeyQ: 'time', KeyL: 'time',
+    KeyM: 'mute',
     KeyR: 'restart',
   };
   window.addEventListener('keydown', e => {

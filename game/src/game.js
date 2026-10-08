@@ -20,15 +20,16 @@
 
   let map, roomId, grid, mapW, mapH, player, enemies, knives, particles, fields, bullets, camX, camY, time;
   let portals, saves, items, signs, msgText = '', msgT = 0;
-  let boss = null, lockedPortals = [], dlg = null, banner = { text: '', t: 0 };
+  let ending = null, boss = null, lockedPortals = [], dlg = null, banner = { text: '', t: 0 };
 
   // 진행 상황 (저장됨)
   const SAVE_KEY = 'gesshokuroku_gaiden_save_v1';
-  const world = { abil: { double: false }, got: {}, visited: { start: true }, save: null, bosses: {}, intro: false };
+  const world = { abil: { double: false }, got: {}, visited: { start: true }, save: null, bosses: {}, intro: false, hpBonus: 0 };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) Object.assign(world, JSON.parse(raw));
   } catch (e) { /* 저장소를 못 쓰는 환경이면 무시 */ }
+  const maxHp = () => 5 + (world.hpBonus || 0);
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(world)); } catch (e) { /* 무시 */ } };
   const say = t => { msgText = t; msgT = 3; };
 
@@ -50,7 +51,7 @@
       else if (c === 't') enemies.push(makeEnemy('turret', x * T + 4, (y + 1) * T - 28));
       else if (c === 'f') enemies.push(makeEnemy('flyer', x * T, y * T));
       else if (c === 'S') saves.push({ x, y });
-      else if (c === 'B') { if (!world.bosses.meiling) boss = makeBoss(x * T + 3, (y + 1) * T - 46); }
+      else if (c === 'B') { if (map.boss && !world.bosses[map.boss]) boss = makeBoss(map.boss, x * T + 3, (y + 1) * T - 46); }
       else if (c === 'j') { if (!world.got[id + ':' + x + ',' + y]) items.push({ x, y, kind: 'double' }); }
       else if ('abcde'.includes(c)) portals.push({ x, y, ch: c });
     }
@@ -64,12 +65,13 @@
       x: start.x, y: start.y, vx: 0, vy: 0, w: P.w, h: P.h,
       face: 1, crouch: false, onGround: false, coyote: 0, buffer: 0, airJump: true, portalLock: true,
       dashT: 0, dashCd: 0, airDash: true,
-      hp: prev ? prev.hp : P.maxHp, mana: prev ? prev.mana : P.maxMana, inv: prev ? prev.inv : 0,
+      hp: prev ? prev.hp : maxHp(), mana: prev ? prev.mana : P.maxMana, inv: prev ? prev.inv : 0,
       knifeCd: 0, dead: false, deadT: 0, start,
     };
     camX = Math.max(0, Math.min(mapW * T - W, player.x - W / 2));
     camY = Math.max(0, Math.min(mapH * T - H, player.y - H / 2));
     time = 0;
+    Sound.bgm(map.bgm || 'field1');
   }
 
   // 사망·재시작: 마지막 저장 지점에서 부활
@@ -88,90 +90,93 @@
   }
 
   // ---------- 보스 ----------
-  const BOSS_PHASES = [
-    { name: '정권 연무', at: 0.65, spell: false },
-    { name: '기공 「채광 난무」', at: 0.30, spell: true },
-    { name: '굉권 「홍염의 비」', at: 0, spell: true },
-  ];
-  function makeBoss(x, y) {
-    return { name: '홍 메이링', x, y, w: 26, h: 46, vx: 0, vy: 0, hp: 70, maxHp: 70, phase: 0, t: 0,
-      inv: 0, active: false, intro: false, dir: -1, cd: 1.2, dashCd: 3, dashT: 0, tele: 0, flash: 0,
-      rain: 0, wave: 2, hop: 1, ang: 0, onGround: false };
+  const bossDef = b => BOSSES[b.id];
+  function makeBoss(id, x, y) {
+    const d = BOSSES[id];
+    return { id, name: d.name, x, y: y + 46 - d.h, w: d.w, h: d.h, vx: 0, vy: 0, hp: d.hp, maxHp: d.hp, phase: 0, pt: 0,
+      st: {}, inv: 0, active: false, intro: false, dir: -1, flash: 0, warn: false, onGround: false };
   }
-  const addBullet = (x, y, vx, vy) => bullets.push({ x, y, w: 8, h: 8, vx, vy, life: 7 });
+  function addBullet(x, y, vx, vy, o) {
+    o = o || {};
+    bullets.push({ x, y, w: o.w || 8, h: o.h || 8, vx, vy, life: o.life || 7, c: o.c });
+  }
 
   function startDlg(lines, done) { dlg = { lines, i: 0, done }; }
   function advanceDlg() {
+    Sound.sfx('tick');
     dlg.i++;
     if (dlg.i >= dlg.lines.length) { const d = dlg.done; dlg = null; if (d) d(); }
+  }
+
+  function enterPhase(b, i) {
+    const def = bossDef(b), ph = def.phases[i];
+    b.phase = i; b.st = {}; b.pt = 0; b.warn = false; b.vx = b.vy = 0;
+    if (ph.who) b.name = ph.who;
+    if (i > 0) { b.inv = 1.6; bullets = []; banner = { text: ph.name, t: 2.4 }; Sound.sfx('spell'); }
+    else banner = { text: ph.name, t: 2 };
   }
 
   function damageBoss() {
     const b = boss;
     if (!b || !b.active || b.inv > 0) return;
-    b.hp--; b.flash = 0.1;
-    const ph = BOSS_PHASES[b.phase];
+    b.hp--; b.flash = 0.1; Sound.sfx('bosshit');
+    const def = bossDef(b), ph = def.phases[b.phase];
     if (b.hp > b.maxHp * ph.at) return;
-    if (b.phase >= BOSS_PHASES.length - 1) { defeatBoss(); return; }
-    b.phase++; b.inv = 1.6; b.cd = 1.2; b.hop = 1; b.rain = 0.5; b.vx = 0; b.dashT = 0; b.tele = 0;
+    if (b.phase >= def.phases.length - 1) { defeatBoss(); return; }
+    b.hp = Math.min(b.hp, Math.floor(b.maxHp * ph.at));
     for (const bl of bullets) burst(bl.x, bl.y, '#fc6', 2);
-    bullets = [];
-    banner = { text: BOSS_PHASES[b.phase].name, t: 2.4 };
-    b.hp = Math.min(b.hp, Math.floor(b.maxHp * BOSS_PHASES[b.phase - 1].at));
+    enterPhase(b, b.phase + 1);
   }
 
   function defeatBoss() {
-    burst(boss.x + boss.w / 2, boss.y + boss.h / 2, '#fc6', 30);
-    bullets = []; boss = null;
-    world.bosses.meiling = true;
+    const b = boss, id = b.id, def = bossDef(b);
+    burst(b.x + b.w / 2, b.y + b.h / 2, '#fc6', 30);
+    bullets = []; boss = null; Sound.sfx('win');
+    world.bosses[id] = true;
     portals = lockedPortals; lockedPortals = [];
-    player.hp = P.maxHp; player.mana = P.maxMana; persist();
+    player.hp = maxHp(); player.mana = P.maxMana;
+    world.hpBonus = (world.hpBonus || 0) + 1; player.hp = maxHp();
+    persist(); Sound.bgm(map.bgm || 'field1');
+    if (id === 'kaguya') { startKaguyaEnding(); return; }
+    startDlg(def.outro, () => say('체력 최대치 +1'));
+  }
+
+  function startKaguyaEnding() {
     startDlg([
-      ['홍 메이링', '……참 많이 늘으셨네요. 오늘은 제가 졌습니다.'],
-      ['사쿠야', '당신이 봐줬을 뿐이에요. 다음에는 정말로 상대해 드리죠.'],
-      ['홍 메이링', '아가씨가 찾으세요. 도서관 쪽에서 이상한 소리가 났다고 하시더군요.'],
-    ], () => say('연무장 승리! (이후 구역은 다음 단계에서 이어집니다)'));
+      ['사쿠야', '……이걸로 끝이에요. 이제 이 밤을 돌려주세요.'],
+      ['카구야', '재미있었어. 정말로. 시간을 멈추는 인간이 이렇게나 오래 버틸 줄은 몰랐어.'],
+      ['카구야', '그래서 알고 싶어졌어. 영원을 만난 인간은, 시간이 멈춘 다음에 어떻게 되는지.'],
+      ['사쿠야', '……아가씨. 죄송합니다. 약속을 지키지 못할 것 같아요.'],
+      ['', '달빛이 한순간 모든 것을 비췄다. 멈춘 시간 속에서, 은빛 시계의 초침만이 흔들렸다.'],
+    ], () => { ending = { t: 0 }; Sound.bgm('ending'); });
   }
 
   function updateBoss(dt) {
     const b = boss;
     if (!b || !b.active) return;
+    const def = bossDef(b);
     b.flash = Math.max(0, b.flash - dt);
-    b.vy = Math.min(P.maxFall, b.vy + P.gravity * dt);
-    if (b.inv > 0) { b.inv -= dt; b.vx = 0; const r = moveBody(b, dt); b.onGround = r.ground; return; }
+    if (b.inv > 0) {
+      b.inv -= dt; b.vx = 0; if (!def.fly) b.vy = Math.min(P.maxFall, b.vy + P.gravity * dt); else b.vy = 0;
+      const r = moveBody(b, dt); b.onGround = r.ground; return;
+    }
     const s = dt * slowAt(b.x + b.w / 2, b.y + b.h / 2);
-    b.t += s;
-    const cx = b.x + b.w / 2, cy = b.y + 14;
+    b.pt += s;
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
     const px = player.x + player.w / 2, py = player.y + player.h / 2;
     b.dir = px < cx ? -1 : 1;
-    if (b.phase === 0) {
-      if (b.dashT > 0) { b.dashT -= s; b.vx = b.dir * 430; }
-      else if (b.tele > 0) { b.tele -= s; b.vx = 0; if (b.tele <= 0) b.dashT = 0.5; }
-      else {
-        b.vx = b.dir * 75; b.cd -= s; b.dashCd -= s;
-        if (b.cd <= 0) {
-          b.cd = 1.5;
-          const a0 = Math.atan2(py - cy, px - cx);
-          for (const da of [-0.3, 0, 0.3]) addBullet(cx - 4, cy - 4, Math.cos(a0 + da) * 230, Math.sin(a0 + da) * 230);
-        }
-        if (b.dashCd <= 0) { b.dashCd = 4; b.tele = 0.55; }
-      }
-    } else if (b.phase === 1) {
-      b.vx = 0; b.cd -= s;
-      if (b.cd <= 0) {
-        b.cd = 0.6; b.ang += 0.27;
-        for (let i = 0; i < 12; i++) { const a = b.ang + i * Math.PI / 6; addBullet(cx - 4, cy - 4, Math.cos(a) * 150, Math.sin(a) * 150); }
-      }
-    } else {
-      b.vx = 0; b.hop -= s; b.rain -= s; b.wave -= s;
-      if (b.hop <= 0 && b.onGround) { b.vy = -760; b.hop = 2.6; }
-      if (b.rain <= 0) { b.rain = 0.16; addBullet(2 * T + Math.random() * (mapW - 4) * T, T + 4, 0, 210); }
-      if (b.wave <= 0) {
-        b.wave = 2.8;
-        const d = px < cx ? -1 : 1;
-        bullets.push({ x: cx - 5, y: (mapH - 2) * T - 12, w: 12, h: 12, vx: d * 250, vy: 0, life: 6 });
-      }
-    }
+    const ph = def.phases[b.phase];
+    const flying = ph.fly !== undefined ? ph.fly : def.fly;
+    if (!flying) b.vy = Math.min(P.maxFall, b.vy + P.gravity * s);
+    const A = {
+      b, s, cx, cy, px, py, g: b.onGround, L: T + 10, R: (mapW - 1) * T - 10, ceil: T, floor: (mapH - 2) * T,
+      rnd: Math.random,
+      shot: (x, y, vx, vy, o) => addBullet(x, y, vx, vy, o),
+      aim: (sp, spreads, o) => { const a0 = Math.atan2(py - cy, px - cx); for (const da of spreads) addBullet(cx - 4, cy - 4, Math.cos(a0 + da) * sp, Math.sin(a0 + da) * sp, o); },
+      ring: (n, sp, off, o) => { for (let i = 0; i < n; i++) { const a = off + i * Math.PI * 2 / n; addBullet(cx - 4, cy - 4, Math.cos(a) * sp, Math.sin(a) * sp, o); } },
+      moveTo: (tx, ty, sp) => { const dx = tx - cx, dy = ty - cy, d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 40); b.vx = dx / d * sp * k; b.vy = dy / d * sp * k; },
+    };
+    ph.run(A);
     const r = moveBody(b, s); b.onGround = r.ground;
     if (!player.dead && overlap(player, b)) hurtPlayer(cx);
   }
@@ -218,7 +223,7 @@
 
   function hurtPlayer(fromX) {
     if (player.inv > 0 || player.dead) return;
-    player.hp--; player.inv = P.iframes;
+    player.hp--; player.inv = P.iframes; Sound.sfx('hurt');
     player.vx = (player.x + player.w / 2 < fromX ? -1 : 1) * 260; player.vy = -300;
     player.dashT = 0;
     burst(player.x + player.w / 2, player.y + player.h / 2, '#f66');
@@ -230,10 +235,12 @@
     const cx = player.x + player.w / 2 + dir * 12, cy = player.y + (player.crouch ? 8 : 24);
     if (lob) knives.push({ x: cx, y: cy, w: 10, h: 6, vx: dir * 360, vy: -440, g: 1300, life: 1.6, spin: 0 });
     else {
-      const up = Input.held('up');
-      knives.push({ x: cx, y: cy, w: 12, h: 4, vx: dir * (up ? 420 : 640), vy: up ? -420 : 0, g: 0, life: 0.9, spin: 0 });
+      const up = Input.held('up'), straightUp = up && !Input.held('left') && !Input.held('right');
+      if (straightUp) knives.push({ x: player.x + player.w / 2 - 4, y: player.y - 8, w: 8, h: 16, vx: 0, vy: -820, g: 0, life: 0.7, spin: 0 });
+      else knives.push({ x: cx, y: cy, w: 12, h: 4, vx: dir * (up ? 420 : 640), vy: up ? -420 : 0, g: 0, life: 0.9, spin: 0 });
     }
     player.knifeCd = lob ? P.lobCd : P.knifeCd;
+    Sound.sfx(lob ? 'lob' : 'knife');
   }
 
   function updatePlayer(dt) {
@@ -260,7 +267,7 @@
 
     // 대시
     if (Input.pressed('dash') && p.dashCd <= 0 && p.dashT <= 0 && (p.onGround || p.airDash)) {
-      p.dashT = P.dashTime; p.dashCd = P.dashCooldown; p.vx = p.face * P.dashSpeed; p.vy = 0;
+      Sound.sfx('dash'); p.dashT = P.dashTime; p.dashCd = P.dashCooldown; p.vx = p.face * P.dashSpeed; p.vy = 0;
       if (!p.onGround) p.airDash = false;
       p.inv = Math.max(p.inv, P.dashTime);   // 대시 중 짧은 무적
     }
@@ -274,10 +281,10 @@
       if (p.vx < target) p.vx = Math.min(target, p.vx + a * dt);
       else if (p.vx > target) p.vx = Math.max(target, p.vx - a * dt);
       // 점프
-      if (p.buffer > 0 && p.coyote > 0) { p.vy = -P.jump; p.buffer = 0; p.coyote = 0; p.onGround = false; }
+      if (p.buffer > 0 && p.coyote > 0) { Sound.sfx('jump'); p.vy = -P.jump; p.buffer = 0; p.coyote = 0; p.onGround = false; }
       else if (p.buffer > 0 && !p.onGround && world.abil.double && p.airJump) {
         p.vy = -P.jump * 0.92; p.buffer = 0; p.airJump = false;
-        burst(p.x + p.w / 2, p.y + p.h, '#9cf', 8);
+        burst(p.x + p.w / 2, p.y + p.h, '#9cf', 8); Sound.sfx('jump2');
       }
       if (!Input.held('jump') && p.vy < -120) p.vy += (P.gravity * 2.2) * dt;   // 점프 컷
       p.vy = Math.min(P.maxFall, p.vy + P.gravity * dt);
@@ -286,7 +293,7 @@
     // 시간 감속장
     p.mana = Math.min(P.maxMana, p.mana + P.manaRegen * dt);
     if (Input.pressed('time') && p.mana >= P.fieldCost) {
-      p.mana -= P.fieldCost;
+      Sound.sfx('field'); p.mana -= P.fieldCost;
       fields.push({ x: p.x + p.w / 2, y: p.y + p.h / 2, r: P.fieldR, life: P.fieldLife });
     }
 
@@ -307,19 +314,19 @@
     if (!door) p.portalLock = false;
     else if (!p.portalLock) {
       const link = map.links[door.ch];
-      if (link) { loadMap(link[0], { tile: link[1], keep: true }); persist(); return; }
+      if (link) { Sound.sfx('door'); loadMap(link[0], { tile: link[1], keep: true }); persist(); return; }
     }
     if (Input.pressed('up')) {
       const sv = saves.find(q => Math.abs(cx - (q.x + 0.5) * T) < 28 && Math.abs(p.y + p.h - (q.y + 1) * T) < 8);
       if (sv) {
         world.save = { room: roomId, pos: { x: sv.x * T + (T - P.w) / 2, y: (sv.y + 1) * T - P.h } };
-        p.hp = P.maxHp; p.mana = P.maxMana; persist(); say('저장했습니다');
-        burst(cx, p.y, '#8fd', 10);
+        p.hp = maxHp(); p.mana = P.maxMana; persist(); say('저장했습니다');
+        burst(cx, p.y, '#8fd', 10); Sound.sfx('save');
       }
     }
     for (const it of items) if (tileHit(it)) {
       if (it.kind === 'double') { world.abil.double = true; say('이단 점프 획득! 공중에서 점프를 한 번 더 누르세요'); }
-      world.got[roomId + ':' + it.x + ',' + it.y] = true; it.taken = true; persist();
+      Sound.sfx('item'); world.got[roomId + ':' + it.x + ',' + it.y] = true; it.taken = true; persist();
     }
     items = items.filter(it => !it.taken);
 
@@ -368,10 +375,10 @@
       k.life -= dt; k.vy += k.g * dt; k.spin += dt * 20;
       k.x += k.vx * dt; k.y += k.vy * dt;
       if (rectSolid(k.x, k.y, k.w, k.h)) { k.life = 0; burst(k.x, k.y, '#ccd', 3); continue; }
-      if (boss && boss.active && overlap(k, boss)) { k.life = 0; burst(k.x, k.y, boss.inv > 0 ? '#ccd' : '#fc6', 4); damageBoss(); continue; }
+      if (boss && boss.active && overlap(k, { x: boss.x - 10, y: boss.y - 10, w: boss.w + 20, h: boss.h + 20 })) { k.life = 0; burst(k.x, k.y, boss.inv > 0 ? '#ccd' : '#fc6', 4); damageBoss(); continue; }
       for (const e of enemies) {
         if (e.hp > 0 && overlap(k, e)) {
-          e.hp--; e.flash = 0.12; k.life = 0;
+          e.hp--; e.flash = 0.12; k.life = 0; Sound.sfx(e.hp <= 0 ? 'kill' : 'hit');
           burst(k.x, k.y, '#fc6', 4);
           if (e.hp <= 0) burst(e.x + e.w / 2, e.y + e.h / 2, '#c6f', 12);
           break;
@@ -396,15 +403,15 @@
   function update(dt) {
     time += dt; msgT = Math.max(0, msgT - dt); banner.t = Math.max(0, banner.t - dt);
     if (dlg) { if (Input.pressed('throw') || Input.pressed('jump') || Input.pressed('up')) advanceDlg(); return; }
-    if (Input.pressed('restart')) respawn();
+    if (Input.pressed('mute')) say(Sound.toggle() ? '소리 끔' : '소리 켬');
+    if (Input.pressed('restart')) { ending = null; respawn(); }
     updatePlayer(dt);
     if (boss && !boss.active && !boss.intro && player.onGround && player.x > 6 * T) {
       boss.intro = true;
-      startDlg([
-        ['홍 메이링', '사쿠야 씨, 오늘도 한 수 부탁드립니다.'],
-        ['사쿠야', '순찰 중이에요. ……뭐, 잠깐이라면.'],
-        ['홍 메이링', '봐주시면 안 됩니다! 저도 오늘은 진심이에요!'],
-      ], () => { boss.active = true; lockedPortals = portals; portals = []; banner = { text: BOSS_PHASES[0].name, t: 2 }; });
+      startDlg(bossDef(boss).intro, () => {
+        boss.active = true; lockedPortals = portals; portals = [];
+        enterPhase(boss, 0); Sound.bgm('boss_' + boss.id);
+      });
     }
     updateBoss(dt);
     updateEnemies(dt);
@@ -450,17 +457,22 @@
       ctx.fillRect(e.x, e.y, e.w, e.h);
       ctx.fillStyle = '#000'; ctx.fillRect(e.x + (e.vx >= 0 ? e.w - 8 : 3), e.y + 5, 5, 5);
     }
-    ctx.fillStyle = '#f84';
-    for (const b of bullets) { ctx.beginPath(); ctx.arc(b.x + 4, b.y + 4, 5, 0, 7); ctx.fill(); }
+    for (const b of bullets) {
+      ctx.fillStyle = b.c || '#f84';
+      if (b.w > b.h + 4) ctx.fillRect(b.x, b.y, b.w, b.h);
+      else { ctx.beginPath(); ctx.arc(b.x + b.w / 2, b.y + b.h / 2, b.w / 2 + 1, 0, 7); ctx.fill(); }
+    }
     for (const e of enemies) if (e.hp < e.maxHp) {
       ctx.fillStyle = '#300'; ctx.fillRect(e.x, e.y - 8, e.w, 4);
       ctx.fillStyle = '#f55'; ctx.fillRect(e.x, e.y - 8, e.w * e.hp / e.maxHp, 4);
     }
     if (boss) {
-      const cA = boss.inv > 0 && Math.floor(time * 16) % 2 === 0;
-      ctx.fillStyle = boss.flash > 0 ? '#fff' : (boss.tele > 0 ? '#fd5' : '#c33'); if (!cA) ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
-      ctx.fillStyle = '#2a7a4a'; if (!cA) ctx.fillRect(boss.x - 2, boss.y, boss.w + 4, 9);
-      ctx.fillStyle = '#000'; ctx.fillRect(boss.x + (boss.dir > 0 ? 16 : 5), boss.y + 14, 4, 4);
+      const d = bossDef(boss), cA = boss.inv > 0 && Math.floor(time * 16) % 2 === 0;
+      if (!cA) {
+        ctx.fillStyle = boss.flash > 0 ? '#fff' : (boss.warn ? '#fd5' : d.color); ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+        ctx.fillStyle = d.accent; ctx.fillRect(boss.x - 2, boss.y, boss.w + 4, 9);
+        ctx.fillStyle = '#000'; ctx.fillRect(boss.x + (boss.dir > 0 ? boss.w - 9 : 5), boss.y + 14, 4, 4);
+      }
     }
     // 나이프
     ctx.fillStyle = '#dfe6ff';
@@ -476,17 +488,18 @@
     for (const q of particles) { ctx.fillStyle = q.color; ctx.fillRect(q.x, q.y, 3, 3); }
     ctx.restore();
 
-    // 미니맵
-    for (const id in world.visited) {
-      const r = MAPS[id]; if (!r) continue;
-      ctx.fillStyle = id === roomId ? '#8fb4ff' : '#4a4468';
-      ctx.fillRect(W - 110 + r.gx * 30, 16 + r.gy * 18, 26, 14);
-    }
+    // 미니맵 (전체 폭 150px에 맞춰 축소)
+    { const cell = Math.min(30, 150 / (MAP_COLS + 0.2)), x0 = W - 16 - cell * MAP_COLS;
+      for (const id in world.visited) {
+        const r = MAPS[id]; if (!r) continue;
+        ctx.fillStyle = id === roomId ? '#8fb4ff' : '#4a4468';
+        ctx.fillRect(x0 + r.gx * cell, 16 + r.gy * 12, cell - 3, 8);
+      } }
     if (boss && boss.active) {
-      const bw = 420, bx = (W - bw) / 2, by = H - 40;
+      const def = bossDef(boss), bw = 420, bx = (W - bw) / 2, by = H - 40;
       ctx.fillStyle = '#211'; ctx.fillRect(bx, by, bw, 10);
-      ctx.fillStyle = BOSS_PHASES[boss.phase].spell ? '#e8a' : '#e55'; ctx.fillRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 10);
-      ctx.fillStyle = '#fff'; for (const ph of BOSS_PHASES.slice(0, -1)) ctx.fillRect(bx + bw * ph.at - 1, by - 3, 2, 16);
+      ctx.fillStyle = def.phases[boss.phase].spell ? '#e8a' : '#e55'; ctx.fillRect(bx, by, bw * Math.max(0, boss.hp) / boss.maxHp, 10);
+      ctx.fillStyle = '#fff'; for (const ph of def.phases.slice(0, -1)) ctx.fillRect(bx + bw * ph.at - 1, by - 3, 2, 16);
       ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(boss.name, W / 2, by - 8); ctx.textAlign = 'left';
     }
     if (banner.t > 0) {
@@ -501,9 +514,22 @@
       ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.fillText(l[1], 64, 142);
       ctx.fillStyle = '#9a93b8'; ctx.font = '12px sans-serif'; ctx.fillText('Z / Space 로 넘기기', W - 190, 172);
     }
+    if (ending) {
+      ending.t += 1 / 60;
+      const a = Math.min(1, ending.t / 3);
+      ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.fillRect(0, 0, W, H);
+      if (ending.t > 3) {
+        ctx.globalAlpha = Math.min(1, (ending.t - 3) / 2); ctx.fillStyle = '#e6e2f5'; ctx.textAlign = 'center';
+        ctx.font = '34px sans-serif'; ctx.fillText('月蝕録 外傳 — 終', W / 2, H / 2 - 20);
+        ctx.font = '18px sans-serif'; ctx.fillStyle = '#9a93b8';
+        ctx.fillText('이 이야기는 『동방월식록』으로 이어집니다.', W / 2, H / 2 + 24);
+        ctx.fillText('R 키: 처음 저장 지점에서 다시 시작', W / 2, H / 2 + 60);
+        ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+      }
+    }
     if (msgT > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(1, msgT)})`; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(msgText, W / 2, 90); ctx.textAlign = 'left'; }
     // HUD
-    for (let i = 0; i < P.maxHp; i++) {
+    for (let i = 0; i < maxHp(); i++) {
       ctx.fillStyle = i < p.hp ? '#e44' : '#422'; ctx.fillRect(16 + i * 26, 16, 20, 20);
     }
     ctx.fillStyle = '#123'; ctx.fillRect(16, 42, 130, 8);
@@ -535,5 +561,5 @@
   }
   requestAnimationFrame(frame);
   // 테스트/디버그용 훅
-  window.__game = { loadMap, get boss() { return boss; }, get bullets() { return bullets; }, get dlg() { return dlg; }, get room() { return roomId; }, world, get player() { return player; }, get enemies() { return enemies; }, get knives() { return knives; }, step: n => { for (let i = 0; i < n; i++) { update(DT); Input.endFrame(); } }, Input };
+  window.__game = { loadMap, get ending() { return ending; }, get boss() { return boss; }, get bullets() { return bullets; }, get dlg() { return dlg; }, get room() { return roomId; }, world, get player() { return player; }, get enemies() { return enemies; }, get knives() { return knives; }, step: n => { for (let i = 0; i < n; i++) { update(DT); Input.endFrame(); } }, Input };
 })();
