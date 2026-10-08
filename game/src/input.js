@@ -9,6 +9,7 @@ const Input = (() => {
     ShiftLeft: 'dash', ShiftRight: 'dash', KeyC: 'dash',
     KeyZ: 'throw', KeyJ: 'throw',
     KeyX: 'lob', KeyK: 'lob',
+    KeyQ: 'time', KeyL: 'time',
     KeyR: 'restart',
   };
   window.addEventListener('keydown', e => {

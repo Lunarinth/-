@@ -15,27 +15,29 @@
     dashSpeed: 560, dashTime: 0.17, dashCooldown: 0.45,
     maxHp: 5, iframes: 1.2,
     knifeCd: 0.22, lobCd: 0.5,
+    maxMana: 100, manaRegen: 14, fieldCost: 40, fieldR: 130, fieldLife: 4, slow: 0.25,
   };
 
-  let map, grid, mapW, mapH, player, enemies, knives, particles, camX, camY, time;
+  let map, grid, mapW, mapH, player, enemies, knives, particles, fields, bullets, camX, camY, time;
 
   function loadMap(id) {
     map = MAPS[id];
     grid = map.rows.map(r => r.split(''));
     mapH = grid.length; mapW = grid[0].length;
-    enemies = []; knives = []; particles = [];
+    enemies = []; knives = []; particles = []; fields = []; bullets = [];
     let start = { x: 2 * T, y: 2 * T };
     for (let y = 0; y < mapH; y++) for (let x = 0; x < mapW; x++) {
       const c = grid[y][x];
       if (c === 'P') { start = { x: x * T + (T - P.w) / 2, y: (y + 1) * T - P.h }; grid[y][x] = '.'; }
       else if (c === 'w') { enemies.push(makeEnemy('walker', x * T + 4, (y + 1) * T - 28)); grid[y][x] = '.'; }
+      else if (c === 't') { enemies.push(makeEnemy('turret', x * T + 4, y * T + 4)); grid[y][x] = '.'; }
       else if (c === 'f') { enemies.push(makeEnemy('flyer', x * T, y * T)); grid[y][x] = '.'; }
     }
     player = {
       x: start.x, y: start.y, vx: 0, vy: 0, w: P.w, h: P.h,
       face: 1, onGround: false, coyote: 0, buffer: 0,
       dashT: 0, dashCd: 0, airDash: true,
-      hp: P.maxHp, inv: 0, knifeCd: 0, dead: false, deadT: 0,
+      hp: P.maxHp, mana: P.maxMana, inv: 0, knifeCd: 0, dead: false, deadT: 0,
       start,
     };
     camX = 0; camY = 0; time = 0;
@@ -43,6 +45,7 @@
 
   function makeEnemy(type, x, y) {
     if (type === 'walker') return { type, x, y, w: 24, h: 28, vx: -60, vy: 0, hp: 3, flash: 0, dir: -1 };
+    if (type === 'turret') return { type, x, y, w: 24, h: 24, vx: 0, vy: 0, hp: 4, flash: 0, cd: 1.2 };
     return { type, x, y, baseY: y, w: 24, h: 20, vx: 0, vy: 0, hp: 2, flash: 0, t: Math.random() * 6 };
   }
 
@@ -58,6 +61,7 @@
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (solidAt(tx, ty)) return true;
     return false;
   };
+  const slowAt = (x, y) => fields.some(f => Math.hypot(x - f.x, y - f.y) < f.r) ? P.slow : 1;
   const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
   // 축별 이동 + 충돌 해결. 부딪히면 해당 축 속도를 0으로.
@@ -141,6 +145,13 @@
       p.vy = Math.min(P.maxFall, p.vy + P.gravity * dt);
     }
 
+    // 시간 감속장
+    p.mana = Math.min(P.maxMana, p.mana + P.manaRegen * dt);
+    if (Input.pressed('time') && p.mana >= P.fieldCost) {
+      p.mana -= P.fieldCost;
+      fields.push({ x: p.x + p.w / 2, y: p.y + p.h / 2, r: P.fieldR, life: P.fieldLife });
+    }
+
     // 투척
     if (p.knifeCd <= 0) {
       if (Input.pressed('throw') || (Input.held('throw') && p.knifeCd <= 0)) throwKnife(false);
@@ -161,8 +172,17 @@
 
   function updateEnemies(dt) {
     for (const e of enemies) {
+      const full = dt;
+      dt = full * slowAt(e.x + e.w / 2, e.y + e.h / 2);
       e.flash = Math.max(0, e.flash - dt);
-      if (e.type === 'walker') {
+      if (e.type === 'turret') {
+        e.cd -= dt;
+        if (e.cd <= 0 && Math.abs(player.x - e.x) < 520) {
+          e.cd = 2;
+          const ang = Math.atan2(player.y + 20 - e.y, player.x - e.x);
+          bullets.push({ x: e.x + 8, y: e.y + 8, w: 8, h: 8, vx: Math.cos(ang) * 200, vy: Math.sin(ang) * 200, life: 4 });
+        }
+      } else if (e.type === 'walker') {
         e.vy = Math.min(P.maxFall, e.vy + P.gravity * dt);
         e.vx = e.dir * 60;
         const r = moveBody(e, dt);
@@ -177,14 +197,17 @@
         e.vy = Math.sin(e.t * 3) * 40 + (near ? Math.sign(dy) * 25 : 0);
         moveBody(e, dt);
       }
+      dt = full;
       if (!player.dead && overlap(player, e)) hurtPlayer(e.x + e.w / 2);
     }
   }
 
   function updateKnives(dt) {
     for (const k of knives) {
+      const full = dt; dt = full * slowAt(k.x, k.y);
       k.life -= dt; k.vy += k.g * dt; k.spin += dt * 20;
       k.x += k.vx * dt; k.y += k.vy * dt;
+      dt = full;
       if (rectSolid(k.x, k.y, k.w, k.h)) { k.life = 0; burst(k.x, k.y, '#ccd', 3); continue; }
       for (const e of enemies) {
         if (e.hp > 0 && overlap(k, e)) {
@@ -195,6 +218,15 @@
         }
       }
     }
+    for (const b of bullets) {
+      const sdt = dt * slowAt(b.x, b.y);
+      b.life -= sdt; b.x += b.vx * sdt; b.y += b.vy * sdt;
+      if (rectSolid(b.x, b.y, b.w, b.h)) b.life = 0;
+      else if (!player.dead && overlap(player, b)) { hurtPlayer(b.x); b.life = 0; }
+    }
+    for (const f of fields) f.life -= dt;
+    bullets = bullets.filter(b => b.life > 0);
+    fields = fields.filter(f => f.life > 0);
     knives = knives.filter(k => k.life > 0);
     enemies = enemies.filter(e => e.hp > 0);
     for (const p of particles) { p.life -= dt; p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
@@ -226,12 +258,22 @@
       ctx.fillStyle = '#3a3358'; ctx.fillRect(x * T, y * T, T, T);
       ctx.fillStyle = '#4c446f'; ctx.fillRect(x * T, y * T, T, 3);
     }
+    // 감속장
+    for (const f of fields) {
+      const a = Math.min(1, f.life) * 0.5;
+      ctx.fillStyle = `rgba(110,150,255,${a * 0.35})`; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(190,215,255,${a})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r * 0.55, time * 0.8, time * 0.8 + 4.2); ctx.stroke();
+    }
     // 적
     for (const e of enemies) {
-      ctx.fillStyle = e.flash > 0 ? '#fff' : (e.type === 'walker' ? '#b34' : '#a5c');
+      ctx.fillStyle = e.flash > 0 ? '#fff' : (e.type === 'walker' ? '#b34' : e.type === 'turret' ? '#b82' : '#a5c');
       ctx.fillRect(e.x, e.y, e.w, e.h);
       ctx.fillStyle = '#000'; ctx.fillRect(e.x + (e.vx >= 0 ? e.w - 8 : 3), e.y + 5, 5, 5);
     }
+    ctx.fillStyle = '#f84';
+    for (const b of bullets) { ctx.beginPath(); ctx.arc(b.x + 4, b.y + 4, 5, 0, 7); ctx.fill(); }
     // 나이프
     ctx.fillStyle = '#dfe6ff';
     for (const k of knives) ctx.fillRect(k.x, k.y, k.w, k.h);
@@ -250,8 +292,10 @@
     for (let i = 0; i < P.maxHp; i++) {
       ctx.fillStyle = i < p.hp ? '#e44' : '#422'; ctx.fillRect(16 + i * 26, 16, 20, 20);
     }
+    ctx.fillStyle = '#123'; ctx.fillRect(16, 42, 130, 8);
+    ctx.fillStyle = p.mana >= P.fieldCost ? '#6af' : '#358'; ctx.fillRect(16, 42, 130 * p.mana / P.maxMana, 8);
     ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif';
-    ctx.fillText(map.name, 16, 58);
+    ctx.fillText(map.name, 16, 70);
     if (p.dead) {
       ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#fff'; ctx.font = '32px sans-serif'; ctx.fillText('— 시간이 멈췄다 —', W / 2 - 150, H / 2);
