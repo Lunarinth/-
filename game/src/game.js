@@ -478,7 +478,7 @@
       if (!cA) {
         const ph = d.phases[boss.phase], fl = ph.fly !== undefined ? ph.fly : d.fly;
         if (boss.flash > 0) ctx.filter = 'brightness(2.2)'; else if (boss.warn) ctx.filter = 'brightness(1.7) saturate(1.6)';
-        Sprites.drawChar(ctx, boss.id, { onGround: boss.onGround, vx: boss.vx, vy: boss.vy, fly: fl, cast: boss.active && ph.spell && boss.inv <= 0 && Math.floor(time * 2) % 2 === 0 }, boss.x + boss.w / 2, boss.y + boss.h + (fl ? 14 : 2), boss.dir, time);
+        Sprites.drawChar(ctx, boss.id, { onGround: boss.onGround, vx: boss.vx, vy: boss.vy, fly: fl, cast: boss.active && ph.spell && boss.inv <= 0 && Math.floor(time * 2) % 2 === 0 }, boss.x + boss.w / 2, fl ? boss.y + boss.h / 2 + 39 : boss.y + boss.h, boss.dir, time);
         ctx.filter = 'none';
       }
     }
@@ -490,7 +490,7 @@
       Sprites.drawChar(ctx, 'sakuya', {
         onGround: p.onGround, vx: p.vx, vy: p.vy, crouch: p.crouch, dash: p.dashT > 0,
         hurt: p.inv > P.iframes - 0.3 && p.dashT <= 0 && p.hp < maxHp(), throw: p.knifeCd > 0.1 ? p.knifeCd / P.knifeCd : 0,
-      }, p.x + p.w / 2, p.y + p.h + 2, p.face, time);
+      }, p.x + p.w / 2, p.y + p.h, p.face, time);
     }
     // 탄막 (가산 합성으로 빛나게)
     ctx.globalCompositeOperation = 'lighter';
@@ -525,10 +525,8 @@
       ctx.strokeStyle = '#6a5a9a'; ctx.lineWidth = 2; ctx.strokeRect(40, 70, W - 80, 128);
       let tx = 64;
       if (pid) {
-        const f = Sprites.frame(pid, { tq: 1, bob: 0 });
         ctx.fillStyle = '#241c3a'; ctx.fillRect(52, 78, 112, 112); ctx.strokeStyle = '#4c446f'; ctx.strokeRect(52, 78, 112, 112);
-        ctx.save(); ctx.beginPath(); ctx.rect(52, 78, 112, 112); ctx.clip();
-        ctx.drawImage(f.c, 0, 0, 48, 40, 52 - 4, 78 + 4, 120, 100); ctx.restore(); tx = 184;
+        ctx.drawImage(Sprites.portrait(pid), 52, 78, 112, 112); tx = 184;
       }
       ctx.fillStyle = '#8fb4ff'; ctx.font = '16px sans-serif'; ctx.fillText(l[0], tx, 102);
       ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; wrapText(l[1], tx, 138, W - 80 - (tx - 40) - 24, 28);
