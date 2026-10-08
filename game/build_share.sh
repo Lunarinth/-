@@ -34,7 +34,7 @@ cat <<'HEAD'
 </div>
 HEAD
 echo '<script>'
-cat src/input.js src/audio.js src/bosses.js src/maps.js src/game.js
+cat src/input.js src/audio.js src/sprites.js src/art.js src/bosses.js src/maps.js src/game.js
 cat <<'TAIL'
 
 document.getElementById('start').addEventListener('click',function(){this.hidden=true;window.focus();Sound.init();});

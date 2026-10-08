@@ -104,3 +104,13 @@ MAPS.arena.boss = 'meiling';
   });
 })();
 const MAP_COLS = Math.max(...Object.values(MAPS).map(r => r.gx)) + 1;
+
+// 방 테마 (배경·타일 모양)
+MAPS.start.theme = 'garden';
+MAPS.hall.theme = MAPS.trial.theme = MAPS.arena.theme = 'mansion';
+Object.assign(MAPS.ap_patchouli, { theme: 'library' }); Object.assign(MAPS.ar_patchouli, { theme: 'library' });
+MAPS.ap_flandre.theme = MAPS.ar_flandre.theme = 'dungeon';
+MAPS.ap_remilia.theme = MAPS.ar_remilia.theme = 'mansion';
+MAPS.ap_youmu.theme = MAPS.ar_youmu.theme = MAPS.ap_yuyuko.theme = MAPS.ar_yuyuko.theme = 'nether';
+MAPS.ap_reisen.theme = MAPS.ar_reisen.theme = 'bamboo';
+MAPS.ap_kaguya.theme = MAPS.ar_kaguya.theme = 'eientei';
