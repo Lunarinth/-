@@ -81,7 +81,7 @@ export class MusicDirector {
   }
 
   _tick(t) {
-    if (this.pending && (this.pending.immediate || this.step % 16 === 0)) {
+    if (this.pending && (this.pending.immediate || this.step % ((this.cur && this.cur.def.barSteps) || 16) === 0)) {
       const p = this.pending; this.pending = null;
       this._retire(this.cur, t, p.fade);
       this.cur = this._makeScene(p.name, t, p.fade);
@@ -91,9 +91,9 @@ export class MusicDirector {
     }
     const sc = this.cur;
     if (!sc) { this.nextT = t + 0.1; return; }
-    const s = this.step % 16, bar = Math.floor(this.step / 16);
+    const BS = sc.def.barSteps || 16, s = this.step % BS, bar = Math.floor(this.step / BS);
     try { sc.def.tick(this, sc, t, s, bar); } catch (e) { console.error('music tick', e); }
-    const bpm = sc.def.bpm + (sc.def.bpmEnrage || 0) * this.intensity;
+    const bpm = sc.def.bpmAt ? sc.def.bpmAt(bar, this.intensity) : sc.def.bpm + (sc.def.bpmEnrage || 0) * this.intensity;
     this.nextT = t + 60 / bpm / 4;
     this.step++;
   }
@@ -129,9 +129,9 @@ export function scheduleScene(engine, name, seconds, { intensity = 0, ramp = fal
   let t = 0.05, step = 0;
   while (t < seconds) {
     if (ramp) m.intensity = Math.min(1, Math.max(0, (t / seconds) * 1.25 - 0.1));
-    const s = step % 16, bar = Math.floor(step / 16);
+    const BS = def.barSteps || 16, s = step % BS, bar = Math.floor(step / BS);
     def.tick(m, sc, t, s, bar);
-    t += 60 / (def.bpm + (def.bpmEnrage || 0) * m.intensity) / 4; step++;
+    t += 60 / (def.bpmAt ? def.bpmAt(bar, m.intensity) : def.bpm + (def.bpmEnrage || 0) * m.intensity) / 4; step++;
   }
   return sc;
 }

@@ -308,4 +308,40 @@ export class AudioEngine {
     this.noise(b, { t, dur, vol, type: 'highpass', f: 5200, q: 0.6, a: 0.002, rev: 0.4 });
     this.noise(b, { t, dur: dur * 0.5, vol: vol * 0.6, type: 'bandpass', f: 9000, q: 0.5, a: 0.002 });
   }
+
+  // ---------- 추가 악기 (v5) ----------
+  /** 금관: 어택 후 밝아지는 톱니파 (스포르찬도) */
+  brass(b, t, midis, dur, vol = 0.05, o = {}) {
+    for (const m of midis) for (const det of [-5, 5]) {
+      this.tone(b, { type: 'sawtooth', f: mtof(m), detune: det, t, dur, vol: vol * 0.6, a: o.a ?? 0.07, d: 0.2, s: 0.75, r: o.r ?? 0.18, cut: (o.cut ?? 700), cutTo: o.cutTo ?? 3200, cutT: 0.18, q: 0.8, vib: o.vib ?? 10, vibRate: 5.5, rev: o.rev ?? 0.4, dly: o.dly ?? 0.1 });
+    }
+  }
+  /** 하프시코드: 가늘고 날카로운 뜯는 소리 */
+  harpsi(b, t, midi, vol = 0.06, dur = 0.5, o = {}) {
+    this.tone(b, { type: 'sawtooth', f: mtof(midi), t, dur, vol: vol * 0.7, a: 0.001, d: dur * 0.8, s: 0.02, r: 0.05, cut: 5200, cutTo: 900, q: 1.5, rev: o.rev ?? 0.3, dly: o.dly ?? 0.15 });
+    this.tone(b, { type: 'square', f: mtof(midi + 12), t, dur: dur * 0.5, vol: vol * 0.25, a: 0.001, d: dur * 0.4, s: 0.01, r: 0.03, cut: 6000 });
+  }
+  /** 마림바/비브라폰: 사인 + 4배음의 짧은 울림 */
+  marimba(b, t, midi, vol = 0.09, dur = 0.5, o = {}) {
+    this.tone(b, { type: 'sine', f: mtof(midi), t, dur, vol, a: 0.002, d: dur * 0.9, s: 0.01, r: 0.06, rev: o.rev ?? 0.35, dly: o.dly ?? 0.2 });
+    this.tone(b, { type: 'sine', f: mtof(midi) * 4.0, t, dur: dur * 0.3, vol: vol * 0.35, a: 0.001, d: dur * 0.25, s: 0.01, r: 0.03 });
+  }
+  /** 첼레스타/오르골: 높은 종소리 */
+  celesta(b, t, midi, vol = 0.06, dur = 1.6, o = {}) {
+    this.bell(b, t, midi + 12, vol, dur, o.rev ?? 0.6, o.dly ?? 0.3);
+    this.tone(b, { type: 'sine', f: mtof(midi + 24), t, dur: dur * 0.4, vol: vol * 0.3, a: 0.001, d: dur * 0.35, s: 0.01, r: 0.05, rev: 0.5 });
+  }
+  /** 슈퍼소 리드: 디튠된 톱니 3겹 */
+  supersaw(b, t, midi, dur, vol = 0.06, o = {}) {
+    for (const det of [-14, 0, 14]) this.tone(b, { type: 'sawtooth', f: mtof(midi), detune: det, t, dur, vol: vol * 0.45, a: o.a ?? 0.01, d: 0.12, s: 0.8, r: o.r ?? 0.12, cut: o.cut ?? 4200, cutTo: o.cutTo ?? 2600, q: 0.7, vib: o.vib ?? 8, vibRate: 5.4, rev: o.rev ?? 0.3, dly: o.dly ?? 0.3 });
+  }
+  /** 팀파니 롤: dur 동안 빠른 연타 */
+  timpRoll(b, t, dur, vol = 0.5) {
+    const n = Math.max(2, Math.floor(dur / 0.06));
+    for (let i = 0; i < n; i++) this.tone(b, { type: 'sine', f: 90, f1: 60, glide: 0.1, t: t + i * (dur / n), dur: 0.12, vol: vol * (0.35 + 0.65 * (i / n)), a: 0.002, d: 0.1, s: 0.01, r: 0.05, rev: 0.5 });
+  }
+  /** 칩튠 펄스 */
+  pulse(b, t, midi, dur, vol = 0.05, o = {}) {
+    this.tone(b, { type: 'square', f: mtof(midi), t, dur, vol: vol * 0.7, a: 0.002, d: dur * 0.5, s: 0.5, r: 0.03, cut: 7000, rev: o.rev ?? 0.1, dly: o.dly ?? 0.15 });
+  }
 }
