@@ -1,5 +1,5 @@
 // DOM 기반 UI: 타이틀·난이도/캐릭터 선택, HUD, 대사창, 스킬 선언 컷인, 컨티뉴/엔딩/결과, 설정집.
-import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF } from './lore.js';
+import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, HELL_DIFF } from './lore.js';
 import { OPSIR } from './bosses/opsir.js';
 import { ASTRA } from './bosses/astra.js';
 import { TRAMONT } from './bosses/tramont.js';
@@ -53,6 +53,7 @@ export class UI {
       if (this.extraUnlocked()) { this.extraMode = true; this.pickedDiff = EXTRA_DIFF; this.openSelect('char'); }
       else { this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true); this.sfx.play('hurt', { vol: 0.25 }); }
     };
+    $('#btn-hell').onclick = () => { if (this.hellUnlocked()) { this.extraMode = true; this.pickedDiff = HELL_DIFF; this.openSelect('char'); } };
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
     $('#btn-help').onclick = () => this.modal('#m-help', true);
@@ -78,7 +79,11 @@ export class UI {
     bind('#o-mute', null, true); bind('#o-shake', 'shake'); bind('#o-calm', 'calm');
     // 테스터용 암호: 입력하면 컨티뉴 무제한 (EXTRA 제외)
     const pw = $('#o-pass');
-    if (pw) pw.oninput = () => { const on = pw.value.trim().toLowerCase() === 'lunacute'; if (on !== !!this._dbg) { this._dbg = on; this.on.debugInf && this.on.debugInf(on); } };
+    if (pw) pw.oninput = () => {
+      const v = pw.value.trim().toLowerCase(), on = v === 'lunacute';
+      if (on !== !!this._dbg) { this._dbg = on; this.on.debugInf && this.on.debugInf(on); }
+      if (v === 'lunaugly' && !this.hellUnlocked()) { this.on.unlockHell && this.on.unlockHell(); }
+    };
     document.body.classList.toggle('calm', S.calm);
   }
 
@@ -162,7 +167,7 @@ export class UI {
       if (!c) { this.warn('아직 선택할 수 없는 슬롯입니다', 1200, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
       if (!this.craftUnlocked(c.id)) { this.warn('아직 잠겨 있는 기체입니다', 1400, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
       this.closeSelect();
-      if (this.extraMode) { this.extraMode = false; this.on.startExtra && this.on.startExtra(c); }
+      if (this.extraMode) { this.extraMode = false; this.on.startExtra && this.on.startExtra(c, this.pickedDiff); }
       else this.on.start && this.on.start(this.pickedDiff, c);
     }
   }
@@ -199,7 +204,9 @@ export class UI {
 
   // ───── EXTRA ─────
   extraUnlocked() { try { return localStorage.getItem('lunarinth.extra.v1') === '1'; } catch (e) { return false; } }
+  hellUnlocked() { try { return localStorage.getItem('lunarinth.hell.v1') === '1'; } catch (e) { return false; } }
   refreshExtra() {
+    $('#btn-hell').hidden = !this.hellUnlocked();
     const b = $('#btn-extra'), on = this.extraUnlocked();
     b.classList.toggle('locked', !on);
     b.innerHTML = on ? 'EXTRA <i class="lock">— 개방됨</i>' : 'EXTRA <i class="lock">🔒</i>';
@@ -261,7 +268,7 @@ export class UI {
       ${O.forms.map((f) => `<div class="form"><b>${f.name}</b> — ${f.moon} · ${f.theme}<ul>${li(f.notes)}</ul></div>`).join('')}
       <h3>공통 능력 ${tag('off')}</h3><ul>${li(O.abilities)}</ul>
       <h3>루센트 저택 ${tag('off')}</h3><ul>${O.house.map(([a, b]) => `<li><b>${a}</b> — ${b}</li>`).join('')}</ul>
-      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}.<br>규칙: ${EXTRA.rules}</p>
+      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}.<br>규칙: ${EXTRA.rules}<br>${EXTRA.hell}</p>
       ${this.extraUnlocked() ? bossCard(ROSTER.find((r) => r.id === 'arkesia'), defs.arkesia) : '<div class="form"><b>？？？ <small>EXTRA</small></b><p class="note">EXTRA를 개방하면 기록됩니다.</p></div>'}
       <h3>플레이어 ${tag('prop')}</h3>
       <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 궁극기 「성검 해방 — 징벌의 월광」</li><li><b>아스트라</b> — 기술실 담당. 2스테이지에서 처음 쓰러뜨린 뒤 사용 가능. 궁극기 「기술실 권한 — 시스템 오버라이드」</li></ul>
@@ -401,7 +408,7 @@ export class UI {
       const show = () => {
         const ln = lines[i];
         if (!ln) return finish();
-        nameEl.textContent = NAMES[ln.who] || '';
+        nameEl.textContent = ln.as || NAMES[ln.who] || '';
         textEl.className = 'd-text' + (ln.who === 'narr' ? ' narr' : '');
         const hasFace = ln.who !== 'narr' && this._paintPortrait(ln.who);
         this.el.dPortrait.classList.toggle('narr', !hasFace);

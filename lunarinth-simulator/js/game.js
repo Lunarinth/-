@@ -8,15 +8,17 @@ import { Bellis, BELLIS_MID } from './bosses/bellis.js';
 import { Astra } from './bosses/astra.js';
 import { Tramont } from './bosses/tramont.js';
 import { Indexer, INDEX_MID } from './bosses/indexer.js';
-import { Arkesia } from './bosses/arkesia.js';
+import * as ArkMod from './bosses/arkesia.js';
+import { LUNARINTH_MID } from './bosses/lunarinth.js';
 import { SigilMid, makeSigilDef, SIGIL_KEYS } from './bosses/sigilmid.js';
 import { Lunarinth, PAL } from './bosses/lunarinth.js';
 import { Mobs } from './mobs.js';
 import { makeStageScript } from './stages.js';
-import { STAGES, EXTRA_STAGE, EXTRA_DIFF, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
+import { STAGES, EXTRA_STAGE, HELL_STAGE, EXTRA_DIFF, HELL_DIFF, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
 
 const EXTRA_KEY = 'lunarinth.extra.v1';
 const ASTRA_KEY = 'lunarinth.unlock.astra';
+const HELL_KEY = 'lunarinth.hell.v1';
 import { UI } from './ui.js';
 import { Input } from './input.js';
 import { AudioEngine } from './audio/engine.js';
@@ -36,7 +38,7 @@ const BOSS_ASSETS = {
   index: { cls: Indexer, img: 'assets/index.png' },
   bellis: { cls: Bellis, img: 'assets/bellis.png' },
   lunarinth: { cls: Lunarinth, img: 'assets/lunarinth.png' },
-  arkesia: { cls: Arkesia, img: 'assets/arkesia.png' },
+  arkesia: { cls: ArkMod.Arkesia, img: 'assets/arkesia.png' },
 };
 // 대사창 초상화 크롭 (이미지 대비 비율)
 const FACE = {
@@ -73,8 +75,8 @@ export class Game {
 
   newStats() { return { hits: 0, graze: 0, damage: 0, attacks: 0, ults: 0, spellsSeen: 0, spellsCaptured: 0, mobs: 0, ultDeaths: 0, ultSurvived: 0 }; }
   makeRun(diff, char, extra = false) {
-    const dbg = this.debugInf && !extra; // 테스트용 암호: EXTRA 에서는 적용되지 않는다
-    return { diff, char, extra, stages: extra ? [EXTRA_STAGE] : STAGES, stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0 };
+    const dbg = !!this.debugInf; // 테스트용 암호: EXTRA · HELL 에서도 적용된다
+    return { diff, char, extra, hell: !!diff.hell, stages: diff.hell ? [HELL_STAGE] : extra ? [EXTRA_STAGE] : STAGES, stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0 };
   }
   get stageList() { return this.run.stages || STAGES; }
 
@@ -123,6 +125,9 @@ export class Game {
     for (const k of SIGIL_KEYS) { const def = makeSigilDef(k); this.bosses['m_' + def.id] = new SigilMid(scene, this.T, this.T[def.sprite], 1, this, def); }
     const mkTex = (img) => { const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; t.anisotropy = 4; return t; };
     this.bosses.m_bellis = new Bellis(scene, this.T, mkTex(imgs.bellis), imgs.bellis.width / imgs.bellis.height, this, BELLIS_MID);
+    // HELL: 아르케시아(15기술) + 중간 보스 루나린스
+    if (ArkMod.ARKESIA_HELL) { const a = imgs.arkesia; this.bosses.arkesiaHell = new ArkMod.Arkesia(scene, this.T, mkTex(a), a.width / a.height, this, ArkMod.ARKESIA_HELL); }
+    { const l = imgs.lunarinth; this.bosses.m_lunarinth_mid = new Lunarinth(scene, this.T, mkTex(l), l.width / l.height, this, LUNARINTH_MID); }
     this.bosses.m_index = new Indexer(scene, this.T, mkTex(imgs.index), imgs.index.width / imgs.index.height, this, INDEX_MID);
     this.boss = this.bosses.opsir;
     // 두 번째 기체 아스트라의 스프라이트
@@ -153,10 +158,11 @@ export class Game {
   _wireUI() {
     const ui = this.ui;
     ui.on.start = (diff, char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff, char, false); };
-    ui.on.startExtra = (char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(EXTRA_DIFF, char, true); };
+    ui.on.startExtra = (char, diff) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff || EXTRA_DIFF, char, true); };
+    ui.on.unlockHell = () => { this.unlockHell(); this.sfx.play('heal'); this.ui.warn('HELL 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
     ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.char, this.run.extra); };
     ui.on.unlockExtra = () => { this.unlockExtra(); this.sfx.play('heal'); this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
-    ui.on.debugInf = (on) => { this.debugInf = on; this.sfx.play(on ? 'heal' : 'hurt', { vol: 0.5 }); this.ui.warn(on ? '테스트 모드 — 컨티뉴 무제한 (EXTRA 제외)' : '테스트 모드 해제', 2200); };
+    ui.on.debugInf = (on) => { this.debugInf = on; if (this.run) this.run.debugInf = on; this.sfx.play(on ? 'heal' : 'hurt', { vol: 0.5 }); this.ui.warn(on ? '테스트 모드 — 컨티뉴 무제한' : '테스트 모드 해제', 2200); };
     ui.craftUnlocked = (id) => id === 'claire' || (id === 'astra' && this.isAstraUnlocked());
     ui.on.toMenu = () => this.toMenu();
     ui.on.resume = () => this.setPause(false);
@@ -261,16 +267,20 @@ export class Game {
     this.ui.banner('WARNING', st.warn.replace('WARNING — ', ''), 2400);
     await sleep(2300); if (my !== this._token) return;
     this.world.setDolly(0.5); B.appear();
-    this.ui.setBossHeader(def); this.ui.setBossStep(B, 0); this.ui.setBossInstant(1); this.ui.setBossTimer(null); this.ui.setAnalysis(null); this.ui.showBossUI(true);
+    const veiled = st.id === 'arkesia' && !this.run.hell; // 정체는 본인이 밝히기 전까지 ？？？
+    this.ui.setBossHeader(veiled ? { ...def, name: '？？？', epithet: '' } : def); this.ui.setBossStep(B, 0); this.ui.setBossInstant(1); this.ui.setBossTimer(null); this.ui.setAnalysis(null); this.ui.showBossUI(true);
     this.music.play(f0.music || def.music, { fade: 1.8, immediate: true });
-    this.ui.banner(def.en, `${def.name} — ${def.epithet}`, 3000);
+    this.ui.banner(veiled ? '？？？' : def.en, veiled ? '실 끝에서 웃는 그림자' : `${def.name} — ${def.epithet}`, 3000);
     await sleep(1800); if (my !== this._token) return;
-    await this.talk(SCRIPT[st.id].intro); if (my !== this._token) return;
+    await this.talk(SCRIPT[this.scriptKey(st)].intro); if (my !== this._token) return;
+    if (veiled) this.ui.setBossHeader(def);
     this.world.setDolly(0);
     this.state = 'fight';
     if (def.hasAnalysis) this.ui.setAnalysis(B.analysis);
     B.startStep(0);
   }
+
+  scriptKey(st) { return st.id === 'arkesiaHell' ? 'hellArkesia' : st.id; }
 
   /** 중간 보스전. 문양 파수병은 말이 없고, 벨리스 · 인덱스는 짧은 대사가 있다. 격파되면 resolve */
   async playMid(st, my) {
@@ -283,16 +293,21 @@ export class Game {
     this.world.setDolly(0.4);
     const f0 = def.forms[def.steps[0].form], th = def.theme || f0.theme;
     this.world.setTheme(th); this.ui.setTheme(th);
-    this.music.play('midboss', { fade: 0.8, immediate: true });
+    this.music.play(def.music || 'midboss', { fade: 0.8, immediate: true });
     this.ui.banner('MID BOSS', `${def.name}`, 2200);
     await sleep(1500); if (my !== this._token) return;
-    const line = st.mid === 'bellis' ? SCRIPT.bellisMid.intro : st.mid === 'index' ? SCRIPT.midIndex.intro : null;
+    const line = this.midLines(st).intro;
     if (line) await this.talk(line); if (my !== this._token) return;
     this.world.setDolly(0);
     this.state = 'fight';
     M.startStep(0);
     await new Promise((res) => { this._midDone = res; });
     this._midDone = null;
+  }
+
+  midLines(st) {
+    const k = st.mid === 'bellis' ? 'bellisMid' : st.mid === 'index' ? 'midIndex' : st.mid === 'lunarinth_mid' ? 'hellMid' : null;
+    return (k && SCRIPT[k]) || {};
   }
 
   /** 중간 보스 격파 연출 → 대사 → 다음 구간으로 */
@@ -305,7 +320,7 @@ export class Game {
     await sleep(700); if (my !== this._token) return;
     this.timeScale = 1; B.alphaT = 0; B.cancelAttack();
     await sleep(600); if (my !== this._token) return;
-    const line = st.mid === 'bellis' ? SCRIPT.bellisMid.outro : st.mid === 'index' ? SCRIPT.midIndex.outro : null;
+    const line = this.midLines(st).outro;
     if (line) await this.talk(line); if (my !== this._token) return;
     B.visible = false; this.ui.hideBark(); this.ui.showBossUI(false);
     const d = this._midDone; this._midDone = null; if (d) d();
@@ -486,7 +501,7 @@ export class Game {
     this.world.setTheme('lumina'); this.ui.setTheme('lumina');
     await sleep(700); if (my !== this._token) return;
     this.music.play('victory', { fade: 2.0, immediate: true }); this.sfx.play('victory');
-    await this.talk(SCRIPT[st.id].outro); if (my !== this._token) return;
+    await this.talk(SCRIPT[this.scriptKey(st)].outro); if (my !== this._token) return;
     B.visible = false; this.ui.hideBark();
     if (B.def.id === 'astra' && !this.isAstraUnlocked()) {
       this.unlockAstra(); this.sfx.play('heal');
@@ -505,28 +520,31 @@ export class Game {
   isExtraUnlocked() { try { return localStorage.getItem(EXTRA_KEY) === '1'; } catch (e) { return false; } }
   unlockExtra() { try { localStorage.setItem(EXTRA_KEY, '1'); } catch (e) { /* noop */ } this.ui.refreshExtra(); }
   isAstraUnlocked() { try { return localStorage.getItem(ASTRA_KEY) === '1'; } catch (e) { return false; } }
+  isHellUnlocked() { try { return localStorage.getItem(HELL_KEY) === '1'; } catch (e) { return false; } }
+  unlockHell() { try { localStorage.setItem(HELL_KEY, '1'); } catch (e) { /* noop */ } this.ui.refreshExtra(); }
   unlockAstra() { try { localStorage.setItem(ASTRA_KEY, '1'); } catch (e) { /* noop */ } this.ui.refreshChars && this.ui.refreshChars(); }
 
   async runEnding() {
     const my = this._token;
     this.state = 'ending'; this.ui.showHud(false); this.ui.hideBark();
-    const n = this.run.continues, ex = this.run.extra, E = ex ? ENDINGS.EX : n === 0 ? ENDINGS.A : ENDINGS.B;
+    const n = this.run.continues, ex = this.run.extra, hell = this.run.hell, E = hell ? (ENDINGS.HELL || ENDINGS.EX) : ex ? ENDINGS.EX : n === 0 ? ENDINGS.A : ENDINGS.B;
     this.world.setDolly(0);
     this.music.play('ending', { fade: 2.5, immediate: true });
     await this.talk(typeof E.lines === 'function' ? E.lines(n === 0 ? this.stats.ultDeaths : n) : E.lines); if (my !== this._token) return;
     this.ui.showEnding(E.title, E.name, E.sub);
     // EXTRA 개방 조건: NORMAL 이상에서 노 컨티뉴 클리어
+    if (ex && !hell && !this.run.debugUsed && !this.isHellUnlocked()) { this.unlockHell(); setTimeout(() => this.ui.warn('HELL 개방 — 타이틀에서 선택할 수 있습니다', 2800), 2600); }
     const unlocked = !ex && n === 0 && this.run.diff.lv >= 1 && !this.run.debugUsed;
     if (unlocked) { const was = this.isExtraUnlocked(); this.unlockExtra(); if (!was) setTimeout(() => this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2800), 2600); }
     await sleep(6500); if (my !== this._token) return;
     this.ui.hideEnding();
     const t = Math.round(this.fightT);
     this.ui.showResult(true, [
-      ['난이도', ex ? 'EXTRA' : this.run.diff.name], ['클리어 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
+      ['난이도', ex ? this.run.diff.name : this.run.diff.name], ['클리어 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
       ['컨티뉴', `${n}회`], ['피격', this.stats.hits], ['스킬 격파 · 노미스 취득', `${this.stats.spellsCaptured} / ${this.stats.spellsSeen}`],
       ['얼티메이트 스킬', `돌파 ${this.stats.ultSurvived} · 쓰러짐 ${this.stats.ultDeaths}`],
       ['병사 격파', this.stats.mobs], ['그레이즈', this.stats.graze], ['궁극기 사용', this.stats.ults],
-    ], ex ? '— EXTRA 클리어 —' : n === 0 ? '— 노 컨티뉴 클리어 —' : '— 컨티뉴 클리어 —');
+    ], ex ? `— ${this.run.diff.name} 클리어 —` : n === 0 ? '— 노 컨티뉴 클리어 —' : '— 컨티뉴 클리어 —');
     this.state = 'result';
   }
 
@@ -578,10 +596,10 @@ export class Game {
   async gameOver() {
     const my = this._token;
     this.ui.hideContinue(); this.state = 'gameover';
-    await this.talk(this.run.extra ? SCRIPT.gameoverExtra : SCRIPT.gameover); if (my !== this._token) return;
+    await this.talk(this.run.hell ? (SCRIPT.gameoverHell || SCRIPT.gameoverExtra) : this.run.extra ? SCRIPT.gameoverExtra : SCRIPT.gameover); if (my !== this._token) return;
     const t = Math.round(this.fightT), B = this.boss;
     this.ui.showResult(false, [
-      ['난이도', this.run.extra ? 'EXTRA' : this.run.diff.name], ['도달', `${this.stageList[this.run.stageIdx].label} — ${B.def.name}`],
+      ['난이도', this.run.diff.name], ['도달', `${this.stageList[this.run.stageIdx].label} — ${B.def.name}`],
       ['단계', B.visible ? `${B.stepIdx + 1} / ${B.stepCount}` : '병사 웨이브'], ['버틴 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
       ['컨티뉴 사용', this.run.extra ? '불가' : `${this.run.continues}회`], ['병사 격파', this.stats.mobs], ['그레이즈', this.stats.graze],
     ], 'GAME OVER');

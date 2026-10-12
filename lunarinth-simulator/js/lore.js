@@ -66,7 +66,7 @@ export const STAGES = [
 ];
 export const EXTRA_STAGE = { id: 'arkesia', no: 'EX', label: 'EXTRA STAGE', place: '실이 드리운 인형극장', mobName: '춤추는 인형', env: 'theater', stageMusic: 'stageEx', mid: 'index', warn: '？？？ 접근' };
 // HELL: EXTRA 를 깨거나 암호(lunaugly)로 열리는 최고 난이도. 중간 보스는 루나린스, 아르케시아의 기술은 15개.
-export const HELL_STAGE = { id: 'arkesiaHell', no: 'HELL', label: 'EXTRA · HELL', place: '실이 끊어지지 않는 인형극장', mobName: '미쳐 춤추는 인형', env: 'theater', stageMusic: 'stageHell', mid: 'lunarinth_mid', warn: '？？？ 접근' };
+export const HELL_STAGE = { id: 'arkesiaHell', no: 'HELL', label: 'EXTRA · HELL', place: '실이 끊어지지 않는 인형극장', mobName: '미쳐 춤추는 인형', env: 'theaterHell', stageMusic: 'stageHell', mid: 'lunarinth_mid', warn: '？？？ 접근' };
 
 export const MOB_NOTE = '잡몹은 캐릭터가 아니라 문양으로 표현됩니다. 스테이지마다 별 · 회로 · 장미창 · 서가 · 룬 · 달 · 인형 실 문양의 병사가 나오고, 중간 보스(하드 이상에서는 기술 1개 추가)가 길을 막습니다. 6스테이지의 중간 보스는 벨리스입니다.';
 
