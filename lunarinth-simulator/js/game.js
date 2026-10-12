@@ -298,7 +298,8 @@ export class Game {
   }
 
   _stepStage(dt) {
-    const R = this.stageRoutine; if (!R) return;
+    const R = this.stageRoutine;
+    if (!R) { if (this.mobs.count() === 0 && this._stageDone) { const d = this._stageDone; this._stageDone = null; d(); } return; }
     this._stageWait -= dt; this._stageAcc += dt;
     let guard = 0;
     while (this._stageWait <= 0 && guard++ < 24) {
