@@ -284,7 +284,7 @@ export class Game {
     this.ui.banner(veiled ? '？？？' : def.en, veiled ? (st.id === 'manager' ? '실을 쥔 손' : '실 끝에서 웃는 그림자') : `${def.name} — ${def.epithet}`, 3000);
     await sleep(1800); if (my !== this._token) return;
     await this.talk(SCRIPT[this.scriptKey(st)].intro); if (my !== this._token) return;
-    if (veiled) this.ui.setBossHeader(def);
+    if (veiled && st.id !== 'manager') this.ui.setBossHeader(def); // 무대 관리자는 이름을 밝히는 장면(fakeScene)에서야 표시된다
     this.world.setDolly(0);
     this.state = 'fight';
     if (def.hasAnalysis) this.ui.setAnalysis(B.analysis);
