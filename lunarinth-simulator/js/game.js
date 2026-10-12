@@ -21,7 +21,6 @@ import * as THREE from '../vendor/three.module.min.js';
 
 const SETTINGS_KEY = 'lunarinth.settings.v2';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const SPELL_NAME = (st) => `${st.tag ? st.tag + ' ' : ''}「${st.name}」`;
 const CONTINUES = 3; // 기본 컨티뉴 횟수
 
 const BOSS_ASSETS = {
@@ -60,7 +59,7 @@ export class Game {
 
   newStats() { return { hits: 0, graze: 0, damage: 0, attacks: 0, ults: 0, spellsSeen: 0, spellsCaptured: 0, mobs: 0, ultDeaths: 0, ultSurvived: 0 }; }
   makeRun(diff, char) {
-    return { diff, char, stageIdx: 0, continues: 0, continuesMax: CONTINUES, stepHit: false, stepUlt: false, practice: null };
+    return { diff, char, stageIdx: 0, continues: 0, continuesMax: CONTINUES, stepHit: false, stepUlt: false };
   }
 
   async init() {
@@ -130,13 +129,7 @@ export class Game {
   _wireUI() {
     const ui = this.ui;
     ui.on.start = (diff, char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff, char); };
-    ui.on.retry = () => {
-      ui.hideResult();
-      const pr = this.run.practice;
-      if (pr) this.startPractice(this.run.diff, this.run.char, pr.bossId, pr.stepIdx);
-      else this.startRun(this.run.diff, this.run.char);
-    };
-    ui.on.practice = (diff, char, bossId, stepIdx) => { this.engine.init(); this.sfx.play('ui_start'); this.startPractice(diff, char, bossId, stepIdx); };
+    ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.char); };
     ui.on.unlockExtra = () => { this.unlockExtra(); this.sfx.play('heal'); this.ui.warn('EXTRA 개방 — (미구현 · 준비 중)', 2600); };
     ui.on.toMenu = () => this.toMenu();
     ui.on.resume = () => this.setPause(false);
@@ -149,6 +142,11 @@ export class Game {
     this._token++; if (this._stageDone) { this._stageDone(); this._stageDone = null; }
     this.state = 'menu'; this.paused = false; this.timeScale = 1; this.ultBusy = false; this.sealed = false; this._ultDying = false; this.stageRoutine = null;
     this.ui.setSealed(false); this.world.setFall(null); this.veilLv = 0.98;
+    // 보스전 도중 탈주해도 다음 판에 아무것도 남지 않도록 연출/타이머 상태를 전부 초기화한다
+    this.hitstopT = 0; this.downFrom = 'fight'; this.ultBusy = false; this._ultDying = false; this.sealed = false;
+    this.ui.setBossTimer(null); this.ui.setAnalysis(null); this.ui.hideContinue(); this.ui.hideDeclare();
+    for (const id of ['#warn', '#announce', '#banner']) { const el = document.querySelector(id); if (el) { el.classList.remove('show'); if (id !== '#warn') el.hidden = true; } }
+    this.engine.resume();
     this.ui.closeModals(); this.ui.hideResult(); this.ui.showHud(false); this.ui.hideBark(); this.ui.hideEnding(); this.ui.hideDeclare();
     this.ui.setTheme('lumina'); this.world.setTheme('lumina'); this.world.setDolly(0);
     this.ui.showMenu(true); this.ui.setVeil(0); this.ui.madness(false); this.veil = false; this.madnessT = 0;
@@ -199,57 +197,6 @@ export class Game {
     this.music.play('ending', { fade: 1.5, immediate: true });
     await this.talk(SCRIPT.prologue); if (my !== this._token) return;
     await this.playStage(0);
-  }
-
-  // ───── 프랙티스: 스테이지/단계를 골라 연습 (전부 기본 개방) ─────
-  async startPractice(diff, char, bossId, stepIdx) {
-    this._token++;
-    const my = this._token;
-    this.run = this.makeRun(diff, char); this.run.practice = { bossId, stepIdx };
-    this.stats = this.newStats(); this.fightT = 0; this.sealed = false; this.ui.setSealed(false); this.ui.setDiff(diff);
-    const idx = STAGES.findIndex((s) => s.id === bossId); this.run.stageIdx = idx;
-    const st = STAGES[idx], B = this.bosses[bossId], def = B.def;
-    this.ui.showMenu(false); this.ui.closeModals(); this.ui.hideResult(); this.ui.hideEnding(); this.ui.hideContinue();
-    for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
-    this.boss = B; B.reset(); this.clearField(); this.timeScale = 1; this.world.setFall(null); this.veilLv = 0.98; this.paused = false; this.ui.showPause(false);
-    const P = this.player; P.reset(diff.php); P.inv = 1.2;
-    this.ui.setHp(P.hp, P.maxHp); this.ui.setUlt(P.ults); this.ui.setContinues(0, CONTINUES); this.ui.setStage(`PRACTICE · ${st.label}`);
-    this.ui.showHud(true); this.ui.hideBark(); this.ui.setAnalysis(null);
-    this.world.setDolly(0); this.music.setIntensity(0);
-    if (stepIdx < 0) {
-      // 병사 웨이브만 연습
-      this.ui.showBossUI(false);
-      const f0 = def.forms[def.steps[0].form]; this.world.setTheme(f0.theme || def.theme); this.ui.setTheme(f0.theme || def.theme);
-      this.music.play(st.stageMusic, { fade: 1.0, immediate: true });
-      this.ui.banner('PRACTICE', `${st.mobName}`, 1800); await sleep(1400); if (my !== this._token) return;
-      await this.runWaves(st); if (my !== this._token) return;
-      await this.practiceEnd('clear'); return;
-    }
-    const step = def.steps[stepIdx], f = def.forms[step.form];
-    B.appear(); this.ui.setBossHeader(def); this.ui.setBossStep(B, stepIdx); this.ui.setBossInstant(1); this.ui.showBossUI(true);
-    const th = step.theme || f.theme || def.theme; this.world.setTheme(th); this.ui.setTheme(th);
-    this.music.play(step.music || f.music || def.music, { fade: 0.8, immediate: true });
-    this.state = 'cutscene';
-    this.ui.banner('PRACTICE', `${def.name} — ${SPELL_NAME(step)}`, 1800);
-    await sleep(1500); if (my !== this._token) return;
-    this.state = 'fight';
-    B.startStep(stepIdx);
-  }
-
-  async practiceEnd(reason) {
-    const my = this._token, st = this.run.practice;
-    this.state = 'result'; this.sealed = false; this.ui.setSealed(false); this.player.alive = true;
-    this.clearBossField(); this.mobs.clear(); this.ui.setVeil(0); this.ui.madness(false);
-    this.music.stop(0.8);
-    await sleep(900); if (my !== this._token) return;
-    this.music.play(reason === 'clear' || reason === 'broken' ? 'victory' : 'ending', { fade: 1.5, immediate: true });
-    const B = this.boss, step = st.stepIdx >= 0 ? B.def.steps[st.stepIdx] : null;
-    const label = reason === 'broken' ? '격파' : reason === 'timeout' ? (step && step.kind === 'ultimate' ? '버텨냄' : '시간 종료') : reason === 'dead' ? '쓰러짐' : '웨이브 클리어';
-    const t = Math.round(this.fightT);
-    this.ui.showResult(true, [
-      ['대상', step ? `${B.def.name} — ${SPELL_NAME(step)}` : `${B.def.name} 스테이지 — 병사`], ['결과', label], ['난이도', this.run.diff.name],
-      ['걸린 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`], ['피격', this.stats.hits], ['그레이즈', this.stats.graze], ['병사 격파', this.stats.mobs],
-    ], 'PRACTICE', '다시 연습', '연습 종료');
   }
 
   /** 진행용 통상 스테이지(병사 웨이브) → 보스 */
@@ -369,7 +316,6 @@ export class Game {
       this.fx.ring(B.x, B.bobY, B.z, B.pal.glow, 10, 0.6);
     }
     if (!this.player.alive && this.sealed) this.player.revive(this);
-    if (this.run.practice) { await this.practiceEnd(reason); return; }
     if (nextUlt) { await this.fakeDefeat(B, i); return; }
     if (last) { this.stageClear(B); return; }
     this.timeScale = 0.3; await sleep(500); this.timeScale = 1; if (my !== this._token) return;
@@ -509,16 +455,6 @@ export class Game {
     this.downFrom = this.state;
     this.state = 'defeat';
     const B = this.boss; B.cancelAttack(); B.vulnerable = false;
-    if (this.run.practice) {
-      // 프랙티스: 컨티뉴 없이 같은 단계를 바로 다시
-      this.timeScale = 0.3; this.world.shake(0.7, 0.5); this.sfx.play('defeat', { vol: 0.5 });
-      await sleep(700); if (my !== this._token) return;
-      this.timeScale = 1; this.clearBossField(); this.mobs.clear(); this.player.reset(this.run.diff.php); this.player.inv = 2.5;
-      this.ui.setHp(this.player.hp, this.player.maxHp); this.ui.setUlt(this.player.ults); this.ui.warn('다시 도전', 1000);
-      if (this.downFrom === 'stage') { this.state = 'stage'; this.runWaves(STAGES[this.run.stageIdx]).then(() => { if (my === this._token) this.practiceEnd('clear'); }); }
-      else { this.state = 'fight'; B.startStep(B.stepIdx, { quick: true }); }
-      return;
-    }
     this.timeScale = 0.2; this.world.shake(0.9, 0.8); this.music.stop(1.0);
     this.sfx.play('defeat'); this.ui.setVeil(0); this.ui.madness(false); this.ui.setBossTimer(null);
     this.fx.burst(this.player.x, 1, this.player.z, 40, { color: [0xffffff, 0xffd36b, 0xff7aa8], speed: 8, size: 0.9, life: 1.2 });

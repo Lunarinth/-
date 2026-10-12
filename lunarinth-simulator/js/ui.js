@@ -9,7 +9,6 @@ const STAR = `<svg viewBox="0 0 32 32"><defs><linearGradient id="hg" x1="0" y1="
 const GEM = `<svg viewBox="0 0 24 24"><path d="M12 1 L21 12 L12 23 L3 12 Z" fill="currentColor" stroke="rgba(255,255,255,.85)" stroke-width="1.2"/></svg>`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const KIND_LABEL = { nonspell: '통상', spell: '스킬', last: '라스트 스킬', ult: '궁극기', ultimate: '얼티메이트 스킬' };
-const BOSSES = [OPSIR, BELLIS, LUNARINTH];
 const SPELL_TAG = (st) => `${st.tag ? st.tag + ' ' : ''}「${st.name}」`;
 
 export class UI {
@@ -21,7 +20,7 @@ export class UI {
       warn: $('#warn'), bubble: $('#bubble'), banner: $('#banner'), announce: $('#announce'), dialog: $('#dialog'),
       dName: $('#d-name'), dText: $('#d-text'), dCanvas: $('#d-canvas'), dPortrait: document.querySelector('.d-portrait'),
       flash: $('#fx-flash'), veil: $('#fx-veil'), menu: $('#menu'), declare: $('#declare'), dcCanvas: $('#dc-canvas'),
-      ending: $('#ending'), selDiff: $('#sel-diff'), selChar: $('#sel-char'), selPr: $('#sel-practice'),
+      ending: $('#ending'), selDiff: $('#sel-diff'), selChar: $('#sel-char'),
       ana: $('#bb-ana'), anaFill: $('#ana-fill'), anaNum: $('#ana-num'),
     };
     this.on = {};
@@ -29,11 +28,10 @@ export class UI {
     this.portraits = {};
     this._warnT = 0; this._bubT = 0; this._annT = 0; this._dcT = 0;
     this.screen = null; this.diffIdx = 1; this.charIdx = 0; this.pickedDiff = DIFFS[1];
-    this.prBoss = 0; this.prStep = 0; this.prDiff = 1; this._kbuf = '';
+    this._kbuf = '';
     try { const d = localStorage.getItem('lunarinth.lastdiff'); if (d != null && DIFFS[+d]) this.diffIdx = +d; } catch (e) { /* noop */ }
     this._bindMenus();
     this._buildSelects();
-    this._buildPractice();
     this._buildCodex();
     this._bindKeys();
     this._titleFx();
@@ -46,14 +44,11 @@ export class UI {
     document.addEventListener('mouseover', (e) => { if (e.target.closest && e.target.closest('button')) sfx.play('ui_hover'); });
     document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('button')) sfx.play('ui_click'); });
     $('#btn-start').onclick = () => this.openSelect('diff');
-    $('#btn-practice').onclick = () => this.openSelect('practice');
     $('#btn-extra').onclick = () => {
       if (this.extraUnlocked()) this.warn('EXTRA — 아직 구현되지 않았습니다 (준비 중)', 2000, true);
       else this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true);
       this.sfx.play('hurt', { vol: 0.25 });
     };
-    $('#btn-pr-start').onclick = () => this.confirm();
-    $('#btn-pr-back').onclick = () => this.back();
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
     $('#btn-help').onclick = () => this.modal('#m-help', true);
@@ -131,22 +126,17 @@ export class UI {
   openSelect(which) {
     this.screen = which;
     this.el.menu.hidden = true;
-    this.el.selDiff.hidden = which !== 'diff'; this.el.selChar.hidden = which !== 'char'; this.el.selPr.hidden = which !== 'practice';
-    if (which === 'diff') this._paintDiff(); else if (which === 'practice') this._paintPractice(); else { this._paintCharArt(); this._paintChar(); }
+    this.el.selDiff.hidden = which !== 'diff'; this.el.selChar.hidden = which !== 'char';
+    if (which === 'diff') this._paintDiff(); else { this._paintCharArt(); this._paintChar(); }
     document.body.dataset.screen = 'select';
   }
-  closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; this.el.selPr.hidden = true; }
+  closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; }
   back() {
     this.sfx.play('ui_hover');
     if (this.screen === 'char') this.openSelect('diff');
-    else if (this.screen === 'diff' || this.screen === 'practice') { this.closeSelect(); this.showMenu(true); }
+    else if (this.screen === 'diff') { this.closeSelect(); this.showMenu(true); }
   }
   confirm() {
-    if (this.screen === 'practice') {
-      const def = BOSSES[this.prBoss], diff = DIFFS[this.prDiff];
-      this.closeSelect(); this.sfx.play('ui_click'); this.on.practice && this.on.practice(diff, CHARS[0], def.id, this.prStep);
-      return;
-    }
     if (this.screen === 'diff') {
       this.pickedDiff = DIFFS[this.diffIdx];
       try { localStorage.setItem('lunarinth.lastdiff', String(this.diffIdx)); } catch (e) { /* noop */ }
@@ -168,18 +158,6 @@ export class UI {
       const open = ['#m-help', '#m-settings', '#m-codex'].find((s) => !$(s).hidden);
       if (open && no && $('#m-pause').hidden) { e.preventDefault(); this.modal(open, false); return; }
       if (this.anyModalOpen()) return;
-      if (this.screen === 'practice') {
-        const nb = BOSSES.length, steps = this._prSteps(BOSSES[this.prBoss]).length;
-        if (code === 'ArrowLeft' || code === 'KeyA') { this.prBoss = (this.prBoss + nb - 1) % nb; this.prStep = 0; this.sfx.play('ui_hover'); this._paintPractice(); }
-        else if (code === 'ArrowRight' || code === 'KeyD') { this.prBoss = (this.prBoss + 1) % nb; this.prStep = 0; this.sfx.play('ui_hover'); this._paintPractice(); }
-        else if (code === 'ArrowUp' || code === 'KeyW') { e.preventDefault(); this.prStep = (this.prStep + steps - 1) % steps; this.sfx.play('ui_hover'); this._paintPractice(); }
-        else if (code === 'ArrowDown' || code === 'KeyS') { e.preventDefault(); this.prStep = (this.prStep + 1) % steps; this.sfx.play('ui_hover'); this._paintPractice(); }
-        else if (code === 'KeyQ') { this.prDiff = (this.prDiff + DIFFS.length - 1) % DIFFS.length; this.sfx.play('ui_hover'); this._paintPractice(); }
-        else if (code === 'KeyE') { this.prDiff = (this.prDiff + 1) % DIFFS.length; this.sfx.play('ui_hover'); this._paintPractice(); }
-        else if (yes) { e.preventDefault(); this.confirm(); }
-        else if (no) { e.preventDefault(); this.back(); }
-        return;
-      }
       if (this.screen === 'diff' || this.screen === 'char') {
         const key = this.screen === 'diff' ? 'diffIdx' : 'charIdx', n = this.screen === 'diff' ? DIFFS.length : CHARS.length;
         if (code === 'ArrowLeft' || code === 'KeyA') { this[key] = (this[key] + n - 1) % n; this.sfx.play('ui_hover'); this.screen === 'diff' ? this._paintDiff() : this._paintChar(); }
@@ -200,32 +178,6 @@ export class UI {
     });
   }
 
-  // ───── 프랙티스 (전부 기본 개방) ─────
-  _prSteps(def) {
-    const stage = def === OPSIR ? '옵서' : def === BELLIS ? '벨리스' : '루나린스';
-    return [{ i: -1, kind: 'mob', label: '병사', name: `${stage} 스테이지 — 병사 웨이브`, time: '' }].concat(def.steps.map((st, i) => ({ i, kind: st.kind, label: KIND_LABEL[st.kind], name: SPELL_TAG(st), time: st.time + 's' })));
-  }
-  _buildPractice() {
-    $('#pr-boss').innerHTML = BOSSES.map((d, i) => `<button data-i="${i}"><b>${d.en}</b><small>${d.name} · ${d.epithet}</small></button>`).join('');
-    $('#pr-boss').querySelectorAll('button').forEach((b) => { b.onclick = () => { this.prBoss = +b.dataset.i; this.prStep = 0; this._paintPractice(); }; });
-    $('#pr-diff').innerHTML = DIFFS.map((d, i) => `<button data-i="${i}" style="--c:${d.color}">${d.name}</button>`).join('');
-    $('#pr-diff').querySelectorAll('button').forEach((b) => { b.onclick = () => { this.prDiff = +b.dataset.i; this._paintPractice(); }; });
-  }
-  _paintPractice() {
-    const def = BOSSES[this.prBoss], steps = this._prSteps(def);
-    document.querySelectorAll('#pr-boss button').forEach((b, i) => b.classList.toggle('sel', i === this.prBoss));
-    document.querySelectorAll('#pr-diff button').forEach((b, i) => b.classList.toggle('sel', i === this.prDiff));
-    const box = $('#pr-steps');
-    box.innerHTML = steps.map((s, k) => `<button data-k="${k}" class="${k === this.prStep ? 'sel' : ''}"><span class="k ${s.kind}">${s.label}</span><span class="n">${s.name}</span><span class="t">${s.time}</span></button>`).join('');
-    box.querySelectorAll('button').forEach((b) => {
-      b.onclick = () => { this.prStep = +b.dataset.k; this._paintPractice(); };
-      b.ondblclick = () => this.confirm();
-    });
-    const cur = box.querySelector('.sel'); if (cur) cur.scrollIntoView({ block: 'nearest' });
-    const d = DIFFS[this.prDiff], s = steps[this.prStep];
-    $('#pr-desc').innerHTML = `<b>${def.name} — ${s.name}</b><br><small>${d.name} · 내 체력 ${d.php} · 컨티뉴 무제한${s.kind === 'ultimate' ? ' · 잔기/궁극기 봉인 (한 번 맞으면 그 식 종료)' : ''} · 연습 종료 후 같은 단계를 바로 다시 할 수 있습니다</small>`;
-  }
-
   // ───── EXTRA (미개방 · 미구현) ─────
   extraUnlocked() { try { return localStorage.getItem('lunarinth.extra.v1') === '1'; } catch (e) { return false; } }
   refreshExtra() {
@@ -244,7 +196,7 @@ export class UI {
     const loop = (now) => {
       requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (this.el.menu.hidden && this.el.selDiff.hidden && this.el.selChar.hidden && this.el.selPr.hidden) return;
+      if (this.el.menu.hidden && this.el.selDiff.hidden && this.el.selChar.hidden) return;
       g.clearRect(0, 0, w, h);
       for (const p of P) {
         p.y += p.v * dt * 3; p.d += dt; if (p.y > 1.05) { p.y = -0.05; p.x = Math.random(); }
@@ -263,7 +215,7 @@ export class UI {
     const O = OFFICIAL;
     const tag = (t) => `<span class="tag ${t}">${t === 'off' ? '공식 설정' : t === 'prov' ? '제공 설정' : '창작 제안'}</span>`;
     const li = (a) => a.map((x) => `<li>${x}</li>`).join('');
-    const skills = (def) => def.steps.map((st, i) => `<li><span class="k ${st.kind}">${i + 1}. ${KIND_LABEL[st.kind]}</span> ${SPELL_TAG(st)} <small>— ${def.forms[st.form].label}${st.ultMode === 'immune' ? ' · 궁극기 면역' : st.ultMode === 'reject' ? ' · 궁극기 무효' : st.ultMode === 'resist' ? ' · 궁극기 저항' : ''}</small></li>`).join('');
+    const skills = (def) => def.steps.filter((st) => st.kind !== 'ultimate').map((st, i) => `<li><span class="k ${st.kind}">${i + 1}. ${KIND_LABEL[st.kind]}</span> ${SPELL_TAG(st)} <small>— ${def.forms[st.form].label}${st.ultMode === 'immune' ? ' · 궁극기 면역' : st.ultMode === 'reject' ? ' · 궁극기 무효' : st.ultMode === 'resist' ? ' · 궁극기 저항' : ''}</small></li>`).join('');
     const bossCard = (r, def) => `
       <div class="form"><b>${r.name} <small>${r.en} · STAGE ${r.stage}</small></b> ${tag(r.tag)}
         <div class="epi">${r.epithet}</div>
@@ -281,7 +233,7 @@ export class UI {
       <div class="form"><b>${O.name} <small>LUNARINTH · FINAL STAGE</small></b> ${tag('off')}
         <div class="epi">삼위(三位)의 달을 다스리는 저택의 주인</div>
         <ul>${li(O.look)}</ul><p>${O.personality}</p>
-        <ul class="sk">${skills(LUNARINTH)}</ul>
+        <ul class="sk">${skills(LUNARINTH)}<li><span class="k last">？</span> ？？？？？？ <small>— 아직 알 수 없습니다</small></li></ul>
         <p class="note">형태 순서(LUMINA → UMBRA → LUNA)와 위 기술명·패턴·대사는 이 게임을 위한 <b>창작 제안</b>이며 공식 설정이 아닙니다. 미확정인 LUMINA / UMBRA의 고유 기술도 공식으로 확정하지 않았습니다.</p>
       </div>
       <h3>삼위일체 ${tag('off')}</h3>
@@ -309,7 +261,9 @@ export class UI {
   setBossStep(B, i) {
     const def = B.def, st = def.steps[i], f = def.forms[st.form];
     this.el.form.innerHTML = `<b>${f.label}</b> · ${f.sub}`;
-    this.el.pips.innerHTML = def.steps.map((s, k) => `<i class="pip ${s.kind === 'nonspell' ? 'n' : 's'} ${k < i ? 'done' : k === i ? 'cur' : ''}"></i>`).join('');
+    // 얼티메이트 스킬은 발동 전까지 존재를 보이지 않는다. 발동하면 그 5식만 표시된다.
+    const ult = st.kind === 'ultimate', list = def.steps.map((s, k) => ({ s, k })).filter((o) => (o.s.kind === 'ultimate') === ult);
+    this.el.pips.innerHTML = list.map(({ s, k }) => `<i class="pip ${s.kind === 'nonspell' ? 'n' : 's'} ${k < i ? 'done' : k === i ? 'cur' : ''}"></i>`).join('');
     const sp = this.el.spell; sp.hidden = false; sp.className = st.kind;
     sp.innerHTML = `<small>${KIND_LABEL[st.kind]}</small>${SPELL_TAG(st)}`;
   }

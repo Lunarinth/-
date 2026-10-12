@@ -97,7 +97,7 @@ export class Boss {
   }
 
   beginRun() {
-    this.state = 'run'; this.vulnerable = this.step.kind !== 'ultimate'; this.idleT = this.step.kind === 'ultimate' ? 0 : 0.6; this.stepT = 0;
+    this.state = 'run'; this.vulnerable = this.step.kind !== 'ultimate'; this.shield = this.step.kind === 'ultimate'; // 얼티메이트 중 루나린스는 무적 this.idleT = this.step.kind === 'ultimate' ? 0 : 0.6; this.stepT = 0;
     this.G.ui.setBossTimer(this.timeLeft);
   }
 

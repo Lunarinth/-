@@ -77,8 +77,8 @@ export const EXTRA = {
 export const DIFFS = [
   { id: 'easy', name: 'EASY', kr: '이지', sub: '달빛 아래 첫 산책', lv: 0, cnt: 0.6, spd: 0.84, rate: 0.82, hp: 0.8, php: 9, color: '#7fe3a4' },
   { id: 'normal', name: 'NORMAL', kr: '노멀', sub: '저택의 정규 근무', lv: 1, cnt: 1, spd: 1, rate: 1, hp: 1, php: 7, color: '#8fb8ff' },
-  { id: 'hard', name: 'HARD', kr: '하드', sub: '감사 기간의 야근', lv: 2, cnt: 1.3, spd: 1.1, rate: 1.12, hp: 1.12, php: 6, color: '#ffb86b' },
-  { id: 'madness', name: 'MADNESS', kr: '매드니스', sub: '루나틱 — 달이 미치는 밤', lv: 3, cnt: 1.62, spd: 1.22, rate: 1.28, hp: 1.25, php: 5, color: '#ff6fae' },
+  { id: 'hard', name: 'HARD', kr: '하드', sub: '감사 기간의 야근', lv: 2, cnt: 1.16, spd: 1.06, rate: 1.07, hp: 1.12, php: 6, color: '#ffb86b' },
+  { id: 'madness', name: 'MADNESS', kr: '매드니스', sub: '루나틱 — 달이 미치는 밤', lv: 3, cnt: 1.32, spd: 1.12, rate: 1.15, hp: 1.25, php: 5, color: '#ff6fae' },
 ];
 
 export const CHARS = [
