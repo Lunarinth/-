@@ -13,6 +13,9 @@ export const rnd = (a, b) => a + Math.random() * (b - a);
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
+// 플레이어의 실효 화력은 대략 초당 85. 루나린스 외 보스의 hp 는 이 계수로 한 번 더 곱해진다 (실효 체력 = hp × hpMul × HP_K × 난이도 hp).
+export const HP_K = 2.2;
+
 export class Boss {
   /**
    * def: { id, name, epithet, h, hitR, pal:{a,b,c,glow}, forms:{id:{label,sub,tint,theme,music,pal}}, steps:[...], barkKey }
@@ -93,7 +96,7 @@ export class Boss {
     this.stepIdx = i; const st = this.step;
     this.enrage = false; this.grow = 0; this.bag = []; this.last = null; this.routine = null; this.cur = null; this.shield = false;
     this.cancelAttack();
-    this.hpMax = st.hp * this.D.hp * (this.def.hpMul ?? 1); this.hp = this.hpMax; this.timeLeft = st.time; this.stepT = 0;
+    this.hpMax = st.hp * this.D.hp * (this.def.hpMul ?? 1) * (this.def.id === 'lunarinth' ? 1 : HP_K); this.hp = this.hpMax; this.timeLeft = st.time; this.stepT = 0;
     this.grow = 0; this._growT = 0;
     this.applyStats();
     this.vulnerable = false; this.state = 'declare';

@@ -40,9 +40,19 @@ export const LUNARINTH = {
   ],
 };
 
+// HELL 의 중간 보스로 나서는 루나린스: 세 형태에서 한 가지씩만 보여 준다
+const S0 = LUNARINTH.steps;
+export const LUNARINTH_MID = {
+  ...LUNARINTH, hpMul: 0.5, music: 'luna', steps: [
+    { ...S0[0], hp: 900, time: 36 },
+    { ...S0[4], hp: 1300, time: 50 },
+    { ...S0[5], hp: 1500, time: 56, pre: null, transform: false },
+  ],
+};
+
 export class Lunarinth extends Boss {
-  constructor(scene, T, tex, aspect, G) {
-    super(scene, T, tex, aspect, G, LUNARINTH);
+  constructor(scene, T, tex, aspect, G, def = LUNARINTH) {
+    super(scene, T, tex, aspect, G, def);
     this.orbit = [0, 1, 2].map(() => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: T.crescent, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       s.renderOrder = 7; s.visible = false; scene.add(s); return s;

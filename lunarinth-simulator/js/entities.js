@@ -43,6 +43,7 @@ export class Bullets {
     b.spin = o.spin || 0; b.rot = o.rot ?? (b.kind === 'crescent' || b.kind === 'blade' || b.kind === 'page' || b.kind === 'petal' ? -a : 0);
     b.dmg = o.dmg ?? 1; b.grazed = false; b.reflected = false; b.trail = !!o.trail; b.trailT = 0;
     b.delay = o.delay || 0; b.tag = o.tag || null; b.accelAt = o.accelAt || 0; b.orbit = o.orbit ? { ...o.orbit } : null;
+    b.speeds = o.speeds || null; b.baseS = sp; b.wob = o.wob || null; b.wobPh = o.wobPh ?? 0; b.fn = o.fn || null;
     b.color = o.color ?? 0xffffff;
     b.mat.map = this.T[KIND_TEX[b.kind] || 'orb'];
     b.mat.color.setHex(b.color); b.mat.opacity = 0; b.mat.rotation = b.rot;
@@ -90,6 +91,16 @@ export class Bullets {
         const c = Math.cos(b.turn * dt), s = Math.sin(b.turn * dt), vx = b.vx * c - b.vz * s;
         b.vz = b.vx * s + b.vz * c; b.vx = vx;
       }
+      if (b.speeds) { // 변속: [[시간, 배율], ...] 키프레임 보간 (정지 · 급가속 · 감속 반복)
+        const K = b.speeds; let m = K[K.length - 1][1];
+        for (let i = 0; i < K.length - 1; i++) if (b.age < K[i + 1][0]) { const u = Math.max(0, (b.age - K[i][0]) / (K[i + 1][0] - K[i][0])); m = K[i][1] + (K[i + 1][1] - K[i][1]) * u; break; }
+        const sp0 = Math.hypot(b.vx, b.vz) || 0.0001, ns0 = Math.max(0.0001, b.baseS * m); b.vx *= ns0 / sp0; b.vz *= ns0 / sp0;
+      }
+      if (b.wob) { // 왜곡: 진행 방향이 사인파로 흔들린다 [진폭(rad/s), 주파수]
+        const r = b.wob[0] * Math.sin(b.wob[1] * b.age + b.wobPh) * dt, c = Math.cos(r), sn = Math.sin(r), vx = b.vx * c - b.vz * sn;
+        b.vz = b.vx * sn + b.vz * c; b.vx = vx;
+      }
+      if (b.fn) b.fn(b, dt);
       if (b.accel && b.age >= b.accelAt) {
         const sp = Math.hypot(b.vx, b.vz) || 0.0001, ns = Math.max(b.minS, Math.min(b.maxS, sp + b.accel * dt));
         b.vx *= ns / sp; b.vz *= ns / sp;

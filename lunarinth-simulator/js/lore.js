@@ -64,7 +64,9 @@ export const STAGES = [
   { id: 'bellis', no: '5', label: 'STAGE 5', place: '저택의 기록실', mobName: '서술의 병사', env: 'archive', stageMusic: 'stage5', mid: 'mid_ledger', warn: '벨리스 접근' },
   { id: 'lunarinth', no: '6', label: 'FINAL STAGE', place: '달의 정원', mobName: '달의 병사', env: 'moongarden', stageMusic: 'stage6', mid: 'bellis', warn: '루나린스 강림' },
 ];
-export const EXTRA_STAGE = { id: 'arkesia', no: 'EX', label: 'EXTRA STAGE', place: '실이 드리운 인형극장', mobName: '인형의 병사', env: 'theater', stageMusic: 'stageEx', mid: 'index', warn: '아르케시아 강림' };
+export const EXTRA_STAGE = { id: 'arkesia', no: 'EX', label: 'EXTRA STAGE', place: '실이 드리운 인형극장', mobName: '춤추는 인형', env: 'theater', stageMusic: 'stageEx', mid: 'index', warn: '？？？ 접근' };
+// HELL: EXTRA 를 깨거나 암호(lunaugly)로 열리는 최고 난이도. 중간 보스는 루나린스, 아르케시아의 기술은 15개.
+export const HELL_STAGE = { id: 'arkesiaHell', no: 'HELL', label: 'EXTRA · HELL', place: '실이 끊어지지 않는 인형극장', mobName: '미쳐 춤추는 인형', env: 'theater', stageMusic: 'stageHell', mid: 'lunarinth_mid', warn: '？？？ 접근' };
 
 export const MOB_NOTE = '잡몹은 캐릭터가 아니라 문양으로 표현됩니다. 스테이지마다 별 · 회로 · 장미창 · 서가 · 룬 · 달 · 인형 실 문양의 병사가 나오고, 중간 보스(하드 이상에서는 기술 1개 추가)가 길을 막습니다. 6스테이지의 중간 보스는 벨리스입니다.';
 
@@ -82,7 +84,8 @@ export const STORY = {
 export const EXTRA = {
   title: 'EXTRA', sub: '실 끝에서 웃는 지배자',
   unlock: 'NORMAL 이상 난이도에서 노 컨티뉴로 클리어 — 또는 타이틀에서 “claude” 입력',
-  rules: '컨티뉴 불가 · 체력 4 · 난이도는 NORMAL과 HARD 사이 · 얼티메이트 없음 · 라스트 스킬 2종(기체별)',
+  rules: '컨티뉴 불가 · 체력 4 · 난이도는 HARD 수준 · 얼티메이트 없음 · 라스트 스킬 2종(기체별)',
+  hell: 'EXTRA를 클리어하면(또는 설정에서 암호 입력) HELL이 열립니다. MADNESS 이상의 난이도, 중간 보스는 루나린스, 아르케시아의 기술은 15개로 늘어납니다.',
 };
 
 // ───────── 난이도 ─────────
@@ -94,7 +97,10 @@ export const DIFFS = [
   { id: 'madness', name: 'MADNESS', kr: '매드니스', sub: '루나틱 — 달이 미치는 밤', lv: 3, cnt: 1.28, spd: 1.1, rate: 1.13, hp: 1.25, php: 5, color: '#ff6fae' },
 ];
 // EXTRA 전용 고정 난이도: NORMAL 과 HARD 의 중간, 체력 4
-export const EXTRA_DIFF = { id: 'extra', name: 'EXTRA', kr: '엑스트라', sub: '실 끝에서 웃는 지배자', lv: 1, cnt: 1.08, spd: 1.03, rate: 1.04, hp: 1.06, php: 4, color: '#ff4f7a', extra: true };
+// EXTRA: HARD 와 같은 수준, 체력 4, 컨티뉴 없음
+export const EXTRA_DIFF = { id: 'extra', name: 'EXTRA', kr: '엑스트라', sub: '실 끝에서 웃는 지배자', lv: 2, cnt: 1.16, spd: 1.06, rate: 1.07, hp: 1.12, php: 4, color: '#ff4f7a', extra: true };
+// HELL: MADNESS 이상
+export const HELL_DIFF = { id: 'hell', name: 'HELL', kr: '헬', sub: '끊어지지 않는 실', lv: 4, cnt: 1.4, spd: 1.14, rate: 1.2, hp: 1.3, php: 4, color: '#ff2b3d', extra: true, hell: true };
 
 // ───────── 기체 ─────────
 export const CHARS = [
