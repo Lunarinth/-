@@ -248,6 +248,7 @@ export function makeTextures() {
     library: floorVar('#3f2a1a', '#2a1a10', '#120a06', 'rgba(255,214,140,.14)', 'planks'),
     archive: floorVar('#2a1650', '#1a0c36', '#0a0420', 'rgba(210,170,255,.16)', 'tiles'),
     theater: floorVar('#4a0f1c', '#2c0810', '#120308', 'rgba(255,120,140,.2)', 'boards'),
+    theaterHell: floorVar('#5c0a14', '#2e050b', '#0e0204', 'rgba(255,70,80,.3)', 'boards'),
     moongarden: T.floor,
   };
   const silhouette = (seed0, drawOne) => mk(2048, 512, (g, w, h) => {
@@ -288,6 +289,7 @@ export function makeTextures() {
     }),
     moongarden: T.ruins,
   };
+  T.envRuins.theaterHell = T.envRuins.theater;
 
   // 룬 문자 탄 (벨리스의 마도서 문자). 얇은 고리 안에 각진 룬 한 글자.
   T.glyph = mk(128, 128, (g) => {
@@ -395,12 +397,87 @@ export function makeTextures() {
     for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(72, 90 + k * 18); g.lineTo(184, 90 + k * 18); g.stroke(); }
     g.beginPath(); g.moveTo(112, 64); g.lineTo(112, 192); g.stroke(); circ(g, 22, 4);
   });
+  // 춤추는 인형: 드레스 자락을 펼친 채 한 팔을 든 마리오네트. 머리 · 손목 · 어깨에서 실이 위로 올라가 조종대에 모인다.
   T.mob_puppet = sig((g) => {
-    circ(g, 112); circ(g, 96, 2);
-    g.lineWidth = 4; g.beginPath(); g.moveTo(78, 74); g.lineTo(178, 74); g.stroke(); g.beginPath(); g.moveTo(128, 74); g.lineTo(128, 96); g.stroke();
-    for (const x of [92, 128, 164]) { g.lineWidth = 2; g.beginPath(); g.moveTo(x, 74); g.lineTo(128, 120); g.stroke(); }
-    g.lineWidth = 4; g.beginPath(); g.arc(128, 132, 22, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.moveTo(128, 154); g.lineTo(128, 196); g.moveTo(104, 168); g.lineTo(152, 168); g.moveTo(128, 196); g.lineTo(108, 224); g.moveTo(128, 196); g.lineTo(148, 224); g.stroke();
+    circ(g, 112, 3.5); circ(g, 98, 1.8);
+    g.lineWidth = 2; for (const [x, y] of [[128, 112], [88, 124], [168, 98]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(128, 26); g.stroke(); }
+    g.lineWidth = 5; g.beginPath(); g.moveTo(100, 26); g.lineTo(156, 26); g.stroke();
+    g.lineWidth = 4; g.beginPath(); g.arc(128, 128, 18, 0, Math.PI * 2); g.stroke(); // 머리
+    g.globalAlpha = 0.3; g.fill(); g.globalAlpha = 1;
+    g.beginPath(); g.moveTo(128, 146); g.lineTo(110, 170); g.lineTo(78, 204); g.quadraticCurveTo(128, 220, 178, 204); g.lineTo(146, 170); g.closePath(); // 드레스
+    g.globalAlpha = 0.22; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.lineWidth = 3.5; g.beginPath(); g.moveTo(116, 156); g.lineTo(88, 124); g.stroke(); // 낮춘 팔
+    g.beginPath(); g.moveTo(140, 156); g.lineTo(166, 126); g.lineTo(168, 98); g.stroke(); // 든 팔
+    g.beginPath(); g.moveTo(112, 208); g.lineTo(100, 234); g.moveTo(144, 208); g.lineTo(156, 232); g.stroke(); // 다리
+    g.beginPath(); g.arc(120, 124, 2.6, 0, 7); g.arc(136, 124, 2.6, 0, 7); g.fill();
+  });
+  // 광대 마리오네트: 뾰족 모자와 마름모 몸통, 관절 구슬
+  T.mob_doll = sig((g) => {
+    circ(g, 112, 3.5); circ(g, 98, 1.8);
+    g.lineWidth = 2; for (const [x, y] of [[128, 62], [70, 140], [186, 140], [100, 200], [156, 200]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(128, 14); g.stroke(); }
+    g.lineWidth = 4.5; g.beginPath(); g.moveTo(96, 14); g.lineTo(160, 14); g.stroke();
+    g.lineWidth = 4; g.beginPath(); g.moveTo(104, 78); g.lineTo(112, 44); g.lineTo(128, 62); g.lineTo(144, 44); g.lineTo(152, 78); g.closePath(); g.globalAlpha = 0.3; g.fill(); g.globalAlpha = 1; g.stroke(); // 모자
+    g.beginPath(); g.arc(128, 96, 20, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(118, 92); g.lineTo(124, 96); g.moveTo(138, 92); g.lineTo(132, 96); g.stroke(); g.lineWidth = 3; g.beginPath(); g.arc(128, 100, 8, 0.2, Math.PI - 0.2); g.stroke();
+    g.lineWidth = 4; g.beginPath(); g.moveTo(128, 116); g.lineTo(104, 148); g.lineTo(128, 184); g.lineTo(152, 148); g.closePath(); g.globalAlpha = 0.25; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.lineWidth = 3.5; g.beginPath(); g.moveTo(108, 130); g.lineTo(70, 140); g.lineTo(60, 112); g.moveTo(148, 130); g.lineTo(186, 140); g.lineTo(196, 112); g.moveTo(118, 180); g.lineTo(100, 200); g.lineTo(108, 232); g.moveTo(138, 180); g.lineTo(156, 200); g.lineTo(148, 232); g.stroke();
+    for (const [x, y] of [[70, 140], [186, 140], [100, 200], [156, 200]]) { g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill(); }
+  });
+  T.mob_mask = sig((g) => { // 극장 가면
+    circ(g, 112, 3); g.lineWidth = 4;
+    g.beginPath(); g.moveTo(128, 40); g.bezierCurveTo(196, 40, 204, 120, 176, 170); g.quadraticCurveTo(128, 232, 80, 170); g.bezierCurveTo(52, 120, 60, 40, 128, 40); g.closePath(); g.globalAlpha = 0.22; g.fill(); g.globalAlpha = 1; g.stroke();
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(128 + s * 18, 104); g.quadraticCurveTo(128 + s * 40, 84, 128 + s * 58, 104); g.quadraticCurveTo(128 + s * 40, 118, 128 + s * 18, 104); g.fill(); }
+    g.beginPath(); g.arc(128, 142, 34, 0.25, Math.PI - 0.25); g.stroke();
+    g.lineWidth = 2.5; g.beginPath(); g.moveTo(128, 112); g.lineTo(122, 140); g.lineTo(134, 140); g.stroke(); g.beginPath(); g.arc(170, 132, 3, 0, 7); g.fill();
+  });
+  T.mob_spool = sig((g) => { // 붉은 실패
+    circ(g, 112, 3);
+    g.lineWidth = 4.5; g.beginPath(); g.roundRect(76, 52, 104, 22, 8); g.stroke(); g.beginPath(); g.roundRect(76, 182, 104, 22, 8); g.stroke();
+    g.globalAlpha = 0.3; g.fillRect(92, 74, 72, 108); g.globalAlpha = 1; g.lineWidth = 2.5;
+    for (let y = 80; y < 180; y += 9) { g.beginPath(); g.moveTo(92, y); g.lineTo(164, y + 5); g.stroke(); }
+    g.lineWidth = 3.5; g.beginPath(); g.moveTo(164, 150); g.bezierCurveTo(210, 150, 200, 200, 226, 214); g.stroke();
+  });
+  // 별똥별: +x 방향이 머리
+  T.mob_comet = mk(256, 256, (g) => {
+    g.shadowColor = '#fff'; g.shadowBlur = 16; g.fillStyle = '#fff'; g.strokeStyle = '#fff';
+    const tg = g.createLinearGradient(10, 0, 190, 0); tg.addColorStop(0, 'rgba(255,255,255,0)'); tg.addColorStop(1, 'rgba(255,255,255,.9)');
+    g.fillStyle = tg; g.beginPath(); g.moveTo(10, 128); g.lineTo(190, 100); g.lineTo(190, 156); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(196, 128, 30, 0, Math.PI * 2); g.fill();
+    g.beginPath(); for (let i = 0; i < 10; i++) { const a = (i * Math.PI) / 5, r = i % 2 ? 10 : 24; g.lineTo(196 + Math.cos(a) * r, 128 + Math.sin(a) * r); } g.closePath(); g.fillStyle = 'rgba(150,170,220,.6)'; g.fill();
+    g.lineWidth = 3; for (const y of [86, 170]) { g.beginPath(); g.moveTo(40, y); g.lineTo(130, y + (y < 128 ? 8 : -8)); g.stroke(); }
+  });
+  T.mob_node = sig((g) => { // 패킷 노드 (작은 칩)
+    g.lineWidth = 5; g.strokeRect(70, 70, 116, 116);
+    for (let i = 0; i < 3; i++) for (const [x, y, dx, dy] of [[100 + i * 28, 70, 0, -30], [100 + i * 28, 186, 0, 30], [70, 100 + i * 28, -30, 0], [186, 100 + i * 28, 30, 0]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + dx, y + dy); g.stroke(); }
+    g.globalAlpha = 0.35; g.fillRect(96, 96, 64, 64); g.globalAlpha = 1; g.lineWidth = 3; g.beginPath(); g.moveTo(104, 128); g.lineTo(124, 128); g.lineTo(124, 108); g.lineTo(152, 108); g.stroke();
+  });
+  T.mob_swift = mk(256, 256, (g) => { // 질주하는 꽃잎 날개 (+x 방향)
+    g.shadowColor = '#fff'; g.shadowBlur = 14; g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 5; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(240, 128); g.quadraticCurveTo(160, 52, 24, 92); g.quadraticCurveTo(84, 128, 24, 164); g.quadraticCurveTo(160, 204, 240, 128); g.closePath(); g.globalAlpha = 0.28; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.lineWidth = 3; g.beginPath(); g.moveTo(40, 128); g.lineTo(220, 128); g.stroke();
+    g.beginPath(); g.arc(150, 128, 12, 0, 7); g.fill();
+    g.lineWidth = 2.5; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(80, 128 + s * 6); g.quadraticCurveTo(140, 128 + s * 40, 196, 128 + s * 14); g.stroke(); }
+  });
+  T.mob_leaf = mk(256, 256, (g) => { // 떠다니는 낱장
+    g.shadowColor = '#fff'; g.shadowBlur = 12; g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 7; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(62, 40); g.lineTo(170, 40); g.lineTo(200, 74); g.lineTo(200, 216); g.lineTo(62, 216); g.closePath(); g.globalAlpha = 0.3; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.beginPath(); g.moveTo(170, 40); g.lineTo(170, 74); g.lineTo(200, 74); g.stroke();
+    g.lineWidth = 5; for (let k = 0; k < 5; k++) { g.beginPath(); g.moveTo(84, 100 + k * 22); g.lineTo(k % 2 ? 150 : 176, 100 + k * 22); g.stroke(); }
+  });
+  T.mob_seal = sig((g) => { // 정밀한 봉인 인장: 육각 + 내접 사각
+    circ(g, 112, 3); g.lineWidth = 4;
+    g.beginPath(); for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 3; g.lineTo(128 + Math.cos(a) * 92, 128 + Math.sin(a) * 92); } g.closePath(); g.stroke();
+    g.beginPath(); for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + (i * Math.PI) / 2; g.lineTo(128 + Math.cos(a) * 62, 128 + Math.sin(a) * 62); } g.closePath(); g.globalAlpha = 0.22; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.lineWidth = 2.5; g.beginPath(); g.moveTo(128, 36); g.lineTo(128, 220); g.moveTo(48, 82); g.lineTo(208, 174); g.moveTo(48, 174); g.lineTo(208, 82); g.stroke();
+    g.beginPath(); g.arc(128, 128, 11, 0, 7); g.fill();
+  });
+  T.mob_phase = sig((g) => { // 달의 위상 문양 (대형 월상 정예)
+    circ(g, 114, 4); circ(g, 100, 2);
+    g.lineWidth = 3; for (let i = 0; i < 24; i++) { const a = (i * Math.PI) / 12; g.beginPath(); g.moveTo(128 + Math.cos(a) * 100, 128 + Math.sin(a) * 100); g.lineTo(128 + Math.cos(a) * (i % 3 ? 108 : 114), 128 + Math.sin(a) * (i % 3 ? 108 : 114)); g.stroke(); }
+    g.lineWidth = 4; g.beginPath(); g.arc(128, 128, 66, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(128, 128, 66, -Math.PI / 2, Math.PI / 2, false); g.ellipse(128, 128, 30, 66, 0, Math.PI / 2, -Math.PI / 2, true); g.fill();
+    g.globalAlpha = 0.25; g.beginPath(); g.arc(128, 128, 66, Math.PI / 2, (Math.PI * 3) / 2); g.fill(); g.globalAlpha = 1;
+    for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4; g.beginPath(); g.arc(128 + Math.cos(a) * 88, 128 + Math.sin(a) * 88, i % 2 ? 4 : 7, 0, 7); g.fill(); }
   });
 
   T.dot = mk(32, 32, (g) => {
