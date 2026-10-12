@@ -625,9 +625,9 @@ export class Game {
     this.sfx.play('ult');
     P.beginUlt(this, mode);
     if (!inStage) {
-      if (mode === 'reject') { this.ui.warn('궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
-      else if (mode === 'immune') { this.ui.warn('이 기술에는 궁극기가 통하지 않습니다', 1800); }
-      else if (mode === 'resist') { this.ui.warn('궁극기의 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
+      if (mode === 'reject') { this.ui.warn('리젝트 — 궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
+      else if (mode === 'immune') { this.ui.warn('면역 — 이 스킬에는 궁극기가 통하지 않습니다', 1800); }
+      else if (mode === 'resist') { this.ui.warn('저항 — 궁극기 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
       else if (Math.random() < 0.5) B.barkFor(B.def.id + 'Ult');
       if (B.addAnalysis) B.addAnalysis(10);
     }
