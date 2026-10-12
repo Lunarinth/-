@@ -224,6 +224,21 @@ export function makeTextures() {
     }
   });
 
+  // 룬 문자 탄 (벨리스의 마도서 문자). 얇은 고리 안에 각진 룬 한 글자.
+  T.glyph = mk(128, 128, (g) => {
+    g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.shadowColor = '#fff'; g.shadowBlur = 14;
+    g.lineWidth = 4; g.beginPath(); g.arc(64, 64, 52, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 9;
+    g.beginPath(); g.moveTo(50, 30); g.lineTo(50, 100); g.stroke();
+    g.beginPath(); g.moveTo(50, 50); g.lineTo(84, 30); g.stroke();
+    g.beginPath(); g.moveTo(50, 72); g.lineTo(84, 52); g.stroke();
+    g.beginPath(); g.arc(84, 92, 3, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill();
+  });
+
+  // 별 모양 탄 (옵서의 별자리). 4각 별 + 중심 광점.
+  T.star = T.spark;
+
   T.dot = mk(32, 32, (g) => {
     const gr = g.createRadialGradient(16, 16, 0, 16, 16, 15);
     gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)');

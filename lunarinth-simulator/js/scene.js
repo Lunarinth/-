@@ -6,6 +6,8 @@ export const ARENA_R = 10.2;
 const THEMES = {
   lumina: { top: 0x0c0730, mid: 0x2e2174, bot: 0xa485ea, moon: 0xfff4d6, rune: 0xd9c8ff, cloud: 0xcdbbff, ruin: 0x140b38, ruinFar: 0x5b49a8, star: 1.0, moonScale: 62, nx: -0.42, ny: 0.5, mc: [1, 0, 0] },
   umbra: { top: 0x03010a, mid: 0x12083a, bot: 0x3a1b78, moon: 0x8a66e0, rune: 0x8a5cff, cloud: 0x3a2a70, ruin: 0x05020f, ruinFar: 0x1f1245, star: 0.7, moonScale: 66, nx: 0.38, ny: 0.5, mc: [0, 1, 0] },
+  astral: { top: 0x020618, mid: 0x0b2155, bot: 0x4a7fd8, moon: 0xdce9ff, rune: 0x9cc3ff, cloud: 0x7fa8ff, ruin: 0x050b24, ruinFar: 0x1d3b86, star: 1.3, moonScale: 56, nx: 0.42, ny: 0.5, mc: [1, 0, 0] },
+  arcane: { top: 0x07010f, mid: 0x2a0a4d, bot: 0x7a2fb8, moon: 0xd9a8ff, rune: 0xc060ff, cloud: 0x6a2a9a, ruin: 0x0a0214, ruinFar: 0x3b1166, star: 0.8, moonScale: 64, nx: -0.35, ny: 0.45, mc: [0, 1, 0] },
   luna: { top: 0x1c0530, mid: 0x6a1a6e, bot: 0xff8ac8, moon: 0xffe9b0, rune: 0xff7ac8, cloud: 0xff9ad0, ruin: 0x1d0828, ruinFar: 0x8a2f85, star: 0.55, moonScale: 200, nx: 0.0, ny: 0.34, mc: [0, 0, 1] },
 };
 

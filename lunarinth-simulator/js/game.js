@@ -1,9 +1,12 @@
-// 게임 본체: 상태 머신(메뉴 → 인트로 → 전투 → 페이즈 전환 → 승리/패배), 충돌, 연출, 메인 루프.
+// 게임 본체: 타이틀 → 난이도/캐릭터 선택 → 스테이지(보스 대사 → 단계 반복 → 클리어) → 엔딩/컨티뉴/게임오버.
+// 동방식 구조: 보스는 "단계(통상/스킬/라스트)"로 진행되고, 스킬 발동 시 이름이 선언된다.
 import { World } from './scene.js';
 import { Bullets, Particles, Zones, Beams, Flyers } from './entities.js';
 import { Player, PLAYER } from './player.js';
-import { Boss, BOSS_MAX_HP, PAL } from './boss.js';
-import { PHASES, SCRIPT, BARKS } from './lore.js';
+import { Opsir } from './bosses/opsir.js';
+import { Bellis } from './bosses/bellis.js';
+import { Lunarinth, PAL } from './bosses/lunarinth.js';
+import { STAGES, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
 import { UI } from './ui.js';
 import { Input } from './input.js';
 import { AudioEngine } from './audio/engine.js';
@@ -12,15 +15,29 @@ import { MusicDirector } from './audio/music.js';
 import { makeTextures, makePlayerTextures, loadImage } from './art.js';
 import * as THREE from '../vendor/three.module.min.js';
 
-const SETTINGS_KEY = 'lunarinth.settings.v1';
+const SETTINGS_KEY = 'lunarinth.settings.v2';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const CONTINUES = 3; // 기본 컨티뉴 횟수
+
+const BOSS_ASSETS = {
+  opsir: { cls: Opsir, img: 'assets/opsir.png' },
+  bellis: { cls: Bellis, img: 'assets/bellis.png' },
+  lunarinth: { cls: Lunarinth, img: 'assets/lunarinth.png' },
+};
+// 대사창 초상화 크롭 (이미지 대비 비율)
+const FACE = {
+  luna: { sx: 0.2, sy: 0.02, sw: 0.55 },
+  opsir: { sx: 0.34, sy: 0.04, sw: 0.5 },
+  bellis: { sx: 0.18, sy: 0.0, sw: 0.62 },
+  claire: { sx: 0.2, sy: 0.1, sw: 0.6 },
+};
 
 class Settings {
   constructor() {
-    this.auto = true; this.shake = true; this.calm = false;
+    this.shake = true; this.calm = false;
     try { Object.assign(this, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* noop */ }
   }
-  save() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ auto: this.auto, shake: this.shake, calm: this.calm })); } catch (e) { /* noop */ } }
+  save() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ shake: this.shake, calm: this.calm })); } catch (e) { /* noop */ } }
 }
 
 export class Game {
@@ -29,10 +46,15 @@ export class Game {
     this.timeScale = 1; this.hitstopT = 0;
     this.veil = false; this.veilV = 0; this.madnessT = 0;
     this.t = 0; this.fightT = 0;
-    this.checkpoint = 0; this.reached = 0;
-    this.stats = { hits: 0, graze: 0, damage: 0, attacks: 0, parries: 0 };
-    this.paused = false;
-    this._lastTs = 0;
+    this.paused = false; this.ultBusy = false;
+    this._lastTs = 0; this._token = 0;
+    this.run = this.makeRun(DIFFS[1], CHARS[0]);
+    this.stats = this.newStats();
+  }
+
+  newStats() { return { hits: 0, graze: 0, damage: 0, attacks: 0, ults: 0, spellsSeen: 0, spellsCaptured: 0 }; }
+  makeRun(diff, char) {
+    return { diff, char, stageIdx: 0, continues: 0, continuesMax: CONTINUES, stepHit: false, stepUlt: false };
   }
 
   async init() {
@@ -43,17 +65,13 @@ export class Game {
     this.music = new MusicDirector(this.engine);
     this.audio = { E: this.engine, sfx: this.sfx, music: this.music, pan: (x) => Math.max(-1, Math.min(1, x / 12)) };
     this.ui = new UI({ audio: this.engine, sfx: this.sfx, settings: this.settings });
-    this.input = new Input(canvas);
+    this.input = new Input();
+    this.input.block = () => !this.ui.el.dialog.hidden || this.state === 'menu';
 
     this.T = makeTextures();
     this.world = new World(canvas, this.T);
     this.world.shakeOn = this.settings.shake;
     const scene = this.world.scene;
-
-    // 보스 스프라이트 로딩 (+ 대사 초상화용 이미지)
-    const img = await loadImage('assets/lunarinth.png');
-    const bossTex = new THREE.Texture(img); bossTex.colorSpace = THREE.SRGBColorSpace; bossTex.needsUpdate = true;
-    bossTex.anisotropy = 4;
 
     this.bullets = new Bullets(scene, this.T);
     this.fx = new Particles(scene, this.T);
@@ -71,46 +89,57 @@ export class Game {
       this.player.setSprite([t, t], claireImg.width / claireImg.height, 2.9);
     } catch (e) { /* 임시 스프라이트 유지 */ }
 
-    this.boss = new Boss(scene, this.T, bossTex, img.width / img.height, this);
+    // 보스 3인 (스프라이트는 전부 미리 만들어 두고 스테이지마다 하나만 보인다)
+    this.bosses = {}; const imgs = { claire: claireImg };
+    for (const [id, a] of Object.entries(BOSS_ASSETS)) {
+      const img = await loadImage(a.img);
+      const tex = new THREE.Texture(img); tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true; tex.anisotropy = 4;
+      this.bosses[id] = new a.cls(scene, this.T, tex, img.width / img.height, this);
+      imgs[id] = img;
+    }
+    this.boss = this.bosses.opsir;
 
-    // 초상화: 루나린스는 일러스트의 얼굴 부분, 클레르는 그려둔 흉상
-    this.ui.setPortraits({
-      luna: { kind: 'img', img, sx: img.width * 0.2, sy: img.height * 0.02, sw: img.width * 0.55, sh: img.width * 0.55 },
-      claire: claireImg ? { kind: 'img', img: claireImg, sx: claireImg.width * 0.2, sy: claireImg.height * 0.1, sw: claireImg.width * 0.6, sh: claireImg.width * 0.6 } : { kind: 'canvas', canvas: pt.portrait.image },
-    });
+    // 초상화 (대사창 / 스킬 컷인)
+    const portraits = {};
+    for (const [who, key] of [['luna', 'lunarinth'], ['opsir', 'opsir'], ['bellis', 'bellis'], ['claire', 'claire']]) {
+      const img = imgs[key]; if (!img) continue;
+      const f = FACE[who];
+      portraits[who] = { kind: 'img', img, sx: img.width * f.sx, sy: img.height * f.sy, sw: img.width * f.sw, sh: img.width * f.sw };
+    }
+    if (!portraits.claire) portraits.claire = { kind: 'canvas', canvas: pt.portrait.image };
+    this.ui.setPortraits(portraits);
 
     this._wireUI();
     this.input.onAny = () => { this.engine.init(); };
 
-    this.ui.setHearts(PLAYER.maxHp, PLAYER.maxHp);
-    this.ui.setBossInstant(1);
     this.toMenu(true);
     document.getElementById('loading').classList.add('done');
     setTimeout(() => document.getElementById('loading').remove(), 1200);
     requestAnimationFrame((ts) => this._frame(ts));
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'fight' && !this.paused) this.setPause(true); });
-    // 디버그/테스트 훅
-    window.__lunarinth = this;
+    window.__lunarinth = this; // 디버그/테스트 훅
   }
 
   _wireUI() {
     const ui = this.ui;
-    ui.on.start = () => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(true); };
-    ui.on.retry = () => { ui.hideResult(); this.startRun(false, this.checkpoint); };
+    ui.on.start = (diff, char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff, char); };
+    ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.char); };
     ui.on.toMenu = () => this.toMenu();
     ui.on.resume = () => this.setPause(false);
-    const restart = document.getElementById('btn-restart');
-    restart.onclick = () => { ui.hideResult(); this.startRun(false, 0); };
+    ui.on.continueYes = () => this.doContinue();
+    ui.on.continueNo = () => this.gameOver();
   }
 
   // ───── 화면 전환 ─────
   toMenu(first = false) {
-    this.state = 'menu'; this.paused = false;
-    this.ui.closeModals(); this.ui.hideResult(); this.ui.showHud(false); this.ui.hideBark();
+    this._token++;
+    this.state = 'menu'; this.paused = false; this.timeScale = 1; this.ultBusy = false;
+    this.ui.closeModals(); this.ui.hideResult(); this.ui.showHud(false); this.ui.hideBark(); this.ui.hideEnding(); this.ui.hideDeclare();
     this.ui.setTheme('lumina'); this.world.setTheme('lumina'); this.world.setDolly(0);
-    this.ui.showMenu(true); this.ui.setVeil(0); this.ui.madness(false); this.veil = false;
-    this.clearField(); this.boss.reset(0); this.boss.vulnerable = false; this.player.reset();
-    this.ui.setHearts(this.player.hp, this.player.max); this.ui.setBossInstant(1); this.ui.setBoss(1, 0);
+    this.ui.showMenu(true); this.ui.setVeil(0); this.ui.madness(false); this.veil = false; this.madnessT = 0;
+    this.clearField();
+    for (const b of Object.values(this.bosses)) { b.reset(); b.visible = false; b.alpha = 0; }
+    this.player.reset(this.run.diff.lives); this.player.invertT = 0;
     if (this.engine.ready) this.music.play('menu', { fade: first ? 3 : 1.6, immediate: true });
     else {
       // 첫 입력 후 오디오가 켜지면 메뉴 음악 시작
@@ -121,157 +150,264 @@ export class Game {
 
   clearField() {
     this.bullets.clearAll(); this.zones.clear(); this.beams.clear(); this.flyers.clear();
-    this.boss.cancelAttack();
+    for (const b of Object.values(this.bosses || {})) b.cancelAttack();
+    this.player.ultBeam.visible = false;
   }
-
-  resetStats() { this.stats = { hits: 0, graze: 0, damage: 0, attacks: 0, parries: 0 }; this.fightT = 0; }
-
-  async startRun(withIntro, fromPhase = 0) {
-    this.state = 'cutscene';
-    this.engine.init();
-    this.ui.showMenu(false); this.ui.closeModals(); this.ui.hideResult();
-    this.clearField(); this.resetStats();
-    this.player.reset(); this.boss.reset(fromPhase);
-    this.boss.vulnerable = false; this.reached = fromPhase;
-    this.ui.setHearts(this.player.hp, this.player.max); this.ui.setGraze(0);
-    const ph = PHASES[fromPhase];
-    this.ui.setTheme(ph.id); this.world.setTheme(ph.id); this.ui.setBossInstant(this.boss.hp / BOSS_MAX_HP); this.ui.setBoss(this.boss.hp / BOSS_MAX_HP, fromPhase);
-    this.world.setDolly(withIntro ? 0.5 : 0);
-    this.ui.showHud(true);
-    this.music.setIntensity(0);
-    this.music.play(withIntro ? 'menu' : ph.music, { fade: 1.5, immediate: true });
-    if (withIntro) {
-      this.duckMusic(0.55);
-      await this.ui.playDialogue(SCRIPT.intro, { onLine: (ln) => this.lineSfx(ln) });
-      this.duckMusic(1);
-    }
-    await this.beginPhaseFight(fromPhase, withIntro);
-  }
-
-  lineSfx(ln) {
-    if (!ln.sfx) return;
-    if (ln.sfx === 'laugh_soft') this.sfx.play('laugh', { vol: 0.55, pitch: 1.05 });
-    else this.sfx.play(ln.sfx);
-    this.fx.ring(this.boss.x, this.boss.bobY || 4, this.boss.z, this.boss.pal.glow, 6, 0.5);
-  }
+  clearBossField() { this.bullets.clearBoss(this.fx); this.zones.clear(); this.beams.clear(); this.flyers.clear(); }
 
   duckMusic(v) { if (this.engine.ready) this.engine.musicDuck.gain.setTargetAtTime(v, this.engine.ctx.currentTime, 0.15); }
-
-  /** 페이즈 전투 시작: 배너 + 음악 + 잠깐의 준비 시간 */
-  async beginPhaseFight(i, first) {
-    const ph = PHASES[i];
-    this.state = 'banner';
-    this.ui.setTheme(ph.id); this.world.setTheme(ph.id);
-    this.music.play(ph.music, { fade: first ? 2.2 : 0.6, immediate: true });
-    this.world.setDolly(0);
-    this.boss.phase = i; this.boss.applyPhaseStats();
-    this.ui.setBoss(this.boss.hp / BOSS_MAX_HP, i);
-    this.sfx.play('phase_flash');
-    this.ui.banner(ph.form, ph.title, 3000);
-    await sleep(1700);
-    this.boss.vulnerable = true; this.boss.alive = true;
-    this.boss.idleT = 0.9;
-    this.state = 'fight';
-    this.reached = Math.max(this.reached, i); this.checkpoint = this.reached;
+  lineSfx(ln) {
+    if (ln.sfx) { if (ln.sfx === 'laugh_soft') this.sfx.play('laugh', { vol: 0.55, pitch: 1.05 }); else this.sfx.play(ln.sfx); }
+    if (ln.who === 'luna' && this.boss.visible) this.fx.ring(this.boss.x, this.boss.bobY || 4, this.boss.z, this.boss.pal.glow, 6, 0.5);
   }
-
-  // ───── 페이즈 전환 ─────
-  async beginPhaseChange(next) {
-    if (this.state !== 'fight') return;
-    this.state = 'transition';
-    const B = this.boss;
-    B.cancelAttack(); B.vulnerable = false;
-    this.bullets.clearBoss(this.fx); this.zones.clear(); this.beams.clear(); this.flyers.clear();
-    this.setVeil(false); this.madnessT = 0; this.ui.madness(false); this.player.invertT = 0;
-    // 1) 경직 + 슬로모션 + 섬광
-    this.ui.flash('#ffffff', 900, 0.9); this.world.shake(1.0, 0.8); this.world.beat(1.2);
-    this.sfx.play('phase_flash'); this.sfx.play('boss_down', { vol: 0.5 });
-    this.fx.burst(B.x, B.bobY, B.z, 60, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 10, size: 1.1, life: 1.2, up: 1.5 });
-    this.fx.ring(B.x, B.bobY, B.z, 0xffffff, 18, 0.9);
-    this.timeScale = 0.2; this.world.kickFov(-4);
-    await sleep(900);
-    this.timeScale = 1;
-    // 2) 대사
-    this.world.setDolly(0.7); this.duckMusic(0.35);
-    const script = next === 1 ? SCRIPT.p1to2 : SCRIPT.p2to3;
-    await this.ui.playDialogue(script, { onLine: (ln) => this.lineSfx(ln) });
+  async talk(lines) {
+    if (!lines || !lines.length) return;
+    this.duckMusic(0.55);
+    await this.ui.playDialogue(lines, { onLine: (ln) => this.lineSfx(ln) });
     this.duckMusic(1);
-    // 3) 변신: 라이저 → 임팩트 + 테마 전환
-    this.state = 'transform';
-    const dur = 2.6;
-    this.music.riser(dur);
-    this.world.setDolly(1);
-    const nextPh = PHASES[next];
-    this.ui.setTheme(nextPh.id); this.world.setTheme(nextPh.id);
-    for (let i = 0; i < 12; i++) {
-      this.fx.burst(B.x, B.bobY, B.z, 10, { color: [0xffffff, PAL[nextPh.id].glow], speed: 6, size: 0.8, life: 0.9, up: 1.2 });
-      this.world.shake(0.1 + i * 0.03, 0.25);
-      await sleep(dur * 1000 / 12);
-    }
-    B.setPhase(next); B.scaleT = next === 2 ? 1.32 : 1;
-    this.music.boom(); this.ui.flash('#ffffff', 1100, 1.0); this.world.shake(1.2, 0.9); this.world.beat(1.5);
-    this.sfx.play('phase_flash');
-    this.fx.ring(B.x, B.bobY, B.z, PAL[nextPh.id].glow, 22, 1.0);
+  }
+
+  // ───── 런 / 스테이지 ─────
+  async startRun(diff, char) {
+    this._token++;
+    this.run = this.makeRun(diff, char);
+    this.stats = this.newStats(); this.fightT = 0;
+    this.ui.showMenu(false); this.ui.closeModals(); this.ui.hideResult(); this.ui.hideEnding();
+    this.player.reset(diff.lives); this.player.x = 0; this.player.z = 6.2;
+    this.ui.setLives(this.player.lives, this.player.baseLives); this.ui.setUlt(this.player.ults);
+    this.ui.setContinues(0, CONTINUES); this.ui.setDiff(diff);
+    await this.playStage(0);
+  }
+
+  async playStage(idx) {
+    const my = ++this._token;
+    this.run.stageIdx = idx;
+    const st = STAGES[idx], B = this.bosses[st.id], def = B.def;
+    for (const b of Object.values(this.bosses)) if (b !== B) { b.visible = false; b.alpha = 0; }
+    this.boss = B;
+    this.state = 'cutscene'; this.timeScale = 1;
+    this.clearField(); this.ui.showHud(true); this.ui.hideBark();
+    this.player.ults = PLAYER.maxUlt; this.player.inv = 1.5;
+    this.ui.setUlt(this.player.ults); this.ui.setStage(st.label);
+    const f0 = def.forms[def.steps[0].form], th = f0.theme || def.theme;
+    this.world.setTheme(th); this.ui.setTheme(th); this.world.setDolly(0.5);
+    this.ui.setBossHeader(def); this.ui.setBossStep(B, 0); this.ui.setBossInstant(1); this.ui.setBossTimer(null); this.ui.setAnalysis(null);
+    B.appear();
     this.music.setIntensity(0);
-    await this.beginPhaseFight(next, false);
-    // 오프닝 일격: 형태가 바뀌었음을 알리는 큰 효과
-    if (next === 2) { this.sfx.play('laugh_big', { vol: 0.9 }); }
+    this.music.play(f0.music || def.music, { fade: 1.8, immediate: true });
+    this.ui.banner(st.label, `${def.name} — ${def.epithet}`, 3200);
+    await sleep(1800); if (my !== this._token) return;
+    await this.talk(SCRIPT[st.id].intro); if (my !== this._token) return;
+    this.world.setDolly(0);
+    this.state = 'fight';
+    if (def.hasAnalysis) this.ui.setAnalysis(B.analysis);
+    B.startStep(0);
   }
 
-  onEnrage() {
-    this.ui.warn('루나틱 오버드라이브', 1800);
-    this.music.setIntensity(1); this.world.beat(1.5); this.ui.flash('#ff7ac8', 600, 0.45);
-    this.sfx.play('laugh_big', { vol: 0.85 }); this.world.shake(0.7, 0.6);
-    this.boss.bark('low');
+  // ───── 단계 콜백 (보스가 호출) ─────
+  onStepStart(B, step, i, quick) {
+    this.run.stepHit = false; this.run.stepUlt = false;
+    const form = B.form, def = B.def;
+    this.ui.setBossStep(B, i); this.ui.setBossInstant(1); this.ui.setBossTimer(step.time);
+    const th = form.theme || def.theme;
+    this.world.setTheme(th); this.ui.setTheme(th);
+    this.music.play(form.music || def.music, { fade: 1.2, immediate: false });
+    if (this.state !== 'cutscene') this.state = 'fight';
+    const isSpell = step.kind !== 'nonspell';
+    if (isSpell) {
+      this.stats.spellsSeen++;
+      this.sfx.play('declare');
+      this.ui.declare({ who: def.id === 'lunarinth' ? 'luna' : def.id, kind: step.kind, tag: step.tag, name: step.name, side: 'right' });
+      this.world.beat(1.0); this.world.shake(0.25, 0.3);
+      this.fx.ring(B.x, B.bobY, B.z, B.pal.glow, 14, 0.8);
+      this.fx.burst(B.x, B.bobY, B.z, 24, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 9, size: 0.9, life: 0.9, up: 1.4 });
+      B.bark();
+    } else {
+      this.ui.announce(`통상 「${step.name}」`);
+      this.sfx.play('cast');
+    }
+    void quick;
   }
 
-  // ───── 승리 / 패배 ─────
-  async beginVictory() {
-    if (this.state === 'victory') return;
-    this.state = 'victory';
-    const B = this.boss; B.cancelAttack(); B.vulnerable = false;
-    this.bullets.clearBoss(this.fx); this.zones.clear(); this.beams.clear(); this.flyers.clear();
-    this.setVeil(false); this.ui.madness(false); this.player.invertT = 0; this.madnessT = 0;
-    this.ui.setBoss(0);
-    this.sfx.play('boss_down'); this.ui.flash('#ffffff', 1400, 1); this.world.shake(1.4, 1.2);
+  async onStepEnd(B, reason, i) {
+    const my = this._token;
+    if (this.state !== 'fight') return;
+    this.state = 'between';
+    const step = B.step, isSpell = step.kind !== 'nonspell';
+    this.clearBossField(); this.setVeil(false); this.ui.madness(false); this.madnessT = 0; this.player.invertT = 0; this.player.sealT = 0;
+    this.ui.setBossTimer(null);
+    const last = i + 1 >= B.stepCount;
+    if (reason === 'broken') {
+      this.sfx.play('boss_down', { vol: last ? 0.9 : 0.45 });
+      this.ui.flash('#ffffff', last ? 900 : 450, last ? 0.9 : 0.55); this.world.shake(last ? 1.2 : 0.7, 0.6);
+      this.fx.burst(B.x, B.bobY, B.z, last ? 60 : 36, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 10, size: 1.0, life: 1.1, up: 1.4 });
+      this.fx.ring(B.x, B.bobY, B.z, 0xffffff, last ? 20 : 14, 0.8);
+      if (isSpell) {
+        this.stats.spellsCaptured += (!this.run.stepHit && !this.run.stepUlt) ? 1 : 0;
+        this.ui.warn(!this.run.stepHit && !this.run.stepUlt ? '스킬 격파 — 노 미스·노 궁극기' : '스킬 격파', 1700);
+      }
+    } else {
+      this.sfx.play('telegraph');
+      this.ui.warn(isSpell ? '스킬 시간 초과' : '통상 시간 초과', 1300);
+      this.fx.ring(B.x, B.bobY, B.z, B.pal.glow, 10, 0.6);
+    }
+    if (last) { this.stageClear(B); return; }
+    this.timeScale = 0.3; await sleep(500); this.timeScale = 1; if (my !== this._token) return;
+    await sleep(500); if (my !== this._token) return;
+    const next = B.def.steps[i + 1];
+    if (next.pre) await this.stepIntro(B, next);
+    if (my !== this._token) return;
+    this.state = 'fight';
+    B.startStep(i + 1);
+  }
+
+  /** 단계 사이 연출: 대사 + (형태가 바뀔 때) 변신 연출 */
+  async stepIntro(B, next) {
+    const my = this._token, id = B.def.id;
+    if (next.transform) {
+      this.ui.flash('#ffffff', 900, 0.9); this.world.shake(1.0, 0.8); this.world.beat(1.2);
+      this.sfx.play('phase_flash');
+      this.fx.burst(B.x, B.bobY, B.z, 50, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 10, size: 1.1, life: 1.2, up: 1.5 });
+      this.timeScale = 0.2; this.world.kickFov(-4); await sleep(800); this.timeScale = 1;
+      this.world.setDolly(0.7);
+    }
+    await this.talk(SCRIPT[id][next.pre]); if (my !== this._token) return;
+    if (next.transform) {
+      const nf = B.def.forms[next.form], dur = 2.6;
+      this.music.riser(dur); this.world.setDolly(1);
+      this.ui.setTheme(nf.theme); this.world.setTheme(nf.theme);
+      for (let k = 0; k < 12; k++) {
+        this.fx.burst(B.x, B.bobY, B.z, 10, { color: [0xffffff, nf.pal.glow], speed: 6, size: 0.8, life: 0.9, up: 1.2 });
+        this.world.shake(0.1 + k * 0.03, 0.25);
+        await sleep((dur * 1000) / 12); if (my !== this._token) return;
+      }
+      B.scaleT = next.form === 'luna' ? 1.32 : 1;
+      this.music.boom(); this.ui.flash('#ffffff', 1100, 1.0); this.world.shake(1.2, 0.9); this.world.beat(1.5);
+      this.sfx.play('phase_flash'); this.fx.ring(B.x, B.bobY, B.z, nf.pal.glow, 22, 1.0);
+      if (next.form === 'luna') this.sfx.play('laugh_big', { vol: 0.9 });
+      this.music.setIntensity(0); this.world.setDolly(0);
+      await sleep(300);
+    } else {
+      this.music.boom(); this.world.beat(1.2); this.ui.flash(`#${(B.pal.glow).toString(16).padStart(6, '0')}`, 500, 0.4);
+    }
+  }
+
+  onEnrage(B) {
+    this.ui.warn('마지막 발악 — 공격이 격화됩니다', 1500);
+    this.world.beat(1.2); this.ui.flash(`#${(B.pal.glow).toString(16).padStart(6, '0')}`, 450, 0.3);
+    if (B.def.id === 'lunarinth' && B.formId === 'luna') { this.music.setIntensity(1); this.sfx.play('laugh_big', { vol: 0.8 }); B.barkFor('low'); }
+  }
+
+  async stageClear(B) {
+    const my = this._token, idx = this.run.stageIdx, st = STAGES[idx];
+    this.state = 'stageclear'; B.alive = true; B.vulnerable = false;
     this.music.stop(1.2);
     this.timeScale = 0.25; this.world.setDolly(0.6);
-    for (let i = 0; i < 16; i++) {
-      this.fx.burst(B.x + (Math.random() - 0.5) * 3, B.bobY + (Math.random() - 0.5) * 3, B.z, 14, { color: [0xffffff, 0xfff1c9, 0xd9c8ff, 0xff7ac8], speed: 8, size: 1.0, life: 1.4, up: 1.4 });
-      await sleep(130);
+    for (let k = 0; k < 14; k++) {
+      this.fx.burst(B.x + (Math.random() - 0.5) * 3, B.bobY + (Math.random() - 0.5) * 3, B.z, 14, { color: [0xffffff, 0xfff1c9, B.pal.glow, B.pal.b], speed: 8, size: 1.0, life: 1.4, up: 1.4 });
+      await sleep(130); if (my !== this._token) return;
     }
     this.timeScale = 1;
-    B.scaleT = 1; this.world.setTheme('lumina'); this.ui.setTheme('lumina');
-    await sleep(700);
-    this.music.play('victory', { fade: 2.5, immediate: true });
-    this.sfx.play('victory');
-    this.duckMusic(0.6);
-    await this.ui.playDialogue(SCRIPT.victory, { onLine: (ln) => this.lineSfx(ln) });
-    this.duckMusic(1);
+    B.alphaT = 0; B.scaleT = 1;
+    this.world.setTheme('lumina'); this.ui.setTheme('lumina');
+    await sleep(700); if (my !== this._token) return;
+    this.music.play('victory', { fade: 2.0, immediate: true }); this.sfx.play('victory');
+    await this.talk(SCRIPT[st.id].outro); if (my !== this._token) return;
+    B.visible = false; this.ui.hideBark();
+    if (idx + 1 < STAGES.length) {
+      this.ui.banner('STAGE CLEAR', `${B.def.name} 격파`, 2200);
+      await sleep(2300); if (my !== this._token) return;
+      await this.playStage(idx + 1);
+    } else {
+      await this.runEnding();
+    }
+  }
+
+  // ───── 엔딩 / 결과 ─────
+  async runEnding() {
+    const my = this._token;
+    this.state = 'ending'; this.ui.showHud(false); this.ui.hideBark();
+    const n = this.run.continues, E = n === 0 ? ENDINGS.A : ENDINGS.B;
+    this.world.setDolly(0);
+    this.music.play('ending', { fade: 2.5, immediate: true });
+    await this.talk(typeof E.lines === 'function' ? E.lines(n) : E.lines); if (my !== this._token) return;
+    this.ui.showEnding(E.title, E.name, E.sub);
+    await sleep(6500); if (my !== this._token) return;
+    this.ui.hideEnding();
     const t = Math.round(this.fightT);
-    this.ui.showResult(true, [['클리어 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`], ['피격', this.stats.hits], ['그레이즈', this.stats.graze], ['패링 성공', this.stats.parries], ['준 피해', Math.round(this.stats.damage)]]);
-    document.getElementById('btn-restart').hidden = true;
+    this.ui.showResult(true, [
+      ['난이도', this.run.diff.name], ['클리어 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
+      ['컨티뉴', `${n}회`], ['피격(잔기 소모)', this.stats.hits], ['스킬 격파 · 노미스 취득', `${this.stats.spellsCaptured} / ${this.stats.spellsSeen}`],
+      ['그레이즈', this.stats.graze], ['궁극기 사용', this.stats.ults],
+    ], n === 0 ? '— 노 컨티뉴 클리어 —' : '— 컨티뉴 클리어 —');
     this.state = 'result';
   }
 
   async onPlayerDown() {
-    if (this.state !== 'fight') { return; }
+    if (this.state !== 'fight') return;
+    const my = this._token;
     this.state = 'defeat';
     const B = this.boss; B.cancelAttack(); B.vulnerable = false;
     this.timeScale = 0.2; this.world.shake(0.9, 0.8); this.music.stop(1.0);
-    this.sfx.play('defeat'); this.ui.setVeil(0); this.ui.madness(false);
+    this.sfx.play('defeat'); this.ui.setVeil(0); this.ui.madness(false); this.ui.setBossTimer(null);
     this.fx.burst(this.player.x, 1, this.player.z, 40, { color: [0xffffff, 0xffd36b, 0xff7aa8], speed: 8, size: 0.9, life: 1.2 });
-    await sleep(1100);
+    await sleep(1100); if (my !== this._token) return;
     this.timeScale = 1;
-    this.bullets.clearBoss(this.fx); this.zones.clear(); this.beams.clear(); this.flyers.clear();
+    this.clearBossField();
     this.music.play('defeat', { fade: 2, immediate: true });
-    this.duckMusic(0.6);
-    await this.ui.playDialogue(SCRIPT.defeat, { onLine: (ln) => this.lineSfx(ln) });
-    this.duckMusic(1);
-    const t = Math.round(this.fightT);
-    this.ui.showResult(false, [['도달한 형태', PHASES[this.boss.phase].form], ['보스 체력', Math.round((this.boss.hp / BOSS_MAX_HP) * 100) + '%'], ['버틴 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`], ['그레이즈', this.stats.graze]]);
-    document.getElementById('btn-restart').hidden = this.checkpoint === 0;
+    const left = this.run.continuesMax - this.run.continues;
+    if (left > 0) { this.state = 'continue'; this.ui.showContinue(left, this.run.continuesMax); }
+    else this.gameOver();
+  }
+
+  doContinue() {
+    const B = this.boss, P = this.player;
+    this.run.continues++;
+    this.ui.hideContinue(); this.ui.setContinues(this.run.continues, CONTINUES);
+    P.reset(this.run.diff.lives); P.inv = 3; this.ui.setLives(P.lives, P.baseLives); this.ui.setUlt(P.ults);
+    this.sfx.play('heal'); this.ui.flash('#ffffff', 600, 0.5);
+    this.clearBossField(); this.timeScale = 1;
+    this.state = 'fight';
+    B.startStep(B.stepIdx, { quick: true }); // 현재 단계를 처음부터 다시
+  }
+
+  async gameOver() {
+    const my = this._token;
+    this.ui.hideContinue(); this.state = 'gameover';
+    await this.talk(SCRIPT.gameover); if (my !== this._token) return;
+    const t = Math.round(this.fightT), B = this.boss;
+    this.ui.showResult(false, [
+      ['난이도', this.run.diff.name], ['도달', `${STAGES[this.run.stageIdx].label} — ${B.def.name}`],
+      ['단계', `${B.stepIdx + 1} / ${B.stepCount}`], ['버틴 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
+      ['컨티뉴 사용', `${this.run.continues}회`], ['그레이즈', this.stats.graze],
+    ], 'GAME OVER');
     this.state = 'result';
+  }
+
+  // ───── 플레이어 궁극기 ─────
+  canUlt() { return this.state === 'fight' && !this.ultBusy && this.boss.state !== 'between'; }
+
+  async useUlt(saved) {
+    const P = this.player, B = this.boss;
+    if (this.ultBusy) return;
+    this.ultBusy = true;
+    const mode = B.step ? (B.step.ultMode || 'normal') : 'normal';
+    this.stats.ults++; this.run.stepUlt = true;
+    this.sfx.play('ult_declare');
+    this.ui.declare({ who: this.run.char ? this.run.char.id : 'claire', kind: 'ult', tag: PLAYER_ULT.tag, name: PLAYER_ULT.name, side: 'left' });
+    this.timeScale = 0;
+    await sleep(720);
+    this.timeScale = 1;
+    if (this.state !== 'fight' && this.state !== 'between') { this.ultBusy = false; return; }
+    this.sfx.play('ult');
+    P.beginUlt(this, mode);
+    if (mode === 'reject') { this.ui.warn('리젝트 — 궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
+    else if (mode === 'immune') { this.ui.warn('면역 — 이 스킬에는 궁극기가 통하지 않습니다', 1800); }
+    else if (mode === 'resist') { this.ui.warn('저항 — 궁극기 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor('ult'); }
+    else if (Math.random() < 0.5) B.barkFor(B.def.id + 'Ult');
+    if (B.addAnalysis) B.addAnalysis(10);
+    void saved;
+    this.ultBusy = false;
   }
 
   // ───── 보조 ─────
@@ -290,17 +426,15 @@ export class Game {
   // ───── 충돌 ─────
   collide(dt) {
     const P = this.player, B = this.boss, bl = this.bullets.list;
-    const parrying = P.parryT > 0 && !P.parryHit;
-    let parried = 0;
+    const hr0 = PLAYER.hr, gr0 = PLAYER.grazeR;
     for (const b of bl) {
-      if (!b.active || b.delay > 0) continue;
+      if (!b.active || b.delay > 0 || (b.owner === 'boss' && b.age < b.armAt)) continue;
       if (b.owner === 'player') {
-        // 플레이어 탄 → 가짜 / 보스
         let used = false;
         for (const d of B.decoys) {
           if (!d.active) continue;
           if ((b.x - d.x) ** 2 + (b.z - d.z) ** 2 < (1.7 + b.hr) ** 2) {
-            d.hp -= b.dmg; this.fx.burst(b.x, 1.6, b.z, 2, { color: 0x9bb8ff, speed: 3, size: 0.4, life: 0.3 });
+            d.hp -= b.dmg * 3; this.fx.burst(b.x, 1.6, b.z, 2, { color: 0x9bb8ff, speed: 3, size: 0.4, life: 0.3 });
             this.sfx.play('hit_boss', { pan: this.audio.pan(d.x), pitch: 0.7, vol: 0.6 });
             if (d.hp <= 0) B.killDecoy(d, true);
             this.bullets.kill(b); used = true; break;
@@ -315,45 +449,30 @@ export class Game {
       }
       // 보스 탄 → 플레이어
       const dx = b.x - P.x, dz = b.z - P.z, d2 = dx * dx + dz * dz;
-      if (parrying && d2 < PLAYER.parryR * PLAYER.parryR) {
-        // 반사: 보스 방향으로
-        const a = Math.atan2(B.z - b.z, B.x - b.x);
-        b.owner = 'player'; b.reflected = true; b.dmg = 38; b.hr = Math.max(b.hr, 0.6); b.size = Math.max(b.size, 1.5);
-        b.vx = Math.cos(a) * 19; b.vz = Math.sin(a) * 19; b.homing = 0; b.accel = 0; b.turn = 0; b.trail = false; b.life = 2;
-        b.mat.color.setHex(0xffe08a); b.age = 1;
-        parried++; continue;
-      }
-      const hr = b.hr + PLAYER.hr;
+      const hr = b.hr + hr0;
       if (d2 < hr * hr) {
-        if (P.hurt(this, b.dmg)) this.bullets.kill(b);
+        if (P.hurt(this)) this.bullets.kill(b);
         continue;
       }
       // 그레이즈
-      if (!b.grazed && d2 < (hr + 0.7) ** 2 && !P.safe) {
-        b.grazed = true; this.stats.graze++; P.grazeAcc++;
+      if (!b.grazed && d2 < (b.hr + gr0) ** 2 && !P.safe) {
+        b.grazed = true; this.stats.graze++;
         this.ui.setGraze(this.stats.graze);
         this.sfx.play('graze', { pan: this.audio.pan(P.x) });
         this.fx.emit({ x: b.x, y: 1.0, z: b.z, life: 0.25, s0: 0.6, s1: 0, color: 0xffffff, tex: 'spark' });
-        if (P.grazeAcc >= 50) { P.grazeAcc = 0; P.heal(this); }
+        if (B.onGraze) B.onGraze();
       }
     }
-    if (parried) {
-      P.parryHit = true; P.parryCd = PLAYER.parryCdHit; this.stats.parries++;
-      this.sfx.play('parry_ok', { pan: this.audio.pan(P.x) });
-      this.hitstop(0.08); this.world.shake(0.4, 0.25); this.ui.flash('#ffe9a6', 300, 0.35);
-      this.fx.burst(P.x, 1, P.z, 22, { color: [0xffffff, 0xffd36b], speed: 8, size: 0.8, life: 0.7 });
-      this.fx.ring(P.x, 0.9, P.z, 0xffffff, 9, 0.4);
-      if (Math.random() < 0.5) B.bark('parry');
-    }
     // 바닥 공격
-    const zh = this.zones.update(dt, P.x, P.z, PLAYER.hr, this.fx, this.audio, this.world);
-    const bh = this.beams.update(dt, P.x, P.z, PLAYER.hr, this.fx, this.audio, this.world);
-    if (zh || bh) P.hurt(this, Math.max(zh, bh));
+    const zh = this.zones.update(dt, P.x, P.z, hr0, this.fx, this.audio, this.world);
+    const bh = this.beams.update(dt, P.x, P.z, hr0, this.fx, this.audio, this.world);
+    if (zh || bh) P.hurt(this);
   }
 
   // ───── 메인 루프 ─────
   _frame(ts) {
     requestAnimationFrame((t) => this._frame(t));
+    if (this._manual) return; // 테스트용: 외부에서 simulate()/_render() 를 직접 구동
     const rawDt = Math.min(0.05, (ts - (this._lastTs || ts)) / 1000);
     this._lastTs = ts;
     this.t += rawDt;
@@ -362,14 +481,13 @@ export class Game {
 
     const input = this.input;
     if (input.take('pause')) {
-      if (this.ui.anyModalOpen() && !document.getElementById('m-pause').hidden) { /* 모달 닫기 */ this.ui.modal('#m-settings', false); }
-      else if (this.state === 'fight') this.setPause(!this.paused);
-      else if (this.state === 'menu') this.ui.closeModals();
+      if (!document.getElementById('m-settings').hidden && this.paused) this.ui.modal('#m-settings', false);
+      else if (this.state === 'fight' || this.paused) this.setPause(!this.paused);
     }
     if (this.paused) { this._render(rawDt, 0); input.endFrame(); return; }
 
     const dt = rawDt * this.timeScale;
-    const active = this.state === 'fight' || this.state === 'transition' || this.state === 'banner' || this.state === 'victory' || this.state === 'defeat' || this.state === 'transform' || this.state === 'cutscene';
+    const active = ['fight', 'between', 'banner', 'stageclear', 'defeat', 'cutscene', 'ending', 'continue', 'gameover', 'result'].includes(this.state);
     if (active) this.simulate(dt, rawDt);
     this._render(rawDt, dt);
     input.endFrame();
@@ -377,19 +495,12 @@ export class Game {
 
   simulate(dt, rawDt) {
     const P = this.player, B = this.boss, fighting = this.state === 'fight';
-    // 플레이어는 전투 중 + 배너 중에는 움직일 수 있다 (준비 시간)
-    const canControl = fighting || this.state === 'banner';
-    if (canControl) {
-      P.update(dt, this.input, this);
-    }
-    if (fighting) {
-      this.fightT += rawDt;
-      B.update(dt);
-    } else if (this.state !== 'cutscene') {
-      B.update(dt); // 전환 중에도 이동/분신 처리
-    }
-    this.bullets.update(dt, P.x, P.z, this.fx);
-    if (fighting || this.state === 'banner') this.collide(dt);
+    const canControl = fighting || this.state === 'between' || this.state === 'cutscene' || this.state === 'stageclear';
+    if (canControl) P.update(dt, this.input, this, fighting || this.state === 'between');
+    if (fighting) this.fightT += rawDt;
+    if (this.state !== 'menu') B.update(dt);
+    this.bullets.update(dt, P.x, P.z, this.fx, B.x, B.z);
+    if (fighting) this.collide(dt);
     this.flyers.update(dt, this.fx);
     this.fx.update(dt);
 
@@ -404,19 +515,27 @@ export class Game {
     }
 
     // HUD
-    if (fighting) { this.ui.setTime(this.fightT); }
+    if (fighting && B.state === 'run') {
+      const sec = Math.max(0, B.timeLeft);
+      const prev = this._lastSec; this._lastSec = Math.ceil(sec);
+      this.ui.setBossTimer(sec);
+      if (sec <= 10 && this._lastSec !== prev) this.sfx.play('gauge', { pitch: 0.8 });
+      if (B.def.hasAnalysis) this.ui.setAnalysis(B.analysis);
+    }
   }
 
   _render(rawDt, dt) {
     const P = this.player, B = this.boss;
     this.world.update(rawDt, P.x);
     P.render(rawDt, this.t);
-    const showP = this.state !== 'menu'; P.spr.visible = P.shadow.visible = P.core.visible = showP;
+    const showP = this.state !== 'menu'; P.spr.visible = P.shadow.visible = P.core.visible = P.dotRim.visible = showP;
+    P.focusRing.visible = showP;
     B.render(rawDt, this.t);
-    // 말풍선 / 장막 위치
-    if (!this.ui.el.bubble.hidden) { const [sx, sy] = this.world.project(B.x, B.bobY + 4.4 * B.scaleK, B.z); this.ui.moveBark(sx, sy); }
+    if (!this.ui.el.bubble.hidden) { const [sx, sy] = this.world.project(B.x, B.bobY + B.h * 0.67 * B.scaleK, B.z); this.ui.moveBark(sx, sy); }
     this.ui.setVeil(this.veilV * 0.98, ...this.world.project(P.x, 1.0, P.z));
     this.world.render();
     void dt;
   }
 }
+
+export { PAL };

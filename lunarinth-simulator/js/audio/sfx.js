@@ -232,6 +232,34 @@ export class Sfx {
       E.tone(b, { type: 'sine', f: 1000 * p, f1: 2000 * p, glide: 0.08, t, dur: 0.1, vol: 0.08, a: 0.002, d: 0.08, s: 0.01, r: 0.03 });
     } };
 
+    // ───── 추가: 대사음 / 스킬 선언 / 궁극기 ─────
+    D.blip_opsir = { cd: 38, len: 0.15, vol: 0.5, fn: (E, b, t, p) => {
+      E.tone(b, { type: 'sine', f: R(780, 980) * p, t, dur: 0.06, vol: 0.12, a: 0.002, d: 0.05, s: 0.01, r: 0.03, rev: 0.35 });
+      E.tone(b, { type: 'sine', f: R(1560, 1960) * p, t, dur: 0.04, vol: 0.04, a: 0.001, d: 0.04, s: 0.01, r: 0.02 });
+    } };
+    D.blip_bellis = { cd: 38, len: 0.15, vol: 0.5, fn: (E, b, t, p) => {
+      E.tone(b, { type: 'square', f: R(420, 520) * p, t, dur: 0.05, vol: 0.06, a: 0.002, d: 0.04, s: 0.01, r: 0.03, cut: 1800, rev: 0.25 });
+    } };
+    D.blip_sol = { cd: 38, len: 0.15, vol: 0.5, fn: (E, b, t, p) => {
+      E.tone(b, { type: 'triangle', f: R(600, 900) * p, t, dur: 0.06, vol: 0.1, a: 0.002, d: 0.05, s: 0.01, r: 0.03, rev: 0.3 });
+    } };
+    D.declare = { len: 2.4, important: true, vol: 1, fn: (E, b, t) => {
+      // 스킬 카드 선언: 하강하는 종 + 리버스 스웰 + 임팩트
+      E.noise(b, { t, dur: 0.6, vol: 0.2, type: 'bandpass', f: 300, f1: 6000, q: 1.5, swell: true, a: 0.1, rev: 0.6 });
+      [96, 91, 88, 84].forEach((m, i) => E.bell(b, t + 0.35 + i * 0.09, m, 0.12, 2.0, 0.8, 0));
+      E.tone(b, { type: 'sine', f: 110, f1: 45, glide: 0.5, t: t + 0.35, dur: 0.9, vol: 0.3, a: 0.003, d: 0.8, s: 0.01, r: 0.2 });
+    } };
+    D.ult_declare = { len: 1.6, important: true, fn: (E, b, t) => {
+      [88, 93, 97, 100].forEach((m, i) => E.bell(b, t + i * 0.07, m, 0.14, 1.6, 0.7, 0));
+      E.noise(b, { t, dur: 0.5, vol: 0.2, type: 'highpass', f: 3000, a: 0.002, rev: 0.6 });
+    } };
+    D.ult = { len: 3.5, important: true, fn: (E, b, t) => {
+      E.taiko(b, t, 1.0, 0.8);
+      E.noise(b, { t, dur: 2.0, vol: 0.3, type: 'bandpass', f: 800, f1: 6000, q: 1.2, swell: false, a: 0.01, rev: 0.7 });
+      E.tone(b, { type: 'sawtooth', f: 220, f1: 880, glide: 1.2, t, dur: 1.8, vol: 0.1, a: 0.05, d: 1.4, s: 0.2, r: 0.4, cut: 3000, rev: 0.6 });
+      [81, 85, 88, 93, 97].forEach((m, i) => E.bell(b, t + 0.1 + i * 0.12, m, 0.12, 2.6, 0.9, 0));
+    } };
+
     return D;
   }
 }

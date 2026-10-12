@@ -215,7 +215,82 @@ const DEFEAT = calm({
   scale: [69, 72, 74, 77, 81],
 });
 
-const SCENES = { menu: MENU, lumina: LUMINA, umbra: UMBRA, luna: LUNA, victory: VICTORY, defeat: DEFEAT };
+// ───────── 옵서 (STAGE 1): 별빛 아르페지오와 나른한 정찰 비트 ─────────
+const OPSIR_CHORDS = [
+  { r: 40, n: [52, 59, 64, 67, 71] }, // Em9
+  { r: 36, n: [48, 55, 60, 64, 67] }, // Cmaj7
+  { r: 43, n: [55, 62, 67, 71, 74] }, // Gmaj7
+  { r: 38, n: [50, 57, 62, 66, 69] }, // D6
+];
+const OPSIR_PHRASES = [
+  [[0, 83, 3], [4, 86, 2], [6, 83, 2], [8, 79, 4], [12, 83, 4]],
+  [[0, 84, 3], [4, 88, 2], [6, 84, 2], [8, 79, 4], [12, 76, 4]],
+  [[0, 86, 3], [4, 83, 2], [6, 79, 2], [8, 86, 4], [12, 90, 4]],
+  [[0, 90, 2], [2, 86, 2], [4, 85, 4], [8, 81, 4], [12, 85, 4]],
+];
+const OPSIR = {
+  bpm: 112,
+  tick(m, sc, t, s, bar) {
+    const E = m.E, b = sc.b, sd = 60 / this.bpm / 4, bi = bar % 4, ch = OPSIR_CHORDS[bi];
+    const rnd = mulberry32(bar * 421 + s * 19 + 5);
+    if (s === 0) E.pad(b, t, ch.n, sd * 16.3, 0.04, { a: 0.7, r: 1.4, cut: 900, cutTo: 2600, rev: 0.6 });
+    if (s % 4 === 0) E.bass(b, t, ch.r + (s === 8 ? 7 : 0), sd * 3.4, 0.2, { cut: 520 });
+    if (s % 4 === 0) E.kick(b, t, 0.5, 0.95);
+    if (s === 4 || s === 12) E.snare(b, t, 0.26, 0.35);
+    if (s % 2 === 0) E.hat(b, t, 0.05);
+    // 별빛 아르페지오 (높은 음역의 오르골)
+    const idx = [1, 3, 2, 4, 3, 4, 2, 3][(s / 2) | 0];
+    if (s % 2 === 0) E.bell(b, t, ch.n[idx % ch.n.length] + 24, 0.045, 1.5, 0.6, 0.4);
+    if (s % 4 === 2 && rnd() < 0.5) E.bell(b, t, 88 + ((rnd() * 5) | 0) * 2, 0.03, 2.0, 0.8, 0.5);
+    if (bar >= 2) for (const [st, midi, d] of OPSIR_PHRASES[bi]) if (st === s) E.lead(b, t, midi - 12, sd * d * 0.9, 0.055, { type: 'triangle', cut: 3200, cutTo: 2200, vib: 10, a: 0.03, rev: 0.5, dly: 0.35 });
+  },
+};
+
+// ───────── 벨리스 (STAGE 5): 건조한 하프시코드풍 아르페지오와 합창, 감사의 행진 ─────────
+const BELLIS_CHORDS = [
+  { r: 37, n: [49, 56, 61, 64, 68] }, // C#m
+  { r: 33, n: [45, 52, 57, 61, 64] }, // A
+  { r: 40, n: [52, 56, 59, 64, 68] }, // E
+  { r: 35, n: [47, 54, 59, 63, 66] }, // B
+  { r: 37, n: [49, 56, 61, 64, 68] },
+  { r: 38, n: [50, 57, 62, 66, 69] }, // D (♭II 느낌)
+  { r: 32, n: [44, 51, 56, 60, 63] }, // G#
+  { r: 32, n: [44, 51, 56, 59, 63] },
+];
+const BELLIS = {
+  bpm: 134,
+  tick(m, sc, t, s, bar) {
+    const E = m.E, b = sc.b, sd = 60 / this.bpm / 4, bi = bar % 8, ch = BELLIS_CHORDS[bi];
+    const rnd = mulberry32(bar * 733 + s * 11 + 9);
+    if (s === 0) {
+      E.pad(b, t, ch.n, sd * 16.3, 0.04, { a: 0.5, r: 1.0, cut: 1000, cutTo: 2800, rev: 0.55 });
+      if (bar % 2 === 0) E.choir(b, t, [ch.n[2] + 12, ch.n[4] + 12], sd * 32, 0.04, { vowel: 'o', rev: 0.85 });
+    }
+    if (s % 4 === 0) E.kick(b, t, 0.7, 0.9);
+    if (s === 8) E.taiko(b, t, 0.3, 0.6);
+    if (s === 4 || s === 12) E.snare(b, t, 0.3, 0.3);
+    if (s % 2 === 1) E.hat(b, t, 0.06);
+    if (s % 2 === 0) E.bass(b, t, ch.r + (s % 8 === 4 ? 12 : 0), sd * 1.8, 0.24, { cut: 600, grit: 0.4 });
+    // 하프시코드풍 아르페지오
+    E.pluck(b, t, ch.n[[0, 2, 4, 3, 1, 3, 4, 2][s % 8] % ch.n.length] + 12, 0.045, sd * 1.4, { type: 'square', cut: 2600 + (bar % 8) * 200, rev: 0.2, dly: 0.2 });
+    // 서술하는 듯한 스타카토 리드
+    if (bar >= 2 && (s === 0 || s === 3 || s === 6 || s === 10 || s === 12)) E.lead(b, t, ch.n[(s + bar) % 5] + 24, sd * 1.6, 0.05, { type: 'sawtooth', cut: 3200, cutTo: 2000, a: 0.005, rev: 0.4, dly: 0.25 });
+    if (s % 4 === 2 && rnd() < 0.35) E.bell(b, t, 96 + ((rnd() * 4) | 0) * 2, 0.04, 1.6, 0.7, 0.4);
+  },
+};
+
+const ENDING = calm({
+  bpm: 70, bellVol: 0.07, padCut: 800, vowel: 'a',
+  chords: [
+    { r: 38, n: [50, 57, 62, 66, 69] }, { r: 35, n: [47, 54, 59, 62, 66] },
+    { r: 31, n: [43, 50, 55, 59, 62] }, { r: 38, n: [50, 57, 62, 66, 69] },
+    { r: 36, n: [48, 55, 60, 64, 67] }, { r: 31, n: [43, 50, 55, 59, 64] },
+    { r: 33, n: [45, 52, 57, 61, 64] }, { r: 38, n: [50, 57, 62, 66, 69] },
+  ],
+  scale: [81, 83, 85, 86, 88, 90, 93, 95],
+});
+
+const SCENES = { menu: MENU, lumina: LUMINA, umbra: UMBRA, luna: LUNA, victory: VICTORY, defeat: DEFEAT, opsir: OPSIR, bellis: BELLIS, ending: ENDING };
 
 // ───────── 디렉터 ─────────
 

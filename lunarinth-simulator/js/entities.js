@@ -33,7 +33,9 @@ export class Bullets {
     b.active = true; b.owner = o.owner || 'boss'; b.kind = o.kind || 'orb';
     b.x = o.x; b.z = o.z; b.vx = Math.cos(a) * sp; b.vz = Math.sin(a) * sp;
     b.size = o.size ?? 1;
-    b.hr = o.hr ?? b.size * (b.kind === 'crescent' ? 0.3 : b.kind === 'shard' ? 0.24 : 0.28);
+    b.hr = o.hr ?? b.size * (b.kind === 'crescent' ? 0.3 : b.kind === 'shard' ? 0.24 : b.kind === 'star' ? 0.26 : b.kind === 'glyph' ? 0.3 : 0.28);
+    b.armAt = (o.delay || 0) + (o.arm ?? (o.hold ? 0.55 : 0)); // 출현 직후에는 판정이 없다 (눈앞에서 생긴 탄에 즉사하지 않게)
+    b.hold = o.hold || 0; b.reaim = !!o.reaim; b.relSpeed = sp; b.relA = a;
     b.life = o.life ?? 9; b.age = 0;
     b.homing = o.homing || 0; b.homeT = o.homeT ?? 3; b.turn = o.turn || 0;
     b.accel = o.accel || 0; b.minS = o.minS ?? 0; b.maxS = o.maxS ?? 99;
@@ -41,9 +43,9 @@ export class Bullets {
     b.dmg = o.dmg ?? 1; b.grazed = false; b.reflected = false; b.trail = !!o.trail; b.trailT = 0;
     b.delay = o.delay || 0;
     b.color = o.color ?? 0xffffff;
-    b.mat.map = this.T[b.kind === 'crescent' ? 'crescent' : b.kind === 'shard' ? 'shard' : b.kind === 'ring' ? 'ring' : 'orb'];
+    b.mat.map = this.T[['crescent', 'shard', 'ring', 'star', 'glyph'].includes(b.kind) ? (b.kind === 'star' ? 'spark' : b.kind) : 'orb'];
     b.mat.color.setHex(b.color); b.mat.opacity = 0; b.mat.rotation = b.rot;
-    const hot = b.kind === 'orb' || b.kind === 'shard';
+    const hot = (b.kind === 'orb' || b.kind === 'shard' || b.kind === 'star') && b.owner !== 'player';
     b.core.visible = hot; b.cmat.opacity = 0;
     b.spr.visible = true; b.spr.position.set(b.x, BULLET_Y, b.z);
     b.core.position.set(b.x, BULLET_Y, b.z);
@@ -58,13 +60,28 @@ export class Bullets {
   clearAll() { for (const b of this.list) if (b.active) this.kill(b); }
   count() { let c = 0; for (const b of this.list) if (b.active) c++; return c; }
 
-  update(dt, px, pz, fx) {
+  update(dt, px, pz, fx, tx = 0, tz = -6) {
     for (const b of this.list) {
       if (!b.active) continue;
       b.age += dt;
       if (b.delay > 0) { b.delay -= dt; continue; }
-      if (b.homing && b.owner === 'boss' && b.age < b.homeT) {
-        const sp = Math.hypot(b.vx, b.vz) || 1, cur = Math.atan2(b.vz, b.vx), want = Math.atan2(pz - b.z, px - b.x);
+      if (b.hold > 0) {
+        // 정지 상태로 대기했다가 방출 (별자리 · 마법진 등). reaim 이면 방출 순간 플레이어를 조준한다.
+        b.hold -= dt;
+        if (b.hold <= 0) {
+          const ra = b.reaim ? Math.atan2(pz - b.z, px - b.x) : b.relA;
+          b.vx = Math.cos(ra) * b.relSpeed; b.vz = Math.sin(ra) * b.relSpeed;
+        } else {
+          const pop0 = Math.min(1, b.age / 0.14), s0 = b.size * (0.35 + 0.65 * pop0);
+          b.mat.opacity = pop0 * (0.55 + 0.35 * Math.sin(b.age * 14)); b.spr.scale.set(s0, s0, 1);
+          if (b.core.visible) { b.cmat.opacity = pop0; b.core.scale.set(s0 * 0.42, s0 * 0.42, 1); }
+          b.life -= dt; if (b.life <= 0) this.kill(b);
+          continue;
+        }
+      }
+      if (b.homing && (b.owner === 'boss' || b.owner === 'player') && b.age < b.homeT) {
+        const gx = b.owner === 'boss' ? px : tx, gz = b.owner === 'boss' ? pz : tz;
+        const sp = Math.hypot(b.vx, b.vz) || 1, cur = Math.atan2(b.vz, b.vx), want = Math.atan2(gz - b.z, gx - b.x);
         const d = Math.max(-b.homing * dt, Math.min(b.homing * dt, wrapPi(want - cur)));
         const na = cur + d; b.vx = Math.cos(na) * sp; b.vz = Math.sin(na) * sp;
       }
@@ -83,7 +100,7 @@ export class Bullets {
       // 등장 연출 (팝인)
       const pop = Math.min(1, b.age / 0.14), s = b.size * (0.35 + 0.65 * pop) * 1.0;
       const fade = b.life < 0.3 ? b.life / 0.3 : 1;
-      b.mat.opacity = pop * fade * (b.owner === 'player' ? 1 : 0.95);
+      b.mat.opacity = pop * fade * (b.owner === 'player' ? 0.62 : 0.95);
       b.spr.scale.set(s, s, 1);
       b.spr.position.set(b.x, BULLET_Y, b.z);
       if (b.core.visible) {
@@ -171,9 +188,21 @@ export class Zones {
   /** @returns 플레이어가 맞은 데미지 (없으면 0). 폭발 구역 안에 있는 동안 계속 판정되지만 무적 시간이 연타를 막는다. */
   update(dt, px, pz, pr, fx, audio, world) {
     let hit = 0;
+    this.bound = false; // 구속 마법진(bind) 안에 있으면 true — 이동 속도가 느려진다
     for (const z of this.list) {
       if (!z.active) continue;
       z.t += dt;
+      if (z.kind === 'bind') {
+        // 구속진: 경고 없이 페이드 인 → 유지 → 소멸. 피해는 없고 이동만 둔화시킨다.
+        const life = z.warn + z.dur, k = z.t / life;
+        z.disc.scale.set(z.r * 2, 1, z.r * 2); z.conv.scale.set(z.r * 2.15, 1, z.r * 2.15);
+        z.conv.rotation.y += dt * 1.4;
+        const fade = Math.min(1, z.t / 0.35) * (z.t > life - 0.4 ? Math.max(0, (life - z.t) / 0.4) : 1);
+        z.disc.material.opacity = 0.42 * fade; z.conv.material.opacity = 0.85 * fade;
+        if (z.t > 0.35 && (px - z.x) ** 2 + (pz - z.z) ** 2 < z.r * z.r) this.bound = true;
+        if (k >= 1) { z.active = false; z.disc.visible = z.conv.visible = z.pil.visible = false; }
+        continue;
+      }
       if (z.state === 0) {
         const k = z.t / z.warn;
         z.disc.scale.set(z.r * 2, 1, z.r * 2);
@@ -214,7 +243,7 @@ export class Beams {
   }
   spawn(o) {
     const b = this.list.find((q) => !q.active); if (!b) return null;
-    Object.assign(b, { active: true, x: o.x, z: o.z, a: o.a, w: o.w ?? 1.3, len: o.len ?? 26, warn: o.warn ?? 0.9, dur: o.dur ?? 0.25, t: 0, state: 0, color: o.color ?? 0xffffff, dmg: o.dmg ?? 1, fired: false, onFire: o.onFire || null });
+    Object.assign(b, { active: true, x: o.x, z: o.z, a: o.a, w: o.w ?? 1.3, len: o.len ?? 26, warn: o.warn ?? 0.9, dur: o.dur ?? 0.25, t: 0, state: 0, color: o.color ?? 0xffffff, dmg: o.dmg ?? 1, fired: false, onFire: o.onFire || null, quiet: !!o.quiet });
     b.m.material.color.setHex(b.color); b.m.visible = b.core.visible = true;
     return b;
   }
@@ -228,9 +257,10 @@ export class Beams {
       if (b.state === 0) {
         const k = b.t / b.warn; w = b.w * (0.12 + 0.12 * k); op = 0.3 + 0.5 * k * (0.7 + 0.3 * Math.sin(b.t * 30));
         if (b.t >= b.warn) {
-          b.state = 1; b.t = 0; world.shake(0.28, 0.25); audio.sfx.play('beam_fire', { pan: audio.pan(b.x) });
+          b.state = 1; b.t = 0;
+          if (!b.quiet) { world.shake(0.28, 0.25); audio.sfx.play('beam_fire', { pan: audio.pan(b.x) }); }
           const ex = b.x + Math.cos(b.a) * b.len * 0.5, ez = b.z + Math.sin(b.a) * b.len * 0.5;
-          fx.ring(b.x, 0.8, b.z, b.color, 3, 0.4); void ex; void ez;
+          if (!b.quiet) fx.ring(b.x, 0.8, b.z, b.color, 3, 0.4); void ex; void ez;
           if (b.onFire) b.onFire(b);
         }
       } else {
@@ -238,7 +268,7 @@ export class Beams {
         const dx = Math.cos(b.a), dz = Math.sin(b.a), rx = px - b.x, rz = pz - b.z;
         const along = rx * dx + rz * dz, perp = Math.abs(-rx * dz + rz * dx);
         if (along > -0.5 && along < b.len && perp < w * 0.5 + pr && b.dmg) hit = Math.max(hit, b.dmg);
-        if (Math.random() < 0.6) fx.emit({ x: b.x + dx * Math.random() * b.len, y: 0.4 + Math.random() * 0.6, z: b.z + dz * Math.random() * b.len, life: 0.4, s0: 0.5, s1: 0, color: 0xffffff, tex: 'spark', vy: 1.5 });
+        if (!b.quiet && Math.random() < 0.6) fx.emit({ x: b.x + dx * Math.random() * b.len, y: 0.4 + Math.random() * 0.6, z: b.z + dz * Math.random() * b.len, life: 0.4, s0: 0.5, s1: 0, color: 0xffffff, tex: 'spark', vy: 1.5 });
         if (b.t >= b.dur) { b.active = false; b.m.visible = b.core.visible = false; continue; }
       }
       const cx = b.x + Math.cos(b.a) * b.len * 0.5, cz = b.z + Math.sin(b.a) * b.len * 0.5;
