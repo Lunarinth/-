@@ -68,6 +68,9 @@ export const STAGES = [
 ];
 export const EXTRA_STAGE = { id: 'arkesia', no: 'EX', label: 'EXTRA STAGE', place: '실이 드리운 인형극장', mobName: '춤추는 인형', env: 'theater', stageMusic: 'stageEx', mid: 'index', warn: '？？？ 접근' };
 // HELL: EXTRA 를 깨거나 암호(lunaugly)로 열리는 최고 난이도. 중간 보스는 루나린스, 아르케시아의 기술은 15개.
+// APOTHEOSIS: 숨겨진 최종 무대. EXTRA 를 깨거나 암호(claude)로 열리고, 한 번 끝내면 사라진다.
+export const APO_STAGE = { id: 'manager', no: 'APO', label: 'APOTHEOSIS', place: '색이 빠져나간 직조실', mobName: '흰 실의 인형', env: 'apo', stageMusic: 'stageApo', mid: 'apo_mid', warn: '？？？ 접근' };
+export const APO_DIFF = { id: 'apo', name: 'APOTHEOSIS', kr: '아포테오시스', sub: '끝을 짜는 손', lv: 5, cnt: 1.5, spd: 1.38, rate: 1.3, hp: 1.4, php: 99, color: '#ffffff', extra: true, hell: true, apo: true };
 export const HELL_STAGE = { id: 'arkesiaHell', no: 'HELL', label: 'EXTRA · HELL', place: '실이 끊어지지 않는 인형극장', mobName: '미쳐 춤추는 인형', env: 'theaterHell', stageMusic: 'stageHell', mid: 'lunarinth_mid', warn: '？？？ 접근' };
 
 export const MOB_NOTE = '길을 막는 병사들은 이름 없는 문양일 뿐입니다. 관측대에서는 별, 기술실에서는 회로, 테라스에서는 장미창, 도서관에서는 서가, 기록실에서는 룬, 달의 정원에서는 달, 극장에서는 “춤추는 실이 이어진 인형”이 하녀장을 막아섭니다. 각 구역에는 주 상대보다 앞서 길을 지키는 문지기가 있고, 달의 정원 어귀의 문지기는 벨리스입니다.';
@@ -101,7 +104,7 @@ export const DIFFS = [
 ];
 // EXTRA 전용 고정 난이도: NORMAL 과 HARD 의 중간, 체력 4
 // EXTRA: HARD 와 같은 수준, 체력 4, 컨티뉴 없음
-export const EXTRA_DIFF = { id: 'extra', name: 'EXTRA', kr: '엑스트라', sub: '실 끝에서 웃는 지배자', lv: 2, cnt: 1.16, spd: 1.06, rate: 1.07, hp: 1.12, php: 4, color: '#ff4f7a', extra: true };
+export const EXTRA_DIFF = { id: 'extra', name: 'EXTRA', kr: '엑스트라', sub: '실 끝에서 웃는 지배자', lv: 3, cnt: 1.28, spd: 1.1, rate: 1.13, hp: 1.25, php: 4, color: '#ff4f7a', extra: true };
 // HELL: MADNESS 이상
 export const HELL_DIFF = { id: 'hell', name: 'HELL', kr: '헬', sub: '끊어지지 않는 실', lv: 4, cnt: 1.4, spd: 1.14, rate: 1.2, hp: 1.3, php: 4, color: '#ff2b3d', extra: true, hell: true };
 
@@ -115,7 +118,7 @@ export const PLAYER_ULT = { claire: { tag: '성검 해방', name: '징벌의 월
 
 export const NAMES = {
   luna: '루나린스', claire: '클레르 · 초대 하녀장', opsir: '옵서 · 천체 관측관', astra: '아스트라 · 기술실', tramont: '트라몽 · 검사', index: '인덱스 · 도서관', bellis: '벨리스 · 기록실 감사관',
-  arkesia: '아르케시아', sitra: '시트라 · 직무대리', narr: '',
+  arkesia: '아르케시아', sitra: '시트라 · 직무대리', manager: '무대 관리자', narr: '',
 };
 
 // ───────── 대사 ─────────
@@ -123,6 +126,58 @@ export const NAMES = {
 // as: 표시 이름을 덮어쓴다 (정체를 밝히기 전의 아르케시아는 '？？？').
 // 말투: 클레르 정중한 존댓말 / 루나린스 장난기 섞인 존댓말 / 옵서·시트라 반말 / 아스트라 겁먹은 존댓말 / 트라몽 반말+프랑스어 / 인덱스 간결한 존댓말 / 벨리스 냉철한 존댓말.
 export const SCRIPT = {
+  // ───── APOTHEOSIS ─────
+  apoStart: [
+    { who: 'narr', text: '극장의 막이 내려간 뒤에도 불은 꺼지지 않았다. 색이 하나씩 빠져나가, 흑과 백만 남았다.' },
+    { who: 'narr', text: '달이 없다. 실이 없다. 실을 쥐고 있던 손만, 무대 어딘가에 아직 남아 있다.' },
+    { who: 'claire', text: '……주인님의 달빛이 닿지 않는 곳입니다. 성검이 하얗게 울고 있습니다.' },
+  ],
+  apoMid: {
+    intro: [
+      { who: 'narr', text: '직조실 입구. 붉게 뒤틀린 인형술사가 허공에서 지직거리며 서 있다.' },
+      { who: 'arkesia', as: '▒ERR::ARK', text: '［오류］ ……실이…… 거꾸로 감긴다…… 막이 올라가 올라가 올라가 올라가 —' },
+      { who: 'claire', text: '……당신, 이미 쓰러지지 않았습니까.' },
+      { who: 'arkesia', as: '▒ERR::ARK', text: '［분석률 ??? ％］ 쓰러진 것은 대본이다 대본이 쓰러졌는데 배우만 남았다 남았으니 춤춰라' },
+    ],
+    outro: [
+      { who: 'arkesia', as: '▒ERR::ARK', text: '［종료］ ……올이 풀린다…… 이 다음은 내 몫이 아니야 …… 그 분이 …… 직접 ——' },
+      { who: 'narr', text: '붉은 글자가 흩어지고, 안쪽에서 누군가 천천히 베틀을 돌리는 소리가 났다.' },
+    ],
+  },
+  apoManager: {
+    intro: [
+      { who: 'narr', text: '직조실의 한가운데. 거대한 흰 거미가 사라진 자리에, 바늘과 실에 둘러싸인 작은 그림자가 앉아 있다.' },
+      { who: 'manager', as: '？？？', text: '……아. 올이 하나 튀어나와 있네. 이 올, 누가 풀었더라.' },
+      { who: 'claire', text: '당신이 이 모든 실을 쥔 사람입니까.' },
+      { who: 'manager', as: '？？？', text: '쥐고 있다기보다는, 손가락에 걸려 있는 거야. 짜다 보면 그렇게 되거든. 달도, 저택도, 너도 — 전부 같은 천이야.' },
+      { who: 'claire', text: '주인님은 천이 아닙니다.' },
+      { who: 'manager', as: '？？？', text: '천이 아니면 뭐야. 풀리면 실이고, 엮이면 천인데. 따뜻한 건 좋았어. 다만 자꾸 비명이 섞여서, 짜기가 어려웠고.' },
+      { who: 'manager', as: '？？？', text: '괜찮아. 아프다는 건 실이 팽팽하다는 뜻이니까. 팽팽한 건, 끊기 좋아.' },
+    ],
+    reveal: [
+      { who: 'narr', text: '쓰러진 그림자가 사라지고, 직조기가 한 번 딸깍 울렸다. 아무 일도 없었다는 듯이.' },
+      { who: 'manager', as: '？？？', text: '끝났다고 생각했어? 귀엽네. 베틀은 천을 다 짜야 멈추는데, 아직 한 뼘도 못 짰는걸.' },
+      { who: 'manager', text: '이름이 궁금하다고 했지. 무대 관리자. 막이 오르고 내리는 걸 지켜보는 사람이야. 배우가 대본을 벗어나면 — 치우는 사람이기도 하고.' },
+      { who: 'claire', text: '대본을 쓴 것은 당신입니까.' },
+      { who: 'manager', text: '쓰는 건 내 일이 아니야. 나는 풀고, 감고, 자를 뿐이야. ……그러니까 이제, 이만 사라져 줄래? 짜던 천에 얼룩이 졌거든.' },
+      { who: 'narr', text: '무대 관리자가 한 걸음 뒤로 물러섰다. 허공의 모든 실이 동시에 팽팽해졌다.' },
+    ],
+    outro: [
+      { who: 'manager', text: '……아. 재미없어.' },
+      { who: 'manager', text: '올이 너무 질기네. 이런 건 짜도 금방 해져. 다음 천을 찾아야겠다.' },
+      { who: 'claire', text: '이 저택에서 손을 떼십시오.' },
+      { who: 'manager', text: '응, 놔둘게. 풀어진 채로. 어차피 너희는 풀린 실이 더 잘 어울려.' },
+      { who: 'narr', text: '직조기의 소리가 멎었다. 흑백의 무대에서 색이 천천히, 아주 조금 돌아왔다. 그리고 그 무대로 향하는 문은, 처음부터 없었던 것처럼 사라졌다.' },
+    ],
+  },
+  // 벨리스 최후의 시련 (루나린스의 잔상이 힘을 건넨다)
+  bellisProxy: [
+    { who: 'narr', text: '쓰러진 벨리스의 몸이 흔들렸다. 그 뒤로, 달빛 같은 잔상이 희미하게 겹쳐졌다.' },
+    { who: 'luna', text: '어머, 벨리스. 이대로 쓰러지면 기록이 너무 아쉽잖아요? 키키킥.', sfx: 'laugh_soft' },
+    { who: 'bellis', text: '……루나린스 님. 이것은 감사 의견이 아니라 ……간청입니다. 한 번만 더, 서 있게 해 주십시오.' },
+    { who: 'luna', text: '좋아요. 제 달을 조금 빌려줄게요. 대신 끝까지 서 있어야 해요?' },
+    { who: 'claire', text: '……주인님이 아니십니다. 달의 잔상이군요. 그렇다면, 버텨 내겠습니다.' },
+  ],
   prologue: [
     { who: 'narr', text: '루센트 저택. 주인 루나린스가 변한 것은 어느 달 없는 밤부터였다.' },
     { who: 'narr', text: '누군가의 속삭임에 귀를 기울이기 시작한 주인은 저택의 질서를 하나씩 뒤집었고, 저택은 두 갈래로 갈라졌다. 루나린스 파와 클레르 파.' },

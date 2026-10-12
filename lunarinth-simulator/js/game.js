@@ -553,7 +553,7 @@ export class Game {
     const my = this._token;
     this.downFrom = this.state;
     this.state = 'defeat';
-    const B = this.boss; B.cancelAttack(); B.vulnerable = false;
+    const B = this.boss; B.cancelAttack(); B.vulnerable = false; if (B.state === 'run' || B.state === 'declare') B.state = 'idle'; // 패배 연출·컨티뉴 화면에서 보스가 멋대로 공격하지 않게 멈춘다
     this.timeScale = 0.2; this.world.shake(0.9, 0.8); this.music.stop(1.0);
     this.sfx.play('defeat'); this.ui.setVeil(0); this.ui.madness(false); this.ui.setBossTimer(null);
     this.fx.burst(this.player.x, 1, this.player.z, 40, { color: [0xffffff, 0xffd36b, 0xff7aa8], speed: 8, size: 0.9, life: 1.2 });

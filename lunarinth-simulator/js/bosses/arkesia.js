@@ -285,11 +285,12 @@ export class Arkesia extends Boss {
     const G = this.G, pal = this.pal;
     this.cast('moon_throw'); this.glide(0, -4.5, 0.8); G.ui.warn('은빛 왕관이 머리 위로 내려온다', 1400); yield 0.9;
     for (let c = 0; c < this.m(3, 4); c++) {
-      const R0 = 7.2, n = this.n(22, 14), w = c % 2 ? -0.6 : 0.6, a0 = rnd(0, TAU), gap = rnd(0, TAU);
+      // 짝수 번째는 바깥에서 조여들고, 홀수 번째는 안쪽에서 퍼져 나간다 (어느 쪽에 있어도 안전하지 않다)
+      const inward = c % 2 === 0, R0 = inward ? 8.6 : 1.8, dr = inward ? -0.7 : 1.15, n = this.n(inward ? 24 : 16, 12), w = c % 2 ? -0.6 : 0.6, a0 = rnd(0, TAU), gap = rnd(0, TAU);
       for (let i = 0; i < n; i++) {
         const ang = a0 + (i * TAU) / n, d = Math.abs((((ang - gap) % TAU) + TAU * 1.5) % TAU - Math.PI);
         if (d > Math.PI - 0.7) continue;
-        G.bullets.spawn({ owner: 'boss', kind: i % 2 ? 'shard' : 'orb', size: 1.1, color: i % 2 ? pal.b : pal.a, life: 7, arm: 0.6, x: 0, z: 0, orbit: { cx: this.x, cz: this.z, r: R0, ang, w, dr: -0.55 } });
+        G.bullets.spawn({ owner: 'boss', kind: i % 2 ? 'shard' : 'orb', size: 1.1, color: i % 2 ? pal.b : pal.a, life: 7, arm: 0.6, x: 0, z: 0, orbit: { cx: this.x, cz: this.z, r: R0, ang, w, dr } });
       }
       this.sfx('orb');
       for (let k = 0; k < 5; k++) { this.fan(this.n(5, 3), 1.2, this.aim(), { kind: 'shard', speed: 6.4, size: 1.1, color: pal.c, speeds: [[0, 1], [0.5, 0.3], [0.8, 1.8]] }); yield this.t(1.0); }

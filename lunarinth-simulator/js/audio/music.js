@@ -5,6 +5,8 @@
 import { TRACKS } from './tracks.js';
 
 const LOOKAHEAD = 0.22;
+// 외부 음원(무료 BGM)으로 재생하는 곡: name -> { file, vol }
+const FILES = { manager: { file: 'assets/music/arachnophobia.mp3', vol: 0.9 } };
 const SCENES = TRACKS;
 
 // ───────── 디렉터 ─────────
@@ -43,8 +45,11 @@ export class MusicDirector {
   /** 씬 재생. immediate=false면 현재 마디가 끝나는 지점에서 크로스페이드한다. */
   play(name, { fade = 2.4, immediate = false } = {}) {
     const E = this.E;
-    if (!E.ready || !SCENES[name]) return;
+    if (!E.ready) return;
+    if (FILES[name]) { this._playFile(name, fade); return; }
+    if (!SCENES[name]) return;
     if (this.name === name && !this.pending) return;
+    this._stopFile(fade);
     if (!this.cur) {
       this.cur = this._makeScene(name, E.ctx.currentTime + 0.06, fade);
       this.name = name;
@@ -57,8 +62,39 @@ export class MusicDirector {
     if (!this.timer) this.timer = setInterval(() => this._pump(), 30);
   }
 
+  async _playFile(name, fade) {
+    const E = this.E;
+    if (this.fileName === name && this.fileSrc) return;
+    // 진행 중인 합성 곡은 내리고 파일 곡을 올린다
+    this.pending = null;
+    if (this.cur) { this._retire(this.cur, E.ctx.currentTime, Math.min(fade, 1)); this.cur = null; }
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    this._stopFile(Math.min(fade, 1));
+    this.name = name; this.fileName = name;
+    const tok = (this._ftok = (this._ftok || 0) + 1);
+    try {
+      this._fbuf = this._fbuf || {};
+      if (!this._fbuf[name]) { const r = await fetch(FILES[name].file); this._fbuf[name] = await E.ctx.decodeAudioData(await r.arrayBuffer()); }
+      if (tok !== this._ftok) return; // 그 사이에 다른 곡으로 바뀜
+      const c = E.ctx, src = c.createBufferSource(), g = c.createGain();
+      src.buffer = this._fbuf[name]; src.loop = true;
+      g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.linearRampToValueAtTime(FILES[name].vol, c.currentTime + Math.max(0.2, fade));
+      src.connect(g); g.connect(E.musicBus); src.start();
+      this.fileSrc = { src, g };
+    } catch (e) { console.error('music file', e); }
+  }
+  _stopFile(fade = 1) {
+    this._ftok = (this._ftok || 0) + 1;
+    const f = this.fileSrc; if (!f) { this.fileName = null; return; }
+    this.fileSrc = null; this.fileName = null;
+    const E = this.E, t = E.ctx.currentTime;
+    f.g.gain.cancelScheduledValues(t); f.g.gain.setTargetAtTime(0.0001, t, Math.max(0.05, fade / 4));
+    setTimeout(() => { try { f.src.stop(); f.src.disconnect(); f.g.disconnect(); } catch (e) { /* noop */ } }, (fade + 1) * 1000);
+  }
+
   stop(fade = 1.5) {
     const E = this.E;
+    this._stopFile(fade);
     this.pending = null;
     if (this.cur && E.ready) this._retire(this.cur, E.ctx.currentTime, fade);
     this.cur = null; this.name = null;
