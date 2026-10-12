@@ -9,6 +9,10 @@ const THEMES = {
   astral: { top: 0x020618, mid: 0x0b2155, bot: 0x4a7fd8, moon: 0xdce9ff, rune: 0x9cc3ff, cloud: 0x7fa8ff, ruin: 0x050b24, ruinFar: 0x1d3b86, star: 1.3, moonScale: 56, nx: 0.42, ny: 0.5, mc: [1, 0, 0] },
   arcane: { top: 0x07010f, mid: 0x2a0a4d, bot: 0x7a2fb8, moon: 0xd9a8ff, rune: 0xc060ff, cloud: 0x6a2a9a, ruin: 0x0a0214, ruinFar: 0x3b1166, star: 0.8, moonScale: 64, nx: -0.35, ny: 0.45, mc: [0, 1, 0] },
   void: { top: 0x000000, mid: 0x04010a, bot: 0x180a2e, moon: 0x6a50b0, rune: 0x7a4bd8, cloud: 0x160c2a, ruin: 0x020106, ruinFar: 0x0b0618, star: 0.3, moonScale: 40, nx: 0.38, ny: 0.5, mc: [0, 0, 0] },
+  techlab: { top: 0x01060f, mid: 0x07283f, bot: 0x2ec4e8, moon: 0xbff4ff, rune: 0x6fe3ff, cloud: 0x3aa6cf, ruin: 0x020a14, ruinFar: 0x0d4560, star: 0.5, moonScale: 44, nx: 0.4, ny: 0.5, mc: [0, 1, 0] },
+  terrace: { top: 0x2a0f2e, mid: 0xa8466a, bot: 0xffb27a, moon: 0xffe6c9, rune: 0xffc59a, cloud: 0xffa89a, ruin: 0x2a0f22, ruinFar: 0x9a4a63, star: 0.45, moonScale: 58, nx: -0.45, ny: 0.4, mc: [1, 0, 0] },
+  library: { top: 0x080a06, mid: 0x1e3a22, bot: 0x8ab04a, moon: 0xf4f0c0, rune: 0xe8d88a, cloud: 0x5a8a4a, ruin: 0x0a0f06, ruinFar: 0x35572a, star: 0.35, moonScale: 40, nx: 0.45, ny: 0.55, mc: [0, 1, 0] },
+  theater: { top: 0x080106, mid: 0x4a0a1c, bot: 0xe0405a, moon: 0xffc0c8, rune: 0xff6a80, cloud: 0xb0304a, ruin: 0x10020a, ruinFar: 0x6a1428, star: 0.3, moonScale: 36, nx: 0.0, ny: 0.55, mc: [0, 1, 0] },
   luna: { top: 0x1c0530, mid: 0x6a1a6e, bot: 0xff8ac8, moon: 0xffe9b0, rune: 0xff7ac8, cloud: 0xff9ad0, ruin: 0x1d0828, ruinFar: 0x8a2f85, star: 0.55, moonScale: 200, nx: 0.0, ny: 0.34, mc: [0, 0, 1] },
 };
 
@@ -138,7 +142,7 @@ export class World {
     const root = (this.arena = new THREE.Group());
     const S = ARENA_R * 2 + 0.6;
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: T.floor, transparent: true, depthWrite: false }));
-    floor.renderOrder = -20; root.add(floor);
+    floor.renderOrder = -20; root.add(floor); this.floor = floor;
     this.rune = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: T.rune, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.4 }));
     this.rune.position.y = 0.02; this.rune.renderOrder = -19; root.add(this.rune);
     this.rune2 = new THREE.Mesh(new THREE.PlaneGeometry(S * 0.62, S * 0.62).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: T.rune, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.35 }));
@@ -155,6 +159,14 @@ export class World {
   setFall(p) { this.fall = p; }
 
   setTheme(id) { if (THEMES[id]) this.theme = id; }
+  /** 스테이지 전장: 바닥과 배경 실루엣을 바꾼다 (색감은 setTheme) */
+  setEnv(id) {
+    if (this.env === id) return;
+    this.env = id;
+    const fl = this.T.envFloor && this.T.envFloor[id], ru = this.T.envRuins && this.T.envRuins[id];
+    if (fl) { this.floor.material.map = fl; this.floor.material.needsUpdate = true; }
+    if (ru) for (const r of this.ruins) { r.m.material.map = ru; r.m.material.needsUpdate = true; }
+  }
 
   shake(a = 0.3, t = 0.3) { if (!this.shakeOn) return; this.shakeAmt = Math.max(this.shakeAmt, a); this.shakeT = Math.max(this.shakeT, t); }
   kickFov(v) { this.fovKick = v; }

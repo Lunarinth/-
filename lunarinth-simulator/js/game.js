@@ -4,13 +4,19 @@ import { World } from './scene.js';
 import { Bullets, Particles, Zones, Beams, Flyers } from './entities.js';
 import { Player, PLAYER } from './player.js';
 import { Opsir } from './bosses/opsir.js';
-import { Bellis } from './bosses/bellis.js';
+import { Bellis, BELLIS_MID } from './bosses/bellis.js';
+import { Astra } from './bosses/astra.js';
+import { Tramont } from './bosses/tramont.js';
+import { Indexer, INDEX_MID } from './bosses/indexer.js';
+import { Arkesia } from './bosses/arkesia.js';
+import { SigilMid, makeSigilDef, SIGIL_KEYS } from './bosses/sigilmid.js';
 import { Lunarinth, PAL } from './bosses/lunarinth.js';
 import { Mobs } from './mobs.js';
 import { makeStageScript } from './stages.js';
-import { STAGES, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
+import { STAGES, EXTRA_STAGE, EXTRA_DIFF, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
 
 const EXTRA_KEY = 'lunarinth.extra.v1';
+const ASTRA_KEY = 'lunarinth.unlock.astra';
 import { UI } from './ui.js';
 import { Input } from './input.js';
 import { AudioEngine } from './audio/engine.js';
@@ -25,8 +31,12 @@ const CONTINUES = 3; // 기본 컨티뉴 횟수
 
 const BOSS_ASSETS = {
   opsir: { cls: Opsir, img: 'assets/opsir.png' },
+  astra: { cls: Astra, img: 'assets/astra.png' },
+  tramont: { cls: Tramont, img: 'assets/tramont.png' },
+  index: { cls: Indexer, img: 'assets/index.png' },
   bellis: { cls: Bellis, img: 'assets/bellis.png' },
   lunarinth: { cls: Lunarinth, img: 'assets/lunarinth.png' },
+  arkesia: { cls: Arkesia, img: 'assets/arkesia.png' },
 };
 // 대사창 초상화 크롭 (이미지 대비 비율)
 const FACE = {
@@ -34,6 +44,10 @@ const FACE = {
   opsir: { sx: 0.34, sy: 0.04, sw: 0.5 },
   bellis: { sx: 0.18, sy: 0.0, sw: 0.62 },
   claire: { sx: 0.2, sy: 0.1, sw: 0.6 },
+  astra: { sx: 0.26, sy: 0.06, sw: 0.42 },
+  tramont: { sx: 0.3, sy: 0.0, sw: 0.4 },
+  index: { sx: 0.36, sy: 0.1, sw: 0.46 },
+  arkesia: { sx: 0.24, sy: 0.07, sw: 0.5 },
 };
 
 class Settings {
@@ -58,9 +72,11 @@ export class Game {
   }
 
   newStats() { return { hits: 0, graze: 0, damage: 0, attacks: 0, ults: 0, spellsSeen: 0, spellsCaptured: 0, mobs: 0, ultDeaths: 0, ultSurvived: 0 }; }
-  makeRun(diff, char) {
-    return { diff, char, stageIdx: 0, continues: 0, continuesMax: CONTINUES, stepHit: false, stepUlt: false };
+  makeRun(diff, char, extra = false) {
+    const dbg = this.debugInf && !extra; // 테스트용 암호: EXTRA 에서는 적용되지 않는다
+    return { diff, char, extra, stages: extra ? [EXTRA_STAGE] : STAGES, stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0 };
   }
+  get stageList() { return this.run.stages || STAGES; }
 
   async init() {
     const canvas = document.getElementById('gl');
@@ -103,17 +119,25 @@ export class Game {
       this.bosses[id] = new a.cls(scene, this.T, tex, img.width / img.height, this);
       imgs[id] = img;
     }
+    // 중간 보스: 문양 파수병 5종 + 벨리스(6스테이지) + 인덱스(EXTRA). 키는 'm_' + 스테이지의 mid id
+    for (const k of SIGIL_KEYS) { const def = makeSigilDef(k); this.bosses['m_' + def.id] = new SigilMid(scene, this.T, this.T[def.sprite], 1, this, def); }
+    const mkTex = (img) => { const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; t.anisotropy = 4; return t; };
+    this.bosses.m_bellis = new Bellis(scene, this.T, mkTex(imgs.bellis), imgs.bellis.width / imgs.bellis.height, this, BELLIS_MID);
+    this.bosses.m_index = new Indexer(scene, this.T, mkTex(imgs.index), imgs.index.width / imgs.index.height, this, INDEX_MID);
     this.boss = this.bosses.opsir;
+    // 두 번째 기체 아스트라의 스프라이트
+    this.craft = { claire: claireImg ? { img: claireImg, h: 2.9 } : null, astra: { img: imgs.astra, h: 2.7 } };
+    for (const c of Object.values(this.craft)) if (c) { const t = mkTex(c.img); c.frames = [t, t]; c.aspect = c.img.width / c.img.height; }
 
     // 초상화 (대사창 / 스킬 컷인)
     const portraits = {};
-    for (const [who, key] of [['luna', 'lunarinth'], ['opsir', 'opsir'], ['bellis', 'bellis'], ['claire', 'claire']]) {
+    for (const [who, key] of [['luna', 'lunarinth'], ['opsir', 'opsir'], ['bellis', 'bellis'], ['claire', 'claire'], ['astra', 'astra'], ['tramont', 'tramont'], ['index', 'index'], ['arkesia', 'arkesia']]) {
       const img = imgs[key]; if (!img) continue;
       const f = FACE[who];
       portraits[who] = { kind: 'img', img, sx: img.width * f.sx, sy: img.height * f.sy, sw: img.width * f.sw, sh: img.width * f.sw };
     }
     if (!portraits.claire) portraits.claire = { kind: 'canvas', canvas: pt.portrait.image };
-    this.ui.setPortraits(portraits);
+    this.ui.setPortraits(portraits, imgs);
 
     this._wireUI();
     this.input.onAny = () => { this.engine.init(); };
@@ -128,9 +152,12 @@ export class Game {
 
   _wireUI() {
     const ui = this.ui;
-    ui.on.start = (diff, char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff, char); };
-    ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.char); };
-    ui.on.unlockExtra = () => { this.unlockExtra(); this.sfx.play('heal'); this.ui.warn('EXTRA 개방 — (미구현 · 준비 중)', 2600); };
+    ui.on.start = (diff, char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff, char, false); };
+    ui.on.startExtra = (char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(EXTRA_DIFF, char, true); };
+    ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.char, this.run.extra); };
+    ui.on.unlockExtra = () => { this.unlockExtra(); this.sfx.play('heal'); this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
+    ui.on.debugInf = (on) => { this.debugInf = on; this.sfx.play(on ? 'heal' : 'hurt', { vol: 0.5 }); this.ui.warn(on ? '테스트 모드 — 컨티뉴 무제한 (EXTRA 제외)' : '테스트 모드 해제', 2200); };
+    ui.craftUnlocked = (id) => id === 'claire' || (id === 'astra' && this.isAstraUnlocked());
     ui.on.toMenu = () => this.toMenu();
     ui.on.resume = () => this.setPause(false);
     ui.on.continueYes = () => this.doContinue();
@@ -181,29 +208,31 @@ export class Game {
   }
 
   // ───── 런 / 스테이지 ─────
-  async startRun(diff, char) {
+  async startRun(diff, char, extra = false) {
     this._token++;
     const my = this._token;
-    this.run = this.makeRun(diff, char);
+    this.run = this.makeRun(diff, char, extra);
+    const cr = this.craft[char.id] || this.craft.claire; if (cr) this.player.setSprite(cr.frames, cr.aspect, cr.h);
     this.stats = this.newStats(); this.fightT = 0; this.sealed = false; this.ui.setSealed(false);
     this.ui.showMenu(false); this.ui.closeModals(); this.ui.hideResult(); this.ui.hideEnding();
     this.player.reset(diff.php); this.player.x = 0; this.player.z = 6.2;
     this.ui.setHp(this.player.hp, this.player.maxHp); this.ui.setUlt(this.player.ults);
-    this.ui.setContinues(0, CONTINUES); this.ui.setDiff(diff);
+    this.ui.setContinues(0, this.run.continuesMax); this.ui.setDiff(diff);
     // 프롤로그: 저택의 분열
     this.state = 'cutscene'; this.clearField(); this.ui.showHud(false);
     for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
     this.world.setTheme('lumina'); this.ui.setTheme('lumina'); this.world.setDolly(0.4);
+    this.world.setEnv('moongarden');
     this.music.play('ending', { fade: 1.5, immediate: true });
-    await this.talk(SCRIPT.prologue); if (my !== this._token) return;
+    await this.talk(extra ? SCRIPT.arkesia.pre || SCRIPT.arkesia.prologue || [] : SCRIPT.prologue); if (my !== this._token) return;
     await this.playStage(0);
   }
 
-  /** 진행용 통상 스테이지(병사 웨이브) → 보스 */
+  /** 진행용 통상 스테이지: 병사 웨이브(앞) → 중간 보스 → 병사 웨이브(뒤) → 보스 */
   async playStage(idx) {
     const my = ++this._token;
     this.run.stageIdx = idx;
-    const st = STAGES[idx], B = this.bosses[st.id], def = B.def;
+    const st = this.stageList[idx], B = this.bosses[st.id], def = B.def;
     for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
     this.boss = B; B.reset(); // 보스는 웨이브가 끝난 뒤 등장
     this.state = 'cutscene'; this.timeScale = 1; this.sealed = false; this.ui.setSealed(false); this.world.setFall(null); this.veilLv = 0.98;
@@ -211,17 +240,24 @@ export class Game {
     const P = this.player;
     P.ults = PLAYER.maxUlt; P.inv = 1.5; P.hp = P.maxHp; P.alive = true; P.x = 0; P.z = 6.2;
     this.ui.setUlt(P.ults); this.ui.setHp(P.hp, P.maxHp); this.ui.setStage(st.label);
-    const f0 = def.forms[def.steps[0].form], th = f0.theme || def.theme;
-    this.world.setTheme(th); this.ui.setTheme(th); this.world.setDolly(0);
+    const f0 = def.forms[def.steps[0].form], th = st.theme || f0.theme || def.theme;
+    this.world.setEnv(st.env); this.world.setTheme(th); this.ui.setTheme(th); this.world.setDolly(0);
     this.music.setIntensity(0);
     this.music.play(st.stageMusic, { fade: 1.6, immediate: true });
     this.ui.banner(st.label, `${st.place} — ${st.mobName}`, 3000);
     await sleep(2200); if (my !== this._token) return;
-    // 통상 스테이지: 문양 병사의 웨이브
-    await this.runWaves(st); if (my !== this._token) return;
+    // 통상 스테이지 (앞부분)
+    await this.runWaves(st, 'a'); if (my !== this._token) return;
+    // 중간 보스
+    if (st.mid) {
+      await this.playMid(st, my); if (my !== this._token) return;
+      this.boss = B; this.state = 'stage'; this.music.play(st.stageMusic, { fade: 1.2, immediate: true });
+      this.player.inv = 1.5;
+    }
+    await this.runWaves(st, 'b'); if (my !== this._token) return;
     // 보스 경고 → 등장 → 대사
     this.state = 'cutscene'; this.clearBossField(); this.mobs.clear();
-    this.music.stop(0.8); this.sfx.play('declare'); this.ui.flash('#ffffff', 500, 0.4);
+    this.music.stop(0.8); this.sfx.play('warning'); this.ui.flash('#ffffff', 500, 0.4);
     this.ui.banner('WARNING', st.warn.replace('WARNING — ', ''), 2400);
     await sleep(2300); if (my !== this._token) return;
     this.world.setDolly(0.5); B.appear();
@@ -236,10 +272,49 @@ export class Game {
     B.startStep(0);
   }
 
-  /** 병사 웨이브 실행: 스크립트가 끝나고 병사가 모두 사라지면 resolve */
-  runWaves(st) {
+  /** 중간 보스전. 문양 파수병은 말이 없고, 벨리스 · 인덱스는 짧은 대사가 있다. 격파되면 resolve */
+  async playMid(st, my) {
+    const M = this.bosses['m_' + st.mid], def = M.def;
+    this.state = 'cutscene'; this.clearBossField(); this.mobs.clear();
+    this.music.stop(0.6); this.sfx.play('mid_appear'); this.ui.flash('#ffffff', 400, 0.3);
+    await sleep(700); if (my !== this._token) return;
+    this.boss = M; M.isMid = true; M.appear();
+    this.ui.setBossHeader(def); this.ui.setBossStep(M, 0); this.ui.setBossInstant(1); this.ui.setBossTimer(null); this.ui.setAnalysis(null); this.ui.showBossUI(true);
+    this.world.setDolly(0.4);
+    const f0 = def.forms[def.steps[0].form], th = def.theme || f0.theme;
+    this.world.setTheme(th); this.ui.setTheme(th);
+    this.music.play('midboss', { fade: 0.8, immediate: true });
+    this.ui.banner('MID BOSS', `${def.name}`, 2200);
+    await sleep(1500); if (my !== this._token) return;
+    const line = st.mid === 'bellis' ? SCRIPT.bellisMid.intro : st.mid === 'index' ? SCRIPT.midIndex.intro : null;
+    if (line) await this.talk(line); if (my !== this._token) return;
+    this.world.setDolly(0);
+    this.state = 'fight';
+    M.startStep(0);
+    await new Promise((res) => { this._midDone = res; });
+    this._midDone = null;
+  }
+
+  /** 중간 보스 격파 연출 → 대사 → 다음 구간으로 */
+  async midClear(B) {
+    const my = this._token, st = this.stageList[this.run.stageIdx];
+    this.state = 'cutscene'; B.alive = true; B.vulnerable = false; this.clearBossField();
+    this.music.stop(0.6); this.timeScale = 0.3;
+    this.fx.burst(B.x, B.bobY, B.z, 50, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 10, size: 1.0, life: 1.1, up: 1.4 });
+    this.fx.ring(B.x, B.bobY, B.z, 0xffffff, 18, 0.8); this.sfx.play('boss_down', { vol: 0.7 }); this.ui.flash('#ffffff', 600, 0.6);
+    await sleep(700); if (my !== this._token) return;
+    this.timeScale = 1; B.alphaT = 0; B.cancelAttack();
+    await sleep(600); if (my !== this._token) return;
+    const line = st.mid === 'bellis' ? SCRIPT.bellisMid.outro : st.mid === 'index' ? SCRIPT.midIndex.outro : null;
+    if (line) await this.talk(line); if (my !== this._token) return;
+    B.visible = false; this.ui.hideBark(); this.ui.showBossUI(false);
+    const d = this._midDone; this._midDone = null; if (d) d();
+  }
+
+  /** 병사 웨이브 실행: 스크립트가 끝나고 병사가 모두 사라지면 resolve. part: 'a' | 'b' */
+  runWaves(st, part = 'a') {
     this.mobs.clear();
-    this.stageRoutine = makeStageScript(this, st.id); this._stageWait = 0; this._stageAcc = 0;
+    this.stageRoutine = makeStageScript(this, st.id, part); this._stageWait = 0; this._stageAcc = 0;
     this.state = 'stage';
     return new Promise((res) => { this._stageDone = res; });
   }
@@ -317,7 +392,7 @@ export class Game {
     }
     if (!this.player.alive && this.sealed) this.player.revive(this);
     if (nextUlt) { await this.fakeDefeat(B, i); return; }
-    if (last) { this.stageClear(B); return; }
+    if (last) { if (B.isMid) this.midClear(B); else this.stageClear(B); return; }
     this.timeScale = 0.3; await sleep(500); this.timeScale = 1; if (my !== this._token) return;
     await sleep(ultimate ? 900 : 500); if (my !== this._token) return;
     const next = B.def.steps[i + 1];
@@ -362,7 +437,7 @@ export class Game {
     // 발악기는 루나린스의 라스트 스킬에만 있다 (체력이 줄수록 점점 강해지는 것이 핵심이고, 이 호출은 연출용)
     this.ui.warn('마지막 발악 — 공격이 격화됩니다', 1500);
     this.world.beat(1.2); this.ui.flash(`#${(B.pal.glow).toString(16).padStart(6, '0')}`, 450, 0.3);
-    if (B.def.id === 'lunarinth') { this.music.setIntensity(1); this.sfx.play('laugh_big', { vol: 0.8 }); B.barkFor('low'); }
+    if (B.def.id === 'lunarinth') { this.music.setIntensity(1); this.sfx.play('laugh_big', { vol: 0.8 }); B.barkFor(B.def.id + 'Low'); }
   }
 
   /** 라스트 스킬 격파 → 격파된 척하던 루나린스가 되살아나 얼티메이트 스킬을 시작한다 */
@@ -397,7 +472,7 @@ export class Game {
   }
 
   async stageClear(B) {
-    const my = this._token, idx = this.run.stageIdx, st = STAGES[idx];
+    const my = this._token, idx = this.run.stageIdx, st = this.stageList[idx];
     this.state = 'stageclear'; B.alive = true; B.vulnerable = false;
     this.music.stop(1.2); this.sealed = false; this.ui.setSealed(false); this.player.alive = true;
     this.timeScale = 0.25; this.world.setDolly(0.6);
@@ -413,7 +488,11 @@ export class Game {
     this.music.play('victory', { fade: 2.0, immediate: true }); this.sfx.play('victory');
     await this.talk(SCRIPT[st.id].outro); if (my !== this._token) return;
     B.visible = false; this.ui.hideBark();
-    if (idx + 1 < STAGES.length) {
+    if (B.def.id === 'astra' && !this.isAstraUnlocked()) {
+      this.unlockAstra(); this.sfx.play('heal');
+      this.ui.banner('NEW CRAFT', '아스트라 — 두 번째 기체 해금', 2600); await sleep(2700); if (my !== this._token) return;
+    }
+    if (idx + 1 < this.stageList.length) {
       this.ui.banner('STAGE CLEAR', `${B.def.name} 격파`, 2200);
       await sleep(2300); if (my !== this._token) return;
       await this.playStage(idx + 1);
@@ -425,27 +504,29 @@ export class Game {
   // ───── 엔딩 / 결과 ─────
   isExtraUnlocked() { try { return localStorage.getItem(EXTRA_KEY) === '1'; } catch (e) { return false; } }
   unlockExtra() { try { localStorage.setItem(EXTRA_KEY, '1'); } catch (e) { /* noop */ } this.ui.refreshExtra(); }
+  isAstraUnlocked() { try { return localStorage.getItem(ASTRA_KEY) === '1'; } catch (e) { return false; } }
+  unlockAstra() { try { localStorage.setItem(ASTRA_KEY, '1'); } catch (e) { /* noop */ } this.ui.refreshChars && this.ui.refreshChars(); }
 
   async runEnding() {
     const my = this._token;
     this.state = 'ending'; this.ui.showHud(false); this.ui.hideBark();
-    const n = this.run.continues, E = n === 0 ? ENDINGS.A : ENDINGS.B;
+    const n = this.run.continues, ex = this.run.extra, E = ex ? ENDINGS.EX : n === 0 ? ENDINGS.A : ENDINGS.B;
     this.world.setDolly(0);
     this.music.play('ending', { fade: 2.5, immediate: true });
     await this.talk(typeof E.lines === 'function' ? E.lines(n === 0 ? this.stats.ultDeaths : n) : E.lines); if (my !== this._token) return;
     this.ui.showEnding(E.title, E.name, E.sub);
     // EXTRA 개방 조건: NORMAL 이상에서 노 컨티뉴 클리어
-    const unlocked = n === 0 && this.run.diff.lv >= 1;
-    if (unlocked) { const was = this.isExtraUnlocked(); this.unlockExtra(); if (!was) setTimeout(() => this.ui.warn('EXTRA 개방 — (미구현 · 준비 중)', 2600), 2600); }
+    const unlocked = !ex && n === 0 && this.run.diff.lv >= 1 && !this.run.debugUsed;
+    if (unlocked) { const was = this.isExtraUnlocked(); this.unlockExtra(); if (!was) setTimeout(() => this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2800), 2600); }
     await sleep(6500); if (my !== this._token) return;
     this.ui.hideEnding();
     const t = Math.round(this.fightT);
     this.ui.showResult(true, [
-      ['난이도', this.run.diff.name], ['클리어 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
+      ['난이도', ex ? 'EXTRA' : this.run.diff.name], ['클리어 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
       ['컨티뉴', `${n}회`], ['피격', this.stats.hits], ['스킬 격파 · 노미스 취득', `${this.stats.spellsCaptured} / ${this.stats.spellsSeen}`],
       ['얼티메이트 스킬', `돌파 ${this.stats.ultSurvived} · 쓰러짐 ${this.stats.ultDeaths}`],
       ['병사 격파', this.stats.mobs], ['그레이즈', this.stats.graze], ['궁극기 사용', this.stats.ults],
-    ], n === 0 ? '— 노 컨티뉴 클리어 —' : '— 컨티뉴 클리어 —');
+    ], ex ? '— EXTRA 클리어 —' : n === 0 ? '— 노 컨티뉴 클리어 —' : '— 컨티뉴 클리어 —');
     this.state = 'result';
   }
 
@@ -463,7 +544,8 @@ export class Game {
     this.clearBossField();
     this.music.play('defeat', { fade: 2, immediate: true });
     const left = this.run.continuesMax - this.run.continues;
-    if (left > 0) { this.state = 'continue'; this.ui.showContinue(left, this.run.continuesMax); }
+    if (this.run.debugInf) { this.state = 'continue'; this.ui.showContinue(left, this.run.continuesMax, true); }
+    else if (left > 0) { this.state = 'continue'; this.ui.showContinue(left, this.run.continuesMax); }
     else this.gameOver();
   }
 
@@ -478,14 +560,15 @@ export class Game {
 
   doContinue() {
     const B = this.boss, P = this.player;
-    this.run.continues++;
-    this.ui.hideContinue(); this.ui.setContinues(this.run.continues, CONTINUES);
+    if (this.run.debugInf && this.run.continues >= this.run.continuesMax) this.run.debugUsed++; // 암호로 쓴 컨티뉴는 기록에 남기지 않는다
+    else this.run.continues++;
+    this.ui.hideContinue(); this.ui.setContinues(this.run.continues, this.run.continuesMax);
     P.reset(this.run.diff.php); P.inv = 3; this.ui.setHp(P.hp, P.maxHp); this.ui.setUlt(P.ults);
     this.sfx.play('heal'); this.ui.flash('#ffffff', 600, 0.5);
     this.clearBossField(); this.timeScale = 1;
     if (this.downFrom === 'stage') {
       // 병사 웨이브는 이어서 진행 (화면의 병사는 정리)
-      this.mobs.clear(); this.state = 'stage'; this.music.play(STAGES[this.run.stageIdx].stageMusic, { fade: 1.0, immediate: true });
+      this.mobs.clear(); this.state = 'stage'; this.music.play(this.stageList[this.run.stageIdx].stageMusic, { fade: 1.0, immediate: true });
     } else {
       this.state = 'fight';
       B.startStep(B.stepIdx, { quick: true }); // 현재 단계를 처음부터 다시
@@ -495,12 +578,12 @@ export class Game {
   async gameOver() {
     const my = this._token;
     this.ui.hideContinue(); this.state = 'gameover';
-    await this.talk(SCRIPT.gameover); if (my !== this._token) return;
+    await this.talk(this.run.extra ? SCRIPT.gameoverExtra : SCRIPT.gameover); if (my !== this._token) return;
     const t = Math.round(this.fightT), B = this.boss;
     this.ui.showResult(false, [
-      ['난이도', this.run.diff.name], ['도달', `${STAGES[this.run.stageIdx].label} — ${B.def.name}`],
+      ['난이도', this.run.extra ? 'EXTRA' : this.run.diff.name], ['도달', `${this.stageList[this.run.stageIdx].label} — ${B.def.name}`],
       ['단계', B.visible ? `${B.stepIdx + 1} / ${B.stepCount}` : '병사 웨이브'], ['버틴 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
-      ['컨티뉴 사용', `${this.run.continues}회`], ['병사 격파', this.stats.mobs], ['그레이즈', this.stats.graze],
+      ['컨티뉴 사용', this.run.extra ? '불가' : `${this.run.continues}회`], ['병사 격파', this.stats.mobs], ['그레이즈', this.stats.graze],
     ], 'GAME OVER');
     this.state = 'result';
   }
@@ -516,7 +599,7 @@ export class Game {
     const mode = inStage || !B.step ? 'normal' : (B.step.ultMode || 'normal');
     this.stats.ults++; this.run.stepUlt = true;
     this.sfx.play('ult_declare');
-    this.ui.declare({ who: this.run.char ? this.run.char.id : 'claire', kind: 'ult', tag: PLAYER_ULT.tag, name: PLAYER_ULT.name, side: 'left' });
+    this.ui.declare({ who: this.run.char ? this.run.char.id : 'claire', kind: 'ult', tag: (PLAYER_ULT[this.run.char.id] || PLAYER_ULT.claire).tag, name: (PLAYER_ULT[this.run.char.id] || PLAYER_ULT.claire).name, side: 'left' });
     this.timeScale = 0;
     await sleep(720);
     this.timeScale = 1;
@@ -524,9 +607,9 @@ export class Game {
     this.sfx.play('ult');
     P.beginUlt(this, mode);
     if (!inStage) {
-      if (mode === 'reject') { this.ui.warn('리젝트 — 궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
-      else if (mode === 'immune') { this.ui.warn('면역 — 이 스킬에는 궁극기가 통하지 않습니다', 1800); }
-      else if (mode === 'resist') { this.ui.warn('저항 — 궁극기 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor('ult'); }
+      if (mode === 'reject') { this.ui.warn('궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
+      else if (mode === 'immune') { this.ui.warn('이 기술에는 궁극기가 통하지 않습니다', 1800); }
+      else if (mode === 'resist') { this.ui.warn('궁극기의 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
       else if (Math.random() < 0.5) B.barkFor(B.def.id + 'Ult');
       if (B.addAnalysis) B.addAnalysis(10);
     }
@@ -652,7 +735,7 @@ export class Game {
       this.ui.setBossTimer(sec);
       if (sec <= 10 && this._lastSec !== prev) this.sfx.play('gauge', { pitch: 0.8 });
       if (B.def.hasAnalysis) this.ui.setAnalysis(B.analysis);
-      if (B.step.kind === 'ultimate') this.ui.setBoss(Math.max(0, B.timeLeft / B.step.time)); // 얼티메이트 스킬은 남은 시간이 게이지
+      if (B.step.kind === 'ultimate' || B.step.endure) this.ui.setBoss(Math.max(0, B.timeLeft / B.step.time)); // 얼티메이트 · 버티기는 남은 시간이 게이지
     }
   }
 

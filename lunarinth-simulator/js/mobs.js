@@ -12,6 +12,11 @@ export const MOB_TYPES = {
   rune: { tex: 'mob_rune', color: 0xc89bff, glow: 0xb06bff, bullet: { kind: 'glyph', color: 0xc89bff, alt: 0xa66bff } },
   page: { tex: 'mob_page', color: 0xffd36b, glow: 0xb06bff, bullet: { kind: 'glyph', color: 0xffd36b, alt: 0xffffff } },
   moon: { tex: 'mob_moon', color: 0xfff1c9, glow: 0xd9c8ff, bullet: { kind: 'crescent', color: 0xe3d6ff, alt: 0xfff1c9 } },
+  circuit: { tex: 'mob_circuit', color: 0x9fd8ff, glow: 0x4aa8ff, bullet: { kind: 'pixel', color: 0x9fd8ff, alt: 0xffffff } },
+  rose: { tex: 'mob_rose', color: 0xff9fb8, glow: 0xff8aa8, bullet: { kind: 'petal', color: 0xff9fb8, alt: 0xffd36b } },
+  tome: { tex: 'mob_tome', color: 0x7fe3b5, glow: 0x3fd49a, bullet: { kind: 'page', color: 0x9fe8c4, alt: 0xffe39a } },
+  ledger: { tex: 'mob_ledger', color: 0xc89bff, glow: 0xb06bff, bullet: { kind: 'glyph', color: 0xc89bff, alt: 0xffffff } },
+  puppet: { tex: 'mob_puppet', color: 0xff8a9a, glow: 0xff4f6a, bullet: { kind: 'shard', color: 0xff8a9a, alt: 0xffffff } },
   eclipse: { tex: 'mob_eclipse', color: 0xa07bff, glow: 0x7a4bd8, bullet: { kind: 'orb', color: 0xa07bff, alt: 0xe4d6ff } },
 };
 

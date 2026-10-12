@@ -1,7 +1,11 @@
 // DOM 기반 UI: 타이틀·난이도/캐릭터 선택, HUD, 대사창, 스킬 선언 컷인, 컨티뉴/엔딩/결과, 설정집.
-import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA } from './lore.js';
+import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF } from './lore.js';
 import { OPSIR } from './bosses/opsir.js';
+import { ASTRA } from './bosses/astra.js';
+import { TRAMONT } from './bosses/tramont.js';
+import { INDEX } from './bosses/indexer.js';
 import { BELLIS } from './bosses/bellis.js';
+import { ARKESIA } from './bosses/arkesia.js';
 import { LUNARINTH } from './bosses/lunarinth.js';
 
 const $ = (s) => document.querySelector(s);
@@ -27,7 +31,8 @@ export class UI {
     this.starCount = 0; this.gemCount = 0;
     this.portraits = {};
     this._warnT = 0; this._bubT = 0; this._annT = 0; this._dcT = 0;
-    this.screen = null; this.diffIdx = 1; this.charIdx = 0; this.pickedDiff = DIFFS[1];
+    this.screen = null; this.diffIdx = 1; this.charIdx = 0; this.pickedDiff = DIFFS[1]; this.extraMode = false;
+    this.craftUnlocked = (id) => id === 'claire';
     this._kbuf = '';
     try { const d = localStorage.getItem('lunarinth.lastdiff'); if (d != null && DIFFS[+d]) this.diffIdx = +d; } catch (e) { /* noop */ }
     this._bindMenus();
@@ -45,9 +50,8 @@ export class UI {
     document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('button')) sfx.play('ui_click'); });
     $('#btn-start').onclick = () => this.openSelect('diff');
     $('#btn-extra').onclick = () => {
-      if (this.extraUnlocked()) this.warn('EXTRA — 아직 구현되지 않았습니다 (준비 중)', 2000, true);
-      else this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true);
-      this.sfx.play('hurt', { vol: 0.25 });
+      if (this.extraUnlocked()) { this.extraMode = true; this.pickedDiff = EXTRA_DIFF; this.openSelect('char'); }
+      else { this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true); this.sfx.play('hurt', { vol: 0.25 }); }
     };
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
@@ -72,6 +76,9 @@ export class UI {
       el.onchange = () => { if (audio) A.setMuted(el.checked); else { S[key] = el.checked; S.save(); document.body.classList.toggle('calm', S.calm); } };
     };
     bind('#o-mute', null, true); bind('#o-shake', 'shake'); bind('#o-calm', 'calm');
+    // 테스터용 암호: 입력하면 컨티뉴 무제한 (EXTRA 제외)
+    const pw = $('#o-pass');
+    if (pw) pw.oninput = () => { const on = pw.value.trim().toLowerCase() === 'lunacute'; if (on !== !!this._dbg) { this._dbg = on; this.on.debugInf && this.on.debugInf(on); } };
     document.body.classList.toggle('calm', S.calm);
   }
 
@@ -98,6 +105,7 @@ export class UI {
         <span class="c-art"><canvas width="220" height="260"></canvas></span>
         <span class="c-en">${c ? c.name : '— — —'}</span><span class="c-kr">${c ? c.kr : '준비 중'}</span>
       </button>`).join('');
+    this.refreshChars();
     cc.querySelectorAll('.card').forEach((b) => {
       b.onclick = () => { this.charIdx = +b.dataset.i; this._paintChar(); this.confirm(); };
       b.onmouseenter = () => { this.charIdx = +b.dataset.i; this._paintChar(); };
@@ -110,17 +118,24 @@ export class UI {
     const d = DIFFS[this.diffIdx];
     $('#diff-desc').innerHTML = `<b style="color:${d.color}">${d.name} — ${d.kr}</b><br>${d.sub}<br><small>탄수 ×${d.cnt} · 탄속 ×${d.spd} · 보스 체력 ×${d.hp} · 내 체력 ${d.php}${d.lv >= 2 ? ' · 추가 패턴 있음' : ''}</small>`;
   }
+  refreshChars() {
+    document.querySelectorAll('#char-cards .card').forEach((b, i) => { const c = CHARS[i]; b.classList.toggle('locked', !!c && !this.craftUnlocked(c.id)); });
+    if (this.screen === 'char') this._paintCharArt();
+  }
   _paintChar() {
     document.querySelectorAll('#char-cards .card').forEach((b, i) => b.classList.toggle('sel', i === this.charIdx));
     const c = CHARS[this.charIdx];
+    if (c && !this.craftUnlocked(c.id)) { $('#char-desc').innerHTML = `<b>${c.name}</b> — 잠김<br><small>${c.id === 'astra' ? '2스테이지의 아스트라를 처음 쓰러뜨리면 사용할 수 있습니다. (난이도 무관)' : ''}</small>`; return; }
     $('#char-desc').innerHTML = c ? `<b>${c.name}</b> — ${c.kr}<br>${c.desc}<br><small>${c.shot}<br>궁극기: ${c.ult[0]} 「${c.ult[1]}」</small>` : '<b>빈 슬롯</b><br><small>아직 사용할 수 없습니다. (추후 추가 예정)</small>';
   }
   _paintCharArt() {
-    const cv = document.querySelector('#char-cards .card:first-child canvas');
-    const p = this.portraits.claire; if (!cv || !p) return;
-    const g = cv.getContext('2d'); g.clearRect(0, 0, 220, 260);
-    if (p.kind === 'img') g.drawImage(p.img, 0, 0, p.img.width, p.img.height, 20, 0, 180, 180 * p.img.height / p.img.width);
-    else g.drawImage(p.canvas, 0, 0, 220, 220);
+    document.querySelectorAll('#char-cards .card').forEach((card, i) => {
+      const c = CHARS[i], cv = card.querySelector('canvas'), p = c && this.full && this.full[c.img]; if (!cv) return;
+      const g = cv.getContext('2d'); g.clearRect(0, 0, 220, 260);
+      if (!c) return;
+      if (p) { const k = Math.min(200 / p.width, 250 / p.height); g.drawImage(p, 0, 0, p.width, p.height, (220 - p.width * k) / 2, 250 - p.height * k, p.width * k, p.height * k); }
+      else { const q = this.portraits.claire; if (q && q.kind === 'canvas') g.drawImage(q.canvas, 0, 0, 220, 220); }
+    });
   }
 
   openSelect(which) {
@@ -133,7 +148,8 @@ export class UI {
   closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; }
   back() {
     this.sfx.play('ui_hover');
-    if (this.screen === 'char') this.openSelect('diff');
+    if (this.screen === 'char' && this.extraMode) { this.extraMode = false; this.closeSelect(); this.showMenu(true); }
+    else if (this.screen === 'char') this.openSelect('diff');
     else if (this.screen === 'diff') { this.closeSelect(); this.showMenu(true); }
   }
   confirm() {
@@ -144,7 +160,10 @@ export class UI {
     } else if (this.screen === 'char') {
       const c = CHARS[this.charIdx];
       if (!c) { this.warn('아직 선택할 수 없는 슬롯입니다', 1200, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
-      this.closeSelect(); this.on.start && this.on.start(this.pickedDiff, c);
+      if (!this.craftUnlocked(c.id)) { this.warn('아직 잠겨 있는 기체입니다', 1400, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
+      this.closeSelect();
+      if (this.extraMode) { this.extraMode = false; this.on.startExtra && this.on.startExtra(c); }
+      else this.on.start && this.on.start(this.pickedDiff, c);
     }
   }
 
@@ -178,12 +197,12 @@ export class UI {
     });
   }
 
-  // ───── EXTRA (미개방 · 미구현) ─────
+  // ───── EXTRA ─────
   extraUnlocked() { try { return localStorage.getItem('lunarinth.extra.v1') === '1'; } catch (e) { return false; } }
   refreshExtra() {
     const b = $('#btn-extra'), on = this.extraUnlocked();
     b.classList.toggle('locked', !on);
-    b.innerHTML = on ? 'EXTRA <i class="lock">— 준비 중</i>' : 'EXTRA <i class="lock">🔒</i>';
+    b.innerHTML = on ? 'EXTRA <i class="lock">— 개방됨</i>' : 'EXTRA <i class="lock">🔒</i>';
   }
 
   // 타이틀 배경 파티클 (떨어지는 달 조각 / 별빛)
@@ -216,6 +235,7 @@ export class UI {
     const tag = (t) => `<span class="tag ${t}">${t === 'off' ? '공식 설정' : t === 'prov' ? '제공 설정' : '창작 제안'}</span>`;
     const li = (a) => a.map((x) => `<li>${x}</li>`).join('');
     const skills = (def) => def.steps.filter((st) => st.kind !== 'ultimate').map((st, i) => `<li><span class="k ${st.kind}">${i + 1}. ${KIND_LABEL[st.kind]}</span> ${SPELL_TAG(st)} <small>— ${def.forms[st.form].label}${st.ultMode === 'immune' ? ' · 궁극기 면역' : st.ultMode === 'reject' ? ' · 궁극기 무효' : st.ultMode === 'resist' ? ' · 궁극기 저항' : ''}</small></li>`).join('');
+    const defs = { opsir: OPSIR, astra: ASTRA, tramont: TRAMONT, index: INDEX, bellis: BELLIS, arkesia: { ...ARKESIA, steps: ARKESIA.allSteps.flatMap((x) => (x.variant ? Object.values(x.variant).map((v) => ({ ...x, ...v })) : [x])) } };
     const bossCard = (r, def) => `
       <div class="form"><b>${r.name} <small>${r.en} · STAGE ${r.stage}</small></b> ${tag(r.tag)}
         <div class="epi">${r.epithet}</div>
@@ -229,7 +249,7 @@ export class UI {
       <p class="note">※ ${STORY.hidden}</p>
       <h3>병사 (통상 스테이지) ${tag('prop')}</h3><p class="note">${MOB_NOTE}</p>
       <h3>등장 보스</h3>
-      ${bossCard(ROSTER[0], OPSIR)}${bossCard(ROSTER[1], BELLIS)}
+      ${ROSTER.filter((r) => r.id !== 'arkesia').map((r) => bossCard(r, defs[r.id])).join('')}
       <div class="form"><b>${O.name} <small>LUNARINTH · FINAL STAGE</small></b> ${tag('off')}
         <div class="epi">삼위(三位)의 달을 다스리는 저택의 주인</div>
         <ul>${li(O.look)}</ul><p>${O.personality}</p>
@@ -241,9 +261,10 @@ export class UI {
       ${O.forms.map((f) => `<div class="form"><b>${f.name}</b> — ${f.moon} · ${f.theme}<ul>${li(f.notes)}</ul></div>`).join('')}
       <h3>공통 능력 ${tag('off')}</h3><ul>${li(O.abilities)}</ul>
       <h3>루센트 저택 ${tag('off')}</h3><ul>${O.house.map(([a, b]) => `<li><b>${a}</b> — ${b}</li>`).join('')}</ul>
-      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}. (현재 미구현 — 잠금 표시만 있습니다)</p>
+      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}.<br>규칙: ${EXTRA.rules}</p>
+      ${this.extraUnlocked() ? bossCard(ROSTER.find((r) => r.id === 'arkesia'), defs.arkesia) : '<div class="form"><b>？？？ <small>EXTRA</small></b><p class="note">EXTRA를 개방하면 기록됩니다.</p></div>'}
       <h3>플레이어 ${tag('prop')}</h3>
-      <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 궁극기 「성검 해방 — 징벌의 월광」</li></ul>
+      <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 궁극기 「성검 해방 — 징벌의 월광」</li><li><b>아스트라</b> — 기술실 담당. 2스테이지에서 처음 쓰러뜨린 뒤 사용 가능. 궁극기 「기술실 권한 — 시스템 오버라이드」</li></ul>
       <p class="note">“성검을 해방한 것은 루나린스가 처음”이라는 전제는 이 게임의 창작 설정입니다.</p>`;
   }
 
@@ -355,7 +376,7 @@ export class UI {
   hideDeclare() { this.el.declare.hidden = true; clearTimeout(this._dcT); }
 
   // ───── 대사 ─────
-  setPortraits(map) { this.portraits = map; }
+  setPortraits(map, full) { this.portraits = map; this.full = full || this.full; }
   _paintPortrait(who) {
     const cv = this.el.dCanvas, g = cv.getContext('2d');
     g.clearRect(0, 0, 256, 256);
@@ -409,7 +430,8 @@ export class UI {
   }
 
   // ───── 컨티뉴 / 엔딩 / 결과 ─────
-  showContinue(left, max) {
+  showContinue(left, max, dbg = false) {
+    if (dbg) { $('#cont-left').innerHTML = `테스트 모드 — 컨티뉴 무제한<br><small>(기록에 남지 않습니다)</small>`; $('#m-continue').hidden = false; setTimeout(() => $('#btn-cont-yes').focus({ preventScroll: true }), 30); return; }
     $('#cont-left').innerHTML = `남은 컨티뉴 <b>${left}</b> / ${max}<br><span class="gems">${Array.from({ length: max }, (_, i) => `<i class="${i < left ? 'on' : ''}">◆</i>`).join('')}</span>`;
     $('#m-continue').hidden = false;
     setTimeout(() => $('#btn-cont-yes').focus({ preventScroll: true }), 30);

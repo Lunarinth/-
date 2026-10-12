@@ -17,10 +17,9 @@ export const OPSIR = {
   },
   steps: [
     { kind: 'nonspell', name: '정찰 사격', form: 'scout', hp: 600, time: 38, attacks: ['scoutFire', 'starRing', 'strafe'], idle: 1.1, ultMode: 'normal' },
-    { kind: 'spell', tag: '천체 관측', name: '아스트랄 옵저베이션', form: 'observe', hp: 800, time: 48, attacks: ['spObserve'], idle: 0.8, ultMode: 'normal' },
+    { kind: 'spell', tag: '천체 관측', name: '아스트랄 옵저베이션', form: 'observe', hp: 850, time: 48, attacks: ['spObserve'], idle: 0.8, ultMode: 'normal' },
     { kind: 'nonspell', name: '사각 포착', form: 'aim', hp: 650, time: 40, attacks: ['leadShots', 'blindSide', 'strafe'], idle: 1.0, ultMode: 'normal' },
-    { kind: 'spell', tag: '사각 관측', name: '데드 앵글', form: 'aim', hp: 850, time: 50, attacks: ['spDeadAngle'], idle: 0.8, ultMode: 'normal' },
-    { kind: 'spell', tag: '성광 포격', name: '스타라이트 캐논', form: 'cannon', hp: 1000, time: 56, attacks: ['spCannon'], idle: 0.8, ultMode: 'normal' },
+    { kind: 'spell', tag: '성광 포격', name: '스타라이트 캐논', form: 'cannon', hp: 1100, time: 58, attacks: ['spCannon'], idle: 0.8, ultMode: 'normal' },
   ],
 };
 

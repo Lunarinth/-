@@ -270,6 +270,36 @@ export class Sfx {
       [81, 85, 88, 93, 97].forEach((m, i) => E.bell(b, t + 0.1 + i * 0.12, m, 0.12, 2.6, 0.9, 0));
     } };
 
+    // ───── 신규 캐릭터 대사음 / 기믹 효과음 ─────
+    D.blip_sitra = { cd: 38, len: 0.15, vol: 0.5, fn: (E, b, t, p) => { E.tone(b, { type: 'triangle', f: R(600, 900) * p, t, dur: 0.06, vol: 0.1, a: 0.002, d: 0.05, s: 0.01, r: 0.03, rev: 0.3 }); } };
+    D.blip_astra = { cd: 34, len: 0.15, vol: 0.5, fn: (E, b, t, p) => {
+      E.tone(b, { type: 'sine', f: R(1100, 1500) * p, f1: R(1500, 1900) * p, glide: 0.03, t, dur: 0.05, vol: 0.1, a: 0.002, d: 0.04, s: 0.01, r: 0.02, rev: 0.3 });
+      E.tone(b, { type: 'square', f: R(2200, 3000) * p, t: t + 0.02, dur: 0.02, vol: 0.02, a: 0.001, d: 0.02, s: 0.01, r: 0.01 });
+    } };
+    D.blip_tramont = { cd: 36, len: 0.15, vol: 0.5, fn: (E, b, t, p) => { E.tone(b, { type: 'triangle', f: R(500, 760) * p, f1: R(700, 1000) * p, glide: 0.04, t, dur: 0.07, vol: 0.12, a: 0.002, d: 0.06, s: 0.01, r: 0.03, rev: 0.3 }); } };
+    D.blip_index = { cd: 36, len: 0.15, vol: 0.5, fn: (E, b, t, p) => { E.tone(b, { type: 'square', f: R(700, 860) * p, t, dur: 0.035, vol: 0.05, a: 0.001, d: 0.03, s: 0.01, r: 0.01, cut: 2600, rev: 0.2 }); } };
+    D.blip_arkesia = { cd: 40, len: 0.2, vol: 0.5, fn: (E, b, t, p) => { E.bell(b, t, R(80, 88), 0.06, 0.5, 0.5, 0); E.tone(b, { type: 'sine', f: R(520, 640) * p, t, dur: 0.07, vol: 0.06, a: 0.003, d: 0.06, s: 0.01, r: 0.03, rev: 0.5 }); } };
+    D.glitch = { cd: 90, len: 0.5, vol: 0.6, fn: (E, b, t, p) => {
+      E.noise(b, { t, dur: 0.16, vol: 0.16, type: 'bandpass', f: 2400 * p, f1: 800, q: 4, a: 0.002, rev: 0.2 });
+      for (let i = 0; i < 4; i++) E.tone(b, { type: 'square', f: R(300, 2200) * p, t: t + i * 0.035, dur: 0.03, vol: 0.05, a: 0.001, d: 0.025, s: 0.01, r: 0.01, cut: 3200 });
+    } };
+    D.page = { cd: 60, len: 0.4, vol: 0.5, fn: (E, b, t, p) => {
+      E.noise(b, { t, dur: 0.18, vol: 0.12, type: 'highpass', f: 4200 * p, a: 0.004, rev: 0.25 });
+      E.noise(b, { t: t + 0.07, dur: 0.12, vol: 0.08, type: 'bandpass', f: 3000, q: 2, a: 0.003 });
+    } };
+    D.twang = { cd: 60, len: 0.9, vol: 0.55, fn: (E, b, t, p) => {
+      E.tone(b, { type: 'sawtooth', f: 330 * p, f1: 300 * p, glide: 0.5, t, dur: 0.8, vol: 0.09, a: 0.002, d: 0.7, s: 0.01, r: 0.2, cut: 2200, rev: 0.5 });
+      E.bell(b, t, 84, 0.05, 1.0, 0.5, 0);
+    } };
+    D.warning = { len: 2.4, important: true, vol: 0.8, fn: (E, b, t) => {
+      for (let i = 0; i < 3; i++) { E.tone(b, { type: 'sawtooth', f: 440, f1: 660, glide: 0.35, t: t + i * 0.7, dur: 0.6, vol: 0.09, a: 0.02, d: 0.5, s: 0.2, r: 0.1, cut: 2200, rev: 0.4 }); }
+      E.taiko(b, t, 0.7, 0.5);
+    } };
+    D.mid_appear = { len: 1.6, important: true, vol: 0.8, fn: (E, b, t) => {
+      [72, 79, 84].forEach((m, i) => E.bell(b, t + i * 0.1, m, 0.14, 2.0, 0.8, 0));
+      E.noise(b, { t, dur: 0.8, vol: 0.14, type: 'bandpass', f: 400, f1: 4000, q: 1.5, swell: true, a: 0.05, rev: 0.5 });
+    } };
+
     return D;
   }
 }

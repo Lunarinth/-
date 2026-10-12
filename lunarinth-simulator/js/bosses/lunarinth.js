@@ -411,7 +411,7 @@ export class Lunarinth extends Boss {
   _p8(dt, k, o = {}) {
     const P = (this.P.p8 ??= { acc: 0, ang: rnd(0, TAU), dir: 1, flip: 0 }), cols = this.ulCol;
     P.ang += dt * (o.spin ?? 0.35) * P.dir; P.flip += dt; if (P.flip > 6.5) { P.flip = 0; P.dir *= -1; }
-    P.acc += dt; const step = (o.step ?? 0.11) / (this.rate * k), arms = o.arms ?? this.n(8, 5);
+    P.acc += dt; const step = (o.step ?? 0.11) * 1.32 / (this.rate * k), arms = o.arms ?? this.n(7, 4);
     while (P.acc >= step) {
       P.acc -= step;
       for (let a = 0; a < arms; a++) this.shoot({ a: P.ang + (a * TAU) / arms, speed: (o.speed ?? 3.3) * k ** 0.4, kind: o.kind ?? 'orb', size: o.size ?? 1.15, color: o.col ?? cols[a % 3], spin: o.spinB ?? 0 });
@@ -440,7 +440,7 @@ export class Lunarinth extends Boss {
       const a = base + (i * Math.PI) / cnt; // 한 점에서 교차하는 직선 2~3개
       this.beam(px - Math.cos(a) * 15, pz - Math.sin(a) * 15, a, { w: 1.15, len: 30, warn, dur: 0.2, color: i ? this.pal.a : this.pal.b });
     }
-    const cc = this.n(10, 6);
+    const cc = this.n(8, 5);
     G.zones.spawn({ x: px, z: pz, r: 0.01, warn: warn + 0.0, dur: 0.05, dmg: 0, color: this.pal.b, onBoom: (zz) => {
       this.ring(cc, { x: zz.x, z: zz.z, kind: 'crescent', speed: 4.4, size: 1.2, color: this.pal.c, spin: 6 });
       this.sfx('fan');
@@ -450,10 +450,10 @@ export class Lunarinth extends Boss {
   /** 제4식 ①: 24방향 고리. 홀수 번째만 1.5초 뒤 가속 */
   _pRing24(dt, k) {
     const P = (this.P.r24 ??= { acc: 0, i: 0 }); P.acc += dt;
-    if (P.acc >= 0.8 / (this.rate * k)) {
+    if (P.acc >= 1.0 / (this.rate * k)) {
       P.acc = 0; P.i++;
       const odd = P.i % 2 === 1;
-      this.ring(this.n(24, 14), { a0: P.i * 0.11, kind: odd ? 'crescent' : 'orb', speed: 3.7, size: odd ? 1.2 : 1.0, color: odd ? this.pal.c : this.pal.a, accel: odd ? 5.5 : 0, accelAt: 1.5, maxS: 9.5, spin: odd ? 5 : 0 });
+      this.ring(this.n(18, 10), { a0: P.i * 0.11, kind: odd ? 'crescent' : 'orb', speed: 3.7, size: odd ? 1.2 : 1.0, color: odd ? this.pal.c : this.pal.a, accel: odd ? 5.5 : 0, accelAt: 1.5, maxS: 9.5, spin: odd ? 5 : 0 });
       this.sfx('orb', { pitch: odd ? 1.2 : 1 });
     }
   }
@@ -464,7 +464,7 @@ export class Lunarinth extends Boss {
     const into = P.t % 3, flicker = into > 2.4;
     if (P.t >= 3 && !P.flipped) { /* noop */ }
     if (Math.floor(P.t / 3) !== Math.floor((P.t - dt) / 3)) { P.dir *= -1; this.sfx('teleport'); G.world.beat(0.8); }
-    P.acc += dt; const step = 0.05 / (this.rate * k), arms = this.n(2, 1), white = flicker && Math.floor(P.t * 10) % 2 === 0;
+    P.acc += dt; const step = 0.075 / (this.rate * k), arms = this.n(2, 1), white = flicker && Math.floor(P.t * 10) % 2 === 0;
     while (P.acc >= step) {
       P.acc -= step;
       for (let a = 0; a < arms; a++) {
@@ -479,7 +479,7 @@ export class Lunarinth extends Boss {
   /** 제4식 ③: 화면 가장자리에서 수렴하는 초승달 + 5발 연속 조준탄 */
   _pConverge(dt, k, o = {}) {
     const P = (this.P.cv ??= { acc: 0, aimT: 0.6, burst: 0 });
-    P.acc += dt; const step = (o.step ?? 0.3) / (this.rate * k), cx = 0, cz = -1;
+    P.acc += dt; const step = (o.step ?? 0.3) * 1.35 / (this.rate * k), cx = 0, cz = -1;
     while (P.acc >= step) {
       P.acc -= step;
       const a = rnd(0, TAU), R = 12.5, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R * 0.85;
@@ -510,7 +510,7 @@ export class Lunarinth extends Boss {
   _ringsInit() {
     const P = (this.P.rings ??= { list: [], t: 0 }), cz = -1.5;
     const defs = [{ r: 3.4, w: 0.55 }, { r: 5.6, w: -0.42 }, { r: 7.8, w: 0.33 }];
-    for (const d of defs) { const n = Math.round((TAU * d.r) / (1.18 - this.D.lv * 0.0)); P.list.push({ ...d, n, ang: rnd(0, TAU), gap: rnd(0, TAU), gw: 1.05, items: Array.from({ length: n }, (_, i) => ({ phi: (i / n) * TAU, b: null })), cz }); }
+    for (const d of defs) { const n = Math.round((TAU * d.r) / 1.5); P.list.push({ ...d, n, ang: rnd(0, TAU), gap: rnd(0, TAU), gw: 1.05, items: Array.from({ length: n }, (_, i) => ({ phi: (i / n) * TAU, b: null })), cz }); }
     this._ringsGaps(true);
   }
   _ringsGaps(first = false) {
@@ -557,7 +557,7 @@ export class Lunarinth extends Boss {
     while (true) {
       const dt = yield 0; t += dt;
       const prog = Math.min(1, t / 20), k = 0.7 + 0.7 * prog;
-      this._p8(dt, k, { spin: -0.45, step: 0.14, speed: 3.6, kind: 'crescent', size: 1.3, spinB: 5, arms: this.n(8, 5) });
+      this._p8(dt, k, { spin: -0.45, step: 0.14, speed: 3.6, kind: 'crescent', size: 1.3, spinB: 5, arms: this.n(6, 4) });
       this._pSlash(dt, k, { interval: 2.8, prog });
     }
   }

@@ -25,10 +25,20 @@ export const BELLIS = {
   ],
 };
 
+// 6스테이지 중간 보스로 다시 나타난 벨리스: 통상 1개 + (하드 이상) 스킬 1개
+export const BELLIS_MID = {
+  ...BELLIS, music: 'midboss', hpMul: 0.5, epithet: '문 앞의 감사관',
+  allSteps: [
+    { kind: 'nonspell', name: '검수 개시', form: 'audit', hp: 700, time: 36, attacks: ['stampLines', 'ruleCircle', 'redPen'], idle: 1.0, ultMode: 'normal' },
+    { kind: 'spell', tag: '필사', name: '아케인 스크립트', form: 'script', hp: 900, time: 46, attacks: ['spScript'], idle: 0.8, ultMode: 'normal', minLv: 2 },
+  ],
+  steps: [],
+};
+
 const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return Math.abs(d); };
 
 export class Bellis extends Boss {
-  constructor(scene, T, tex, aspect, G) { super(scene, T, tex, aspect, G, BELLIS); }
+  constructor(scene, T, tex, aspect, G, def = BELLIS) { super(scene, T, tex, aspect, G, def); }
 
   addAnalysis(v) { this.analysis = Math.min(100, this.analysis + v); }
   /** 분석률에 비례한 증폭 (라스트 스킬에서 사용). 1.0 ~ 1.35 */

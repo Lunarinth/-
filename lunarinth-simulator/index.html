@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LUNARINTH — 달의 삼위일체</title>
-<meta name="description" content="루센트 저택의 달의 정원. 옵서 · 벨리스 · 루나린스와의 2.5D 탄막 보스전.">
+<meta name="description" content="루센트 저택의 달의 정원. 여섯 개의 전장과 EXTRA, 2.5D 탄막 보스전.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23cdb8ff' d='M40 6a26 26 0 1 0 0 52 22 22 0 1 1 0-52z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,12 +74,12 @@
   <div class="m-bg"><i class="m-ring r1"></i><i class="m-ring r2"></i><i class="m-ring r3"></i><canvas id="m-fx"></canvas></div>
   <img class="m-char m-claire" src="assets/claire.png" alt="">
   <img class="m-char m-luna" src="assets/lunarinth.png" alt="">
-  <div class="m-trio"><img src="assets/opsir.png" alt=""><img src="assets/bellis.png" alt=""></div>
+  <div class="m-trio"><img src="assets/opsir.png" alt=""><img src="assets/astra.png" alt=""><img src="assets/tramont.png" alt=""><img src="assets/index.png" alt=""><img src="assets/bellis.png" alt=""></div>
   <div class="m-inner">
     <div class="m-kicker">LUCENT MANOR · MIDNIGHT GARDEN</div>
     <h1>LUNARINTH</h1>
     <div class="m-sub">달의 삼위일체</div>
-    <div class="m-tag">~ 옵서 · 벨리스 · 루나린스, 세 개의 밤을 넘어서 ~</div>
+    <div class="m-tag">~ 여섯 개의 전장을 지나, 달의 정원으로 ~</div>
     <div class="m-btns" id="m-main">
       <button id="btn-start" class="primary">게임 시작</button>
       <button id="btn-extra" class="locked">EXTRA <i class="lock">🔒</i></button>
@@ -89,7 +89,7 @@
     </div>
     <p class="m-foot">↑↓ 선택 · Z / Enter 결정 · X / Esc 취소 · 헤드폰 권장</p>
   </div>
-  <div class="m-ver">v3.1 · STAGE 1 · 5 · FINAL</div>
+  <div class="m-ver">v4.0 · STAGE 1 – 6 · EXTRA</div>
 </section>
 
 <!-- 난이도 선택 -->
@@ -115,15 +115,16 @@
     <table class="keys">
       <tr><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>이동</td></tr>
       <tr><td><kbd>Z</kbd></td><td>샷 (누르고 있으면 연사) · 대사 넘기기 · 결정</td></tr>
-      <tr><td><kbd>X</kbd></td><td>궁극기 「성검 해방」 — 무적 + 탄 소거 + 큰 피해. 피탄 직후 아주 짧은 유예 안에 쓰면 사망을 취소합니다</td></tr>
-      <tr><td><kbd>Shift</kbd></td><td>저속 이동 + 피탄점 표시 · 샷이 정면에 집중되고 유도 검기가 나갑니다</td></tr>
+      <tr><td><kbd>X</kbd></td><td>궁극기 (기체마다 다름) — 무적 + 탄 소거 + 큰 피해. 피탄 직후 아주 짧은 유예 안에 쓰면 사망을 취소합니다</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>저속 이동 + 피탄점 표시 · 샷이 정면에 집중됩니다</td></tr>
       <tr><td><kbd>Esc</kbd> · <kbd>P</kbd></td><td>일시정지 · 취소 · 대사 건너뛰기</td></tr>
     </table>
     <ul class="tips">
       <li>작은 붉은 점이 실제 피탄점입니다. 탄의 겉모양이 아니라 이 점이 닿을 때만 맞습니다.</li>
-      <li>피격 시 체력이 1 줄고 잠시 무적이 됩니다. 체력을 모두 잃으면 컨티뉴(기본 3회)를 쓸 수 있고, 컨티뉴를 한 번이라도 쓰면 엔딩이 달라집니다.</li>
+      <li>피격 시 체력이 1 줄고 잠시 무적이 됩니다. 체력을 모두 잃으면 컨티뉴(기본 3회)를 쓸 수 있고, 컨티뉴를 한 번이라도 쓰면 엔딩이 달라집니다. EXTRA에는 컨티뉴가 없습니다.</li>
       <li>보스는 통상 → 스킬 순서로 이어지는 “단계”마다 체력과 제한시간이 따로 있습니다. 시간이 지나도 다음 단계로 넘어갑니다.</li>
-      <li>루나린스는 궁극기에 저항하고, 라스트 스킬에는 완전히 면역입니다. 벨리스의 「리젝트」와 「파이널 베리딕트」는 궁극기를 무효화합니다.</li>
+      <li>보스에 따라 궁극기가 통하지 않거나 크게 줄어드는 기술이 있습니다. 화면에 알림이 나옵니다.</li>
+      <li>스테이지 중간에는 길을 막는 중간 보스가 나옵니다. 하드 이상에서는 기술이 하나 더 붙습니다.</li>
       <li>붉은 원·선은 곧 터질 공격, 연한 선은 예고선입니다.</li>
     </ul>
     <button class="close">닫기</button>
@@ -139,6 +140,7 @@
     <label class="chk"><input type="checkbox" id="o-mute"> 음소거</label>
     <label class="chk"><input type="checkbox" id="o-shake"> 화면 흔들림</label>
     <label class="chk"><input type="checkbox" id="o-calm"> 깜빡임 줄이기 (플래시·색 왜곡 완화)</label>
+    <label class="row pass">암호 <input type="text" id="o-pass" autocomplete="off" spellcheck="false" placeholder="테스트용"></label>
     <button class="close">닫기</button>
   </div>
 </section>

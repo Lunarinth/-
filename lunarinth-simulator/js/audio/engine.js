@@ -53,11 +53,11 @@ export class AudioEngine {
     try { localStorage.setItem(KEY, JSON.stringify({ vol: this.vol, muted: this.muted })); } catch (e) { /* noop */ }
   }
 
-  init() {
+  init(external = null) {
     if (this.ctx) { this.resume(); return true; }
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return false;
-    const c = (this.ctx = new AC({ latencyHint: 'interactive' }));
+    if (!AC && !external) return false;
+    const c = (this.ctx = external || new AC({ latencyHint: 'interactive' }));
 
     this.master = c.createGain();
     this.comp = c.createDynamicsCompressor();
@@ -273,5 +273,39 @@ export class AudioEngine {
     const stopT = t + dur + r * 1.6 + 0.05;
     for (const x of oscs) x.stop(stopT);
     this.send(out, b, o.rev ?? 0.7, 0);
+  }
+
+  // ---------- 추가 악기 (v4) ----------
+  /** 현악 앙상블: 느린 어택 + 비브라토 */
+  strings(b, t, midis, dur, vol = 0.04, o = {}) {
+    const a = Math.min(o.a ?? 0.35, dur * 0.5), r = o.r ?? 0.6;
+    for (const m of midis) for (const det of [-8, 8]) {
+      this.tone(b, { type: 'sawtooth', f: mtof(m), detune: det, t, dur, vol: vol * 0.7, a, d: dur * 0.3, s: 0.9, r, cut: o.cut || 2200, cutTo: o.cutTo || 3200, cutT: dur * 0.6, q: 0.4, vib: o.vib ?? 12, vibRate: 5.1, rev: o.rev ?? 0.55, dly: o.dly ?? 0 });
+    }
+  }
+  /** 하프: 맑고 긴 여운 */
+  harp(b, t, midi, vol = 0.07, dur = 1.6, o = {}) {
+    this.tone(b, { type: 'triangle', f: mtof(midi), t, dur, vol, a: 0.002, d: dur * 0.9, s: 0.02, r: 0.12, cut: o.cut || 4600, cutTo: 900, q: 0.8, rev: o.rev ?? 0.5, dly: o.dly ?? 0.3 });
+    this.tone(b, { type: 'sine', f: mtof(midi + 12), t, dur: dur * 0.6, vol: vol * 0.35, a: 0.002, d: dur * 0.5, s: 0.01, r: 0.08, rev: o.rev ?? 0.5 });
+  }
+  /** 파이프 오르간: 정수배음 가산 */
+  organ(b, t, midis, dur, vol = 0.04, o = {}) {
+    const a = Math.min(o.a ?? 0.04, dur * 0.4);
+    for (const m of midis) for (const [k, g] of [[1, 1], [2, 0.55], [3, 0.35], [4, 0.2]]) {
+      this.tone(b, { type: 'sine', f: mtof(m) * k, t, dur, vol: vol * g * 0.6, a, d: 0.1, s: 0.9, r: o.r ?? 0.12, vib: 5, vibRate: 5, rev: o.rev ?? 0.6 });
+    }
+  }
+  /** 아코디언풍 리드(리드 악기) */
+  reed(b, t, midi, dur, vol = 0.06, o = {}) {
+    for (const [ty, det] of [['sawtooth', -7], ['square', 7]]) this.tone(b, { type: ty, f: mtof(midi), detune: det, t, dur, vol: vol * 0.6, a: 0.02, d: 0.1, s: 0.8, r: 0.1, cut: 2400, cutTo: 1600, q: 0.9, vib: o.vib ?? 16, vibRate: 5.8, rev: o.rev ?? 0.35, dly: o.dly ?? 0.15 });
+  }
+  /** 피치카토 */
+  pizz(b, t, midi, vol = 0.08, dur = 0.22, o = {}) {
+    this.tone(b, { type: 'triangle', f: mtof(midi), t, dur, vol, a: 0.002, d: dur * 0.9, s: 0.02, r: 0.05, cut: 2600, cutTo: 600, q: 1.1, rev: o.rev ?? 0.3, dly: o.dly ?? 0.1 });
+  }
+  /** 심벌/크래시 */
+  crash(b, t, vol = 0.12, dur = 1.6) {
+    this.noise(b, { t, dur, vol, type: 'highpass', f: 5200, q: 0.6, a: 0.002, rev: 0.4 });
+    this.noise(b, { t, dur: dur * 0.5, vol: vol * 0.6, type: 'bandpass', f: 9000, q: 0.5, a: 0.002 });
   }
 }

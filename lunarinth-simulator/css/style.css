@@ -281,3 +281,12 @@ input[type="range"] { accent-color: #b99bff; width: 100%; }
 #btn-extra:not(.locked) { border-color: rgba(255, 220, 140, .8); box-shadow: 0 0 18px rgba(255, 200, 120, .35); }
 .m-btns { gap: 10px; }
 .m-btns button { padding: 11px 20px; }
+
+/* v4: 기체 잠금 · 암호 입력 · 타이틀 행렬 */
+.card.char.locked { opacity: .5; filter: grayscale(.8) brightness(.7); }
+.card.char.locked::after { content: '🔒'; position: absolute; right: 10px; top: 8px; font-size: 18px; }
+.card.char { position: relative; }
+.row.pass { grid-template-columns: 70px 1fr; }
+.row.pass input { background: rgba(255,255,255,.06); border: 1px solid rgba(200,180,255,.35); border-radius: 8px; color: var(--ink); padding: 6px 10px; font: inherit; }
+.m-trio { gap: 0; }
+.m-trio img { height: min(26vh, 240px); margin: 0 -1.2vw; }

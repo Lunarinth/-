@@ -50,7 +50,15 @@ export class Boss {
   /** 현재 체력 비율 (현재 단계 기준) */
   get ratio() { return this.hpMax > 0 ? Math.max(0, this.hp / this.hpMax) : 0; }
 
+  /** def.allSteps 가 있으면 난이도(minLv)와 기체(variant)에 맞춰 이번 판의 단계 목록을 만든다 */
+  buildSteps() {
+    const def = this.def; if (!def.allSteps) return;
+    const lv = this.G.run && this.G.run.diff ? this.G.run.diff.lv : 1, cid = this.G.run && this.G.run.char ? this.G.run.char.id : 'claire';
+    def.steps = def.allSteps.filter((s) => (s.minLv ?? 0) <= lv).map((s) => (s.variant ? { ...s, ...(s.variant[cid] || s.variant.claire) } : s));
+  }
+
   reset() {
+    this.buildSteps();
     this.stepIdx = 0; this.hp = 1; this.hpMax = 1; this.timeLeft = 0; this.state = 'idle'; // idle|declare|run|between|dead
     this.alive = true; this.vulnerable = false; this.visible = false; this.shield = false; this.shieldV = 0;
     this.bobY = 4; this.x = 0; this.z = -6.5; this.tx = 0; this.tz = -6.5; this.tk = 4;
@@ -97,7 +105,10 @@ export class Boss {
   }
 
   beginRun() {
-    this.state = 'run'; this.vulnerable = this.step.kind !== 'ultimate'; this.shield = this.step.kind === 'ultimate'; // 얼티메이트 중 루나린스는 무적 this.idleT = this.step.kind === 'ultimate' ? 0 : 0.6; this.stepT = 0;
+    // 얼티메이트 · 버티기(endure) 단계의 보스는 무적이다
+    const inv = this.step.kind === 'ultimate' || !!this.step.endure;
+    this.state = 'run'; this.vulnerable = !inv; this.shield = inv && !this.step.endure;
+    this.idleT = inv ? 0 : 0.6; this.stepT = 0;
     this.G.ui.setBossTimer(this.timeLeft);
   }
 

@@ -3,6 +3,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 
 const BULLET_Y = 0.9;
+const KIND_TEX = { crescent: 'crescent', shard: 'shard', ring: 'ring', star: 'spark', glyph: 'glyph', pixel: 'pixel', page: 'pagebullet', blade: 'blade', petal: 'petal' };
 const ADD = THREE.AdditiveBlending;
 const TAU = Math.PI * 2;
 
@@ -33,19 +34,19 @@ export class Bullets {
     b.active = true; b.owner = o.owner || 'boss'; b.kind = o.kind || 'orb';
     b.x = o.x; b.z = o.z; b.vx = Math.cos(a) * sp; b.vz = Math.sin(a) * sp;
     b.size = o.size ?? 1;
-    b.hr = o.hr ?? b.size * (b.kind === 'crescent' ? 0.3 : b.kind === 'shard' ? 0.24 : b.kind === 'star' ? 0.26 : b.kind === 'glyph' ? 0.3 : 0.28);
+    b.hr = o.hr ?? b.size * (b.kind === 'crescent' ? 0.3 : b.kind === 'shard' ? 0.24 : b.kind === 'star' ? 0.26 : b.kind === 'glyph' ? 0.3 : b.kind === 'blade' ? 0.2 : b.kind === 'pixel' || b.kind === 'page' ? 0.28 : b.kind === 'petal' ? 0.25 : 0.28);
     b.armAt = (o.delay || 0) + (o.arm ?? (o.hold ? 0.55 : 0)); // 출현 직후에는 판정이 없다 (눈앞에서 생긴 탄에 즉사하지 않게)
     b.hold = o.hold || 0; b.reaim = !!o.reaim; b.relSpeed = sp; b.relA = a;
     b.life = o.life ?? 9; b.age = 0;
     b.homing = o.homing || 0; b.homeT = o.homeT ?? 3; b.turn = o.turn || 0;
     b.accel = o.accel || 0; b.minS = o.minS ?? 0; b.maxS = o.maxS ?? 99;
-    b.spin = o.spin || 0; b.rot = o.rot ?? (b.kind === 'crescent' ? -a : 0);
+    b.spin = o.spin || 0; b.rot = o.rot ?? (b.kind === 'crescent' || b.kind === 'blade' || b.kind === 'page' || b.kind === 'petal' ? -a : 0);
     b.dmg = o.dmg ?? 1; b.grazed = false; b.reflected = false; b.trail = !!o.trail; b.trailT = 0;
     b.delay = o.delay || 0; b.tag = o.tag || null; b.accelAt = o.accelAt || 0; b.orbit = o.orbit ? { ...o.orbit } : null;
     b.color = o.color ?? 0xffffff;
-    b.mat.map = this.T[['crescent', 'shard', 'ring', 'star', 'glyph'].includes(b.kind) ? (b.kind === 'star' ? 'spark' : b.kind) : 'orb'];
+    b.mat.map = this.T[KIND_TEX[b.kind] || 'orb'];
     b.mat.color.setHex(b.color); b.mat.opacity = 0; b.mat.rotation = b.rot;
-    const hot = (b.kind === 'orb' || b.kind === 'shard' || b.kind === 'star') && b.owner !== 'player';
+    const hot = (b.kind === 'orb' || b.kind === 'shard' || b.kind === 'star' || b.kind === 'pixel') && b.owner !== 'player';
     b.core.visible = hot; b.cmat.opacity = 0;
     b.spr.visible = true; b.spr.position.set(b.x, BULLET_Y, b.z);
     b.core.position.set(b.x, BULLET_Y, b.z);
@@ -182,7 +183,7 @@ export class Zones {
   spawn(o) {
     const z = this.list.find((q) => !q.active); if (!z) return null;
     z.active = true; z.x = o.x; z.z = o.z; z.r = o.r ?? 1.6; z.warn = o.warn ?? 0.9; z.dur = o.dur ?? 0.3; z.t = 0; z.state = 0;
-    z.color = o.color ?? 0xffffff; z.dmg = o.dmg ?? 1; z.onBoom = o.onBoom || null; z.kind = o.kind || 'light';
+    z.color = o.color ?? 0xffffff; z.dmg = o.dmg ?? 1; z.onBoom = o.onBoom || null; z.kind = o.kind || 'light'; z.pull = o.pull;
     z.disc.position.set(z.x, 0.05, z.z); z.conv.position.set(z.x, 0.06, z.z);
     z.disc.material.color.setHex(z.color); z.conv.material.color.setHex(z.color); z.pil.material.color.setHex(z.color);
     z.disc.visible = z.conv.visible = true; z.pil.visible = false;
@@ -193,17 +194,25 @@ export class Zones {
   update(dt, px, pz, pr, fx, audio, world) {
     let hit = 0;
     this.bound = false; // 구속 마법진(bind) 안에 있으면 true — 이동 속도가 느려진다
+    this.invert = false; this.lag = false; this.pullX = 0; this.pullZ = 0; // 기믹 장: 조작 반전 / 입력 지연 / 중력
     for (const z of this.list) {
       if (!z.active) continue;
       z.t += dt;
-      if (z.kind === 'bind') {
+      if (z.kind === 'bind' || z.kind === 'invert' || z.kind === 'lag' || z.kind === 'gravity') {
         // 구속진: 경고 없이 페이드 인 → 유지 → 소멸. 피해는 없고 이동만 둔화시킨다.
         const life = z.warn + z.dur, k = z.t / life;
         z.disc.scale.set(z.r * 2, 1, z.r * 2); z.conv.scale.set(z.r * 2.15, 1, z.r * 2.15);
         z.conv.rotation.y += dt * 1.4;
         const fade = Math.min(1, z.t / 0.35) * (z.t > life - 0.4 ? Math.max(0, (life - z.t) / 0.4) : 1);
         z.disc.material.opacity = 0.42 * fade; z.conv.material.opacity = 0.85 * fade;
-        if (z.t > 0.35 && (px - z.x) ** 2 + (pz - z.z) ** 2 < z.r * z.r) this.bound = true;
+        const inside = z.t > 0.35 && (px - z.x) ** 2 + (pz - z.z) ** 2 < z.r * z.r;
+        if (inside) {
+          if (z.kind === 'bind') this.bound = true;
+          else if (z.kind === 'invert') this.invert = true;
+          else if (z.kind === 'lag') this.lag = true;
+          else { const dx = z.x - px, dz = z.z - pz, d = Math.hypot(dx, dz) || 1, s = (z.pull ?? 4.2) * (0.5 + 0.5 * Math.min(1, d / z.r)); this.pullX += (dx / d) * s; this.pullZ += (dz / d) * s; }
+        }
+        if (z.kind === 'gravity') z.conv.rotation.y -= dt * 3.2;
         if (k >= 1) { z.active = false; z.disc.visible = z.conv.visible = z.pil.visible = false; }
         continue;
       }

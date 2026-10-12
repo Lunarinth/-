@@ -224,6 +224,71 @@ export function makeTextures() {
     }
   });
 
+  // ───── 스테이지별 전장 환경: 바닥 + 배경 실루엣 ─────
+  const rr = (seed0) => { let sd = seed0; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); };
+  const floorVar = (c0, c1, c2, line, style) => mk(1024, 1024, (g) => {
+    const gr = g.createRadialGradient(512, 512, 40, 512, 512, 500);
+    gr.addColorStop(0, c0); gr.addColorStop(0.7, c1); gr.addColorStop(1, c2);
+    g.fillStyle = gr; g.beginPath(); g.arc(512, 512, 500, 0, Math.PI * 2); g.fill();
+    g.save(); g.beginPath(); g.arc(512, 512, 496, 0, Math.PI * 2); g.clip();
+    g.strokeStyle = line; g.fillStyle = line;
+    if (style === 'grid') { g.lineWidth = 2; for (let i = -8; i <= 8; i++) { g.beginPath(); g.moveTo(512 + i * 64, 0); g.lineTo(512 + i * 64, 1024); g.stroke(); g.beginPath(); g.moveTo(0, 512 + i * 64); g.lineTo(1024, 512 + i * 64); g.stroke(); } g.lineWidth = 3; for (let i = 0; i < 26; i++) { const x = 40 + ((i * 197) % 940), y = 40 + ((i * 331) % 940); g.beginPath(); g.moveTo(x, y); g.lineTo(x + 64, y); g.lineTo(x + 64, y + 64); g.stroke(); g.fillRect(x - 4, y - 4, 8, 8); } }
+    else if (style === 'check') { for (let i = -8; i < 8; i++) for (let j = -8; j < 8; j++) if ((i + j) & 1) { g.globalAlpha = 0.5; g.fillRect(512 + i * 80, 512 + j * 80, 80, 80); } g.globalAlpha = 1; }
+    else if (style === 'planks') { g.lineWidth = 2; for (let j = -9; j <= 9; j++) { g.beginPath(); g.moveTo(0, 512 + j * 56); g.lineTo(1024, 512 + j * 56); g.stroke(); for (let i = 0; i < 9; i++) { const x = ((i * 173 + j * 97) % 1024 + 1024) % 1024; g.beginPath(); g.moveTo(x, 512 + j * 56); g.lineTo(x, 512 + j * 56 + 56); g.stroke(); } } }
+    else if (style === 'tiles') { g.lineWidth = 2; for (let k = 1; k < 8; k++) { g.strokeRect(512 - k * 62, 512 - k * 62, k * 124, k * 124); } for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(512, 512); g.lineTo(512 + Math.cos(i * Math.PI / 2 + 0.78) * 700, 512 + Math.sin(i * Math.PI / 2 + 0.78) * 700); g.stroke(); } }
+    else if (style === 'boards') { g.lineWidth = 3; for (let i = -9; i <= 9; i++) { g.beginPath(); g.moveTo(512 + i * 58, 0); g.lineTo(512 + i * 58, 1024); g.stroke(); } g.globalAlpha = 0.25; g.beginPath(); g.arc(512, 512, 180, 0, 7); g.fill(); g.globalAlpha = 1; }
+    g.restore();
+    g.strokeStyle = line; g.globalAlpha = 0.9; g.lineWidth = 5; g.beginPath(); g.arc(512, 512, 494, 0, Math.PI * 2); g.stroke();
+    g.globalAlpha = 0.35; g.lineWidth = 2; g.beginPath(); g.arc(512, 512, 478, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+  });
+  T.envFloor = {
+    observatory: floorVar('#16254f', '#0f1a3d', '#060d24', 'rgba(150,190,255,.14)', 'tiles'),
+    techlab: floorVar('#0e2b3d', '#0a1d2e', '#040e18', 'rgba(110,220,255,.22)', 'grid'),
+    terrace: floorVar('#5a3a45', '#3d2433', '#1e101c', 'rgba(255,190,150,.16)', 'check'),
+    library: floorVar('#3f2a1a', '#2a1a10', '#120a06', 'rgba(255,214,140,.14)', 'planks'),
+    archive: floorVar('#2a1650', '#1a0c36', '#0a0420', 'rgba(210,170,255,.16)', 'tiles'),
+    theater: floorVar('#4a0f1c', '#2c0810', '#120308', 'rgba(255,120,140,.2)', 'boards'),
+    moongarden: T.floor,
+  };
+  const silhouette = (seed0, drawOne) => mk(2048, 512, (g, w, h) => {
+    g.fillStyle = '#fff'; const r = rr(seed0); let x = 0;
+    while (x < w) { const bw = 80 + r() * 150, bh = 150 + r() * 280; g.beginPath(); drawOne(g, x, h, bw, bh, r()); g.closePath(); g.fill(); x += bw * (0.55 + r() * 0.5); }
+  });
+  const hole = (g, x, y, ww, hh) => { g.save(); g.globalCompositeOperation = 'destination-out'; g.fillRect(x, y, ww, hh); g.restore(); };
+  T.envRuins = {
+    // 관측대: 돔과 망원경 탑
+    observatory: silhouette(21, (g, x, h, bw, bh, k) => {
+      if (k < 0.5) { g.moveTo(x, h); g.lineTo(x, h - bh * 0.5); g.arc(x + bw / 2, h - bh * 0.5, bw / 2, Math.PI, 0); g.lineTo(x + bw, h); }
+      else { g.moveTo(x + bw * 0.3, h); g.lineTo(x + bw * 0.38, h - bh); g.lineTo(x + bw * 0.5, h - bh); g.lineTo(x + bw * 0.7, h); }
+    }),
+    // 기술실: 서버 랙 탑과 안테나
+    techlab: silhouette(33, (g, x, h, bw, bh, k) => {
+      if (k < 0.65) { g.rect(x, h - bh, bw * 0.7, bh); } else { g.moveTo(x + bw * 0.3, h); g.lineTo(x + bw * 0.34, h - bh * 1.15); g.lineTo(x + bw * 0.38, h); }
+    }),
+    // 테라스: 아치 회랑과 굴뚝 · 돔
+    terrace: silhouette(47, (g, x, h, bw, bh, k) => {
+      if (k < 0.5) { g.rect(x, h - bh * 0.55, bw, bh * 0.55); g.moveTo(x + bw * 0.1, h - bh * 0.55); g.arc(x + bw / 2, h - bh * 0.55, bw * 0.4, Math.PI, 0); }
+      else if (k < 0.8) { g.rect(x + bw * 0.3, h - bh * 0.9, bw * 0.22, bh * 0.9); }
+      else { g.moveTo(x, h); g.lineTo(x + bw / 2, h - bh * 0.7); g.lineTo(x + bw, h); }
+    }),
+    // 도서관: 서가 벽 (칸막이) + 아치창
+    library: mk(2048, 512, (g, w, h) => {
+      g.fillStyle = '#fff'; const r = rr(59); let x = 0;
+      while (x < w) { const bw = 110 + r() * 120, bh = 200 + r() * 230; g.fillRect(x, h - bh, bw, bh); for (let y = h - bh + 24; y < h; y += 34) hole(g, x + 6, y, bw - 12, 5); if (r() < 0.4) { g.save(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.moveTo(x + bw * 0.3, h - bh * 0.4); g.lineTo(x + bw * 0.3, h - bh * 0.6); g.quadraticCurveTo(x + bw / 2, h - bh * 0.78, x + bw * 0.7, h - bh * 0.6); g.lineTo(x + bw * 0.7, h - bh * 0.4); g.fill(); g.restore(); } x += bw + 8 + r() * 30; }
+    }),
+    // 기록실: 가는 기둥과 두루마리 통
+    archive: silhouette(71, (g, x, h, bw, bh, k) => {
+      if (k < 0.6) { g.rect(x + bw * 0.35, h - bh, bw * 0.2, bh); g.moveTo(x + bw * 0.3, h - bh); g.arc(x + bw * 0.45, h - bh, bw * 0.16, Math.PI, 0); }
+      else { g.moveTo(x, h); g.lineTo(x, h - bh * 0.6); g.lineTo(x + bw, h - bh * 0.6); g.lineTo(x + bw, h); }
+    }),
+    // 극장: 프로시니엄 기둥과 커튼 주름
+    theater: silhouette(83, (g, x, h, bw, bh, k) => {
+      if (k < 0.5) { g.rect(x, h - bh * 1.1, bw * 0.28, bh * 1.1); }
+      else { g.moveTo(x, h); g.quadraticCurveTo(x + bw * 0.2, h - bh * 0.9, x + bw * 0.5, h - bh * 0.35); g.quadraticCurveTo(x + bw * 0.8, h - bh * 0.9, x + bw, h); }
+    }),
+    moongarden: T.ruins,
+  };
+
   // 룬 문자 탄 (벨리스의 마도서 문자). 얇은 고리 안에 각진 룬 한 글자.
   T.glyph = mk(128, 128, (g) => {
     g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineJoin = 'round';
@@ -276,6 +341,66 @@ export function makeTextures() {
     g.globalAlpha = 0.5; g.beginPath(); g.arc(128, 128, 66, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
     g.lineWidth = 3; for (let i = 0; i < 16; i++) { const a = (i * Math.PI) / 8; g.beginPath(); g.moveTo(128 + Math.cos(a) * 74, 128 + Math.sin(a) * 74); g.lineTo(128 + Math.cos(a) * (i % 2 ? 92 : 104), 128 + Math.sin(a) * (i % 2 ? 92 : 104)); g.stroke(); }
     circ(g, 66, 3);
+  });
+
+
+  // ───── v4: 새 탄 종류 ─────
+  T.pixel = mk(64, 64, (g) => { // 픽셀(패킷) 탄
+    g.shadowColor = '#fff'; g.shadowBlur = 10; g.fillStyle = '#fff'; g.fillRect(14, 14, 36, 36);
+    g.shadowBlur = 0; g.fillStyle = 'rgba(180,180,180,.8)'; g.fillRect(14, 14, 18, 18);
+  });
+  T.pagebullet = mk(96, 96, (g) => { // 페이지(쪽) 탄
+    g.shadowColor = '#fff'; g.shadowBlur = 10; g.fillStyle = '#fff'; g.beginPath(); g.roundRect(26, 14, 44, 68, 5); g.fill();
+    g.shadowBlur = 0; g.strokeStyle = 'rgba(120,120,120,.85)'; g.lineWidth = 3;
+    for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(34, 28 + i * 11); g.lineTo(62, 28 + i * 11); g.stroke(); }
+  });
+  T.blade = mk(128, 64, (g) => { // 검섬(칼날) 탄: +x 방향으로 뾰족
+    g.shadowColor = '#fff'; g.shadowBlur = 12; g.fillStyle = '#fff';
+    g.beginPath(); g.moveTo(8, 32); g.quadraticCurveTo(60, 22, 120, 32); g.quadraticCurveTo(60, 42, 8, 32); g.fill();
+    g.shadowBlur = 0; g.fillStyle = 'rgba(200,200,200,.75)'; g.beginPath(); g.moveTo(40, 32); g.lineTo(118, 32); g.lineTo(60, 27); g.closePath(); g.fill();
+  });
+  T.petal = mk(96, 96, (g) => { // 꽃잎 탄
+    g.shadowColor = '#fff'; g.shadowBlur = 10; g.fillStyle = '#fff';
+    g.beginPath(); g.moveTo(48, 12); g.bezierCurveTo(80, 28, 80, 68, 48, 86); g.bezierCurveTo(16, 68, 16, 28, 48, 12); g.fill();
+    g.shadowBlur = 0; g.strokeStyle = 'rgba(150,150,150,.8)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(48, 20); g.lineTo(48, 78); g.stroke();
+  });
+  T.holo = mk(256, 160, (g) => { // 홀로그램 패널 (시야 차단 기믹)
+    g.fillStyle = 'rgba(80,170,255,.55)'; g.beginPath(); g.roundRect(6, 6, 244, 148, 10); g.fill();
+    g.strokeStyle = 'rgba(200,240,255,.95)'; g.lineWidth = 4; g.beginPath(); g.roundRect(6, 6, 244, 148, 10); g.stroke();
+    g.strokeStyle = 'rgba(220,245,255,.8)'; g.lineWidth = 2;
+    for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(24, 34 + i * 18); g.lineTo(24 + 70 + ((i * 53) % 110), 34 + i * 18); g.stroke(); }
+    g.beginPath(); g.arc(196, 70, 34, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.moveTo(196, 30); g.lineTo(196, 110); g.moveTo(156, 70); g.lineTo(236, 70); g.stroke();
+  });
+  // 병사 문양 추가: 회로 / 장미창 / 서가 / 장부 / 인형
+  T.mob_circuit = sig((g) => {
+    circ(g, 112); circ(g, 92, 2.5);
+    g.lineWidth = 4; g.strokeRect(78, 78, 100, 100);
+    for (let i = 0; i < 4; i++) { for (const [x, y, dx, dy] of [[98 + i * 20, 78, 0, -26], [98 + i * 20, 178, 0, 26], [78, 98 + i * 20, -26, 0], [178, 98 + i * 20, 26, 0]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + dx, y + dy); g.stroke(); } }
+    g.globalAlpha = 0.35; g.fillRect(104, 104, 48, 48); g.globalAlpha = 1; g.beginPath(); g.arc(128, 128, 10, 0, Math.PI * 2); g.fill();
+  });
+  T.mob_rose = sig((g) => {
+    circ(g, 112); circ(g, 100, 2);
+    for (let i = 0; i < 12; i++) { const a = (i * Math.PI) / 6; g.beginPath(); g.ellipse(128 + Math.cos(a) * 56, 128 + Math.sin(a) * 56, 26, 11, a, 0, Math.PI * 2); g.stroke(); }
+    circ(g, 32, 4); g.beginPath(); g.arc(128, 128, 9, 0, Math.PI * 2); g.fill();
+  });
+  T.mob_tome = sig((g) => {
+    circ(g, 112); circ(g, 96, 2);
+    g.lineWidth = 4; g.strokeRect(76, 90, 104, 78); g.beginPath(); g.moveTo(128, 90); g.lineTo(128, 168); g.stroke();
+    g.beginPath(); g.arc(128, 70, 14, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.moveTo(128, 84); g.lineTo(128, 116); g.moveTo(128, 104); g.lineTo(140, 104); g.stroke();
+    g.lineWidth = 2.5; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(88, 108 + k * 18); g.lineTo(118, 108 + k * 18); g.moveTo(138, 108 + k * 18); g.lineTo(168, 108 + k * 18); g.stroke(); }
+  });
+  T.mob_ledger = sig((g) => {
+    circ(g, 112); circ(g, 100, 2);
+    g.lineWidth = 3.5; g.strokeRect(72, 64, 112, 128);
+    for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(72, 90 + k * 18); g.lineTo(184, 90 + k * 18); g.stroke(); }
+    g.beginPath(); g.moveTo(112, 64); g.lineTo(112, 192); g.stroke(); circ(g, 22, 4);
+  });
+  T.mob_puppet = sig((g) => {
+    circ(g, 112); circ(g, 96, 2);
+    g.lineWidth = 4; g.beginPath(); g.moveTo(78, 74); g.lineTo(178, 74); g.stroke(); g.beginPath(); g.moveTo(128, 74); g.lineTo(128, 96); g.stroke();
+    for (const x of [92, 128, 164]) { g.lineWidth = 2; g.beginPath(); g.moveTo(x, 74); g.lineTo(128, 120); g.stroke(); }
+    g.lineWidth = 4; g.beginPath(); g.arc(128, 132, 22, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(128, 154); g.lineTo(128, 196); g.moveTo(104, 168); g.lineTo(152, 168); g.moveTo(128, 196); g.lineTo(108, 224); g.moveTo(128, 196); g.lineTo(148, 224); g.stroke();
   });
 
   T.dot = mk(32, 32, (g) => {

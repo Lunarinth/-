@@ -5,7 +5,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { ARENA_R } from './scene.js';
 
 export const PLAYER = {
-  speed: 8.6, focusSpeed: 3.6, hr: 0.12, grazeR: 0.55,
+  speed: 8.6, focusSpeed: 3.6, hr: 0.075, grazeR: 0.5,
   shotCd: 0.085,
   hitInv: 1.7, respawnInv: 2.5,
   maxUlt: 3, ultDur: 2.5, ultTotal: 280, ultInv: 4.2,
@@ -52,6 +52,7 @@ export class Player {
   get ultActive() { return this.ultT > 0; }
 
   update(dt, input, G, canShoot = true) {
+    this.G = G;
     if (!this.alive) return;
     this.inv = Math.max(0, this.inv - dt); this.shotCd = Math.max(0, this.shotCd - dt);
     this.invertT = Math.max(0, this.invertT - dt); this.sealT = Math.max(0, this.sealT - dt);
@@ -59,11 +60,14 @@ export class Player {
     this.focus = input.focusHeld;
     this.focusK += ((this.focus ? 1 : 0) - this.focusK) * (1 - Math.exp(-dt * 18));
 
-    const mv = input.move(this.invertT > 0);
+    // 기믹: 조작 반전(invertT / 반전 장), 입력 지연(lag 장)
+    let mv = input.move(this.invertT > 0 || G.zones.invert);
+    this._mvq = this._mvq || []; this._mvq.push([G.t, mv]); while (this._mvq.length > 90) this._mvq.shift();
+    if (G.zones.lag) { const tt = G.t - 0.32; let pick = this._mvq[0][1]; for (const [t0, m] of this._mvq) { if (t0 <= tt) pick = m; else break; } mv = pick; }
     this.moving = mv[0] !== 0 || mv[1] !== 0;
     const bound = G.zones.bound ? 0.45 : 1;
     const sp = (this.focus ? PLAYER.focusSpeed : PLAYER.speed) * bound;
-    this.x += mv[0] * sp * dt; this.z += mv[1] * sp * dt;
+    this.x += mv[0] * sp * dt + (G.zones.pullX || 0) * dt; this.z += mv[1] * sp * dt + (G.zones.pullZ || 0) * dt;
     const l = Math.hypot(this.x, this.z), lim = ARENA_R - 0.55;
     if (l > lim) { this.x *= lim / l; this.z *= lim / l; }
     if (mv[0] !== 0) this.face = mv[0] > 0 ? 1 : -1;
@@ -87,6 +91,7 @@ export class Player {
   _fire(G) {
     this.shotCd = PLAYER.shotCd;
     const B = G.bullets, x = this.x, z = this.z - 0.5;
+    if (G.run.char && G.run.char.id === 'astra') { this._fireAstra(G); return; }
     const mk = (dx, a, dmg, o = {}) => B.spawn({ owner: 'player', kind: 'shard', x: x + dx, z, a, speed: o.speed ?? 34, size: o.size ?? 0.8, hr: o.hr ?? 0.34, life: 0.95, color: o.color ?? 0xffe9a6, dmg, rot: -(a - FWD), homing: o.homing || 0, homeT: 1.1 });
     if (this.focus) {
       // 저속: 정면에 집중된 3줄 + 유도 검기 2
@@ -100,11 +105,27 @@ export class Player {
     G.audio.sfx.play('shoot', { pan: G.audio.pan(this.x), vol: 0.5 });
   }
 
+  /** 아스트라: 중앙 직선탄 + 좌우 위성의 유도탄 (화력은 낮지만 알아서 적을 쫓는다) */
+  _fireAstra(G) {
+    const B = G.bullets, x = this.x, z = this.z - 0.5, t = G.t;
+    const mk = (dx, dz, a, dmg, o = {}) => B.spawn({ owner: 'player', kind: 'pixel', x: x + dx, z: z + dz, a, speed: o.speed ?? 32, size: o.size ?? 0.7, hr: o.hr ?? 0.3, life: 1.0, color: o.color ?? 0x9fd8ff, dmg, rot: -(a - FWD), homing: o.homing || 0, homeT: 1.1 });
+    const orb = (s) => { const k = this.focus ? 0.55 : 1.15; return [s * k * 1.0, Math.sin(t * 5 + s) * 0.25]; };
+    if (this.focus) {
+      mk(-0.2, 0, FWD, 1.9); mk(0.2, 0, FWD, 1.9); mk(0, -0.2, FWD, 2.0, { color: 0xffffff });
+      for (const s of [-1, 1]) { const [ox, oz] = orb(s); mk(ox, oz, FWD, 1.5, { color: 0xffe36b, homing: 8, speed: 28 }); }
+    } else {
+      mk(0, 0, FWD, 2.0, { color: 0xffffff });
+      mk(-0.3, 0, FWD - 0.1, 1.3); mk(0.3, 0, FWD + 0.1, 1.3);
+      for (const s of [-1, 1]) { const [ox, oz] = orb(s); mk(ox, oz, FWD + s * 0.12, 1.5, { color: 0xffe36b, homing: 7, speed: 26 }); mk(ox * 1.5, oz, FWD + s * 0.3, 1.2, { color: 0xffe36b, homing: 7, speed: 26 }); }
+    }
+    G.audio.sfx.play('shoot', { pan: G.audio.pan(this.x), vol: 0.4, pitch: 1.4 });
+  }
+
   /** 피탄. 체력이 1 줄고 잠시 무적이 된다. 얼티메이트 스킬 중에는 체력과 관계없이 즉사. @returns true if hit registered */
   hurt(G) {
     if (this.safe) return false;
     if (G.state !== 'fight' && G.state !== 'stage') return false; // 연출 중의 피탄은 무효
-    if (G.sealed) { G.onUltimateDeath(); return true; }
+    if (G.sealed) { if (G.run.debugInf) return false; G.onUltimateDeath(); return true; }
     this.hp = Math.max(0, this.hp - 1); this.inv = PLAYER.hitInv;
     G.stats.hits++; G.run.stepHit = true;
     G.ui.setHp(this.hp, this.maxHp);
@@ -113,7 +134,7 @@ export class Player {
     G.fx.burst(this.x, 1, this.z, 22, { color: [0xffb0d0, 0xffffff, 0xffd36b], speed: 7, size: 0.8, life: 0.8 });
     G.fx.ring(this.x, 0.5, this.z, 0xff7aa8, 6, 0.5);
     if (this.hp <= 0) { this.alive = false; G.onPlayerDown(); return true; }
-    if (G.state === 'fight' && Math.random() < 0.5) G.boss.barkFor('hurtPlayer');
+    if (G.state === 'fight' && Math.random() < 0.5) G.boss.barkFor(G.boss.def.id + 'Hit');
     return true;
   }
 
@@ -138,6 +159,7 @@ export class Player {
     G.world.shake(0.7, 0.5); G.world.beat(1.4);
     G.fx.ring(this.x, 0.5, this.z, 0xffe9a6, 14, 0.8);
     G.fx.burst(this.x, 1, this.z, 40, { color: [0xffffff, 0xffe9a6, 0xffd36b], speed: 11, size: 1.0, life: 1.0, up: 1.4 });
+    this.ultBeam.material.color.setHex(G.run.char && G.run.char.id === 'astra' ? 0x9fd8ff : 0xffe9a6);
     this.ultBeam.visible = mode !== 'reject' && G.state !== 'stage';
   }
 
@@ -188,11 +210,11 @@ export class Player {
     this.spr.position.set(this.x, h / 2 + bob, this.z);
     const blink = this.inv > 0 && this.ultT <= 0 && Math.floor(t * 20) % 2 === 0;
     this.spr.material.opacity = blink ? 0.3 : this.focus ? 0.8 : 1;
-    this.spr.material.color.setRGB(this.invertT > 0 ? 1.0 : 1, this.invertT > 0 ? 0.6 : 1, this.invertT > 0 ? 1.3 : 1);
+    const odd = this.invertT > 0 || (this.G && this.G.zones && (this.G.zones.invert || this.G.zones.lag)); this.spr.material.color.setRGB(1, odd ? 0.65 : 1, odd ? 1.3 : 1);
     this.shadow.position.x = this.x; this.shadow.position.z = this.z; this.shadow.scale.set(1.7, 1, 1.7);
 
     // 피탄점 (항상 표시: 작은 점 / 저속 시 테두리 링 확대)
-    const dy = 0.95, cs = 0.2 + this.focusK * 0.06;
+    const dy = 0.95, cs = 0.15 + this.focusK * 0.05;
     this.core.position.set(this.x, dy, this.z); this.dotRim.position.set(this.x, dy, this.z); this.focusRing.position.set(this.x, dy, this.z);
     this.core.material.opacity = this.alive ? 1 : 0; this.core.scale.setScalar(cs);
     this.dotRim.material.opacity = this.alive ? 0.95 : 0; this.dotRim.scale.setScalar(cs * 2.1);
