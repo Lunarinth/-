@@ -268,3 +268,37 @@ input[type="range"] { accent-color: #b99bff; width: 100%; }
 #dialog[data-who="claire"] { --a1: #ffd36b; --glass-edge: rgba(255, 211, 107, .45); }
 
 @keyframes spinc { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* ───────── v3: 체력 / 봉인 / EXTRA / 프랙티스 ───────── */
+#sealtag { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); text-align: center; font-family: var(--display); letter-spacing: .4em; color: #ff8aa8; text-shadow: 0 0 18px #ff2d6a, 0 0 4px #000; font-size: 15px; animation: blink 1.4s infinite; }
+#sealtag small { display: block; margin-top: 3px; font-family: var(--serif); letter-spacing: .12em; font-size: 11px; color: var(--ink-dim); text-shadow: 0 0 6px #000; }
+#hud.sealed #ults, #hud.sealed #stats > div:nth-child(2) { opacity: .22; filter: grayscale(1); }
+#hud.sealed #lives { opacity: .35; filter: grayscale(.8); }
+#hud.sealed #lives::after, #hud.sealed #ults::after { content: '봉인'; margin-left: 8px; font-size: 11px; letter-spacing: .2em; color: #ff8aa8; }
+#declare[data-kind="ultimate"] { --a1: #ff5f8f; --a2: #ffd9e6; }
+#btn-extra.locked { opacity: .55; border-style: dashed; }
+#btn-extra .lock { font-style: normal; font-size: 13px; margin-left: 4px; }
+#btn-extra:not(.locked) { border-color: rgba(255, 220, 140, .8); box-shadow: 0 0 18px rgba(255, 200, 120, .35); }
+.m-btns { gap: 10px; }
+.m-btns button { padding: 11px 20px; }
+
+.pr-wrap { display: flex; gap: 26px; align-items: flex-start; justify-content: center; width: min(1000px, 94vw); }
+.pr-col { width: 240px; }
+.pr-col.wide { flex: 1; width: auto; min-width: 0; }
+.pr-col h3 { margin: 0 0 8px; font-family: var(--display); letter-spacing: .3em; font-size: 12px; color: var(--ink-dim); font-weight: 400; }
+#pr-boss { display: grid; gap: 8px; }
+#pr-boss button, #pr-steps button { width: 100%; text-align: left; border-radius: 14px; padding: 10px 14px; letter-spacing: .06em; font-size: 14px; }
+#pr-boss button b { display: block; font-family: var(--display); letter-spacing: .16em; font-size: 16px; color: var(--a1); }
+#pr-boss button small { color: var(--ink-dim); font-size: 11px; }
+#pr-steps { display: grid; gap: 5px; max-height: 44vh; overflow: auto; padding-right: 4px; }
+#pr-steps button { display: flex; gap: 10px; align-items: baseline; padding: 8px 14px; }
+#pr-steps button .k { flex: none; width: 74px; font-size: 11px; letter-spacing: .1em; color: var(--ink-dim); }
+#pr-steps button .k.spell { color: #ffb8e0; } #pr-steps button .k.last { color: #ff9a7a; } #pr-steps button .k.ultimate { color: #ff6f9a; } #pr-steps button .k.mob { color: #9fe3b5; }
+#pr-steps button .n { flex: 1; min-width: 0; }
+#pr-steps button .t { flex: none; font-size: 11px; color: var(--ink-dim); }
+#pr-boss button.sel, #pr-steps button.sel { background: rgba(110, 76, 210, .6); border-color: var(--a1); box-shadow: var(--glow); }
+.pr-diff { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pr-diff button { padding: 7px 16px; font-size: 13px; border-radius: 999px; --c: var(--a1); }
+.pr-diff button.sel { border-color: var(--c); color: var(--c); box-shadow: 0 0 16px var(--c); background: rgba(60, 34, 130, .7); }
+.pr-btns { display: flex; gap: 12px; }
+@media (max-width: 760px) { .pr-wrap { flex-direction: column; align-items: stretch; } .pr-col { width: auto; } #pr-boss { grid-template-columns: repeat(3, 1fr); } }

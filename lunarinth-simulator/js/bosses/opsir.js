@@ -8,7 +8,7 @@ const PAL = { a: 0xcfe0ff, b: 0x9cc3ff, c: 0xffffff, glow: 0x7fa8ff };
 export const OPSIR = {
   id: 'opsir', name: '옵서', en: 'OPSIR', epithet: '별을 겨누는 무심한 관측관',
   h: 5.0, hitR: 1.45, barkKey: 'opsir', pal: PAL, decoyColor: 0xcfe0ff,
-  theme: 'astral', music: 'opsir',
+  hpMul: 0.55, theme: 'astral', music: 'opsir',
   forms: {
     scout: { label: '정찰 형태', sub: '관측대 위의 사수', tint: [1, 1, 1] },
     observe: { label: '관측 형태', sub: '별자리를 읽는 눈', tint: [0.96, 1, 1.08] },

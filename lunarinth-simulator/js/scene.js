@@ -8,6 +8,7 @@ const THEMES = {
   umbra: { top: 0x03010a, mid: 0x12083a, bot: 0x3a1b78, moon: 0x8a66e0, rune: 0x8a5cff, cloud: 0x3a2a70, ruin: 0x05020f, ruinFar: 0x1f1245, star: 0.7, moonScale: 66, nx: 0.38, ny: 0.5, mc: [0, 1, 0] },
   astral: { top: 0x020618, mid: 0x0b2155, bot: 0x4a7fd8, moon: 0xdce9ff, rune: 0x9cc3ff, cloud: 0x7fa8ff, ruin: 0x050b24, ruinFar: 0x1d3b86, star: 1.3, moonScale: 56, nx: 0.42, ny: 0.5, mc: [1, 0, 0] },
   arcane: { top: 0x07010f, mid: 0x2a0a4d, bot: 0x7a2fb8, moon: 0xd9a8ff, rune: 0xc060ff, cloud: 0x6a2a9a, ruin: 0x0a0214, ruinFar: 0x3b1166, star: 0.8, moonScale: 64, nx: -0.35, ny: 0.45, mc: [0, 1, 0] },
+  void: { top: 0x000000, mid: 0x04010a, bot: 0x180a2e, moon: 0x6a50b0, rune: 0x7a4bd8, cloud: 0x160c2a, ruin: 0x020106, ruinFar: 0x0b0618, star: 0.3, moonScale: 40, nx: 0.38, ny: 0.5, mc: [0, 0, 0] },
   luna: { top: 0x1c0530, mid: 0x6a1a6e, bot: 0xff8ac8, moon: 0xffe9b0, rune: 0xff7ac8, cloud: 0xff9ad0, ruin: 0x1d0828, ruinFar: 0x8a2f85, star: 0.55, moonScale: 200, nx: 0.0, ny: 0.34, mc: [0, 0, 1] },
 };
 
@@ -39,7 +40,7 @@ export class World {
     this.shakeAmt = 0; this.shakeT = 0; this.shakeOn = true;
     this.fovKick = 0;
     this.theme = 'lumina';
-    this.t = 0; this.pulse = 0; this._dir = new THREE.Vector3();
+    this.t = 0; this.pulse = 0; this._dir = new THREE.Vector3(); this._dir2 = new THREE.Vector3();
 
     this._buildSky();
     this._buildStars();
@@ -107,6 +108,10 @@ export class World {
     // 달 앞의 소용돌이 후광 (루나 페이즈에서 강해짐)
     this.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.T.orb, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.0 }));
     this.halo.renderOrder = -79; this.scene.add(this.halo);
+    // 종월: 하늘에서 내려오는 거대한 달
+    this.fall = null;
+    this.fallMoon = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.T.moon, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffe9c0, opacity: 0 }));
+    this.fallMoon.renderOrder = -78; this.fallMoon.visible = false; this.scene.add(this.fallMoon);
   }
 
   _buildLayers() {
@@ -145,6 +150,9 @@ export class World {
     rim.position.y = -0.02; root.add(rim); this.rim = rim;
     this.scene.add(root);
   }
+
+  /** p: 0(하늘 위) ~ 1(거의 지면 가까이). null 이면 해제 */
+  setFall(p) { this.fall = p; }
 
   setTheme(id) { if (THEMES[id]) this.theme = id; }
 
@@ -215,6 +223,11 @@ export class World {
       m.scale.set(sc, sc, 1);
       m.visible = m.material.opacity > 0.01;
     });
+    if (this.fall != null) {
+      const p = Math.max(0, Math.min(1, this.fall)), e = Math.pow(p, 1.5), d2 = this._dir2.set(0, 1.5 - e * 1.55, 0.5).unproject(cam).sub(cam.position).normalize();
+      this.fallMoon.visible = true; this.fallMoon.position.copy(cam.position).addScaledVector(d2, 135);
+      const fs = 150 + e * 560; this.fallMoon.scale.set(fs, fs, 1); this.fallMoon.material.opacity = Math.min(0.95, p * 6); this.fallMoon.material.rotation = this.t * 0.02;
+    } else this.fallMoon.visible = false;
     this.halo.position.copy(cam.position).addScaledVector(dir, 149);
     this.halo.material.color.copy(c.rune);
     this.halo.material.opacity = 0.2 * c.mc[2] + this.pulse * 0.1;

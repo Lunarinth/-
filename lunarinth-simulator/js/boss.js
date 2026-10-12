@@ -45,7 +45,7 @@ export class Boss {
   get step() { return this.def.steps[this.stepIdx]; }
   get formId() { return this.step ? this.step.form : this.def.steps[0].form; }
   get form() { return this.def.forms[this.formId]; }
-  get pal() { return this.form.pal || this.def.pal; }
+  get pal() { return (this.step && this.step.pal) || this.form.pal || this.def.pal; }
   get stepCount() { return this.def.steps.length; }
   /** 현재 체력 비율 (현재 단계 기준) */
   get ratio() { return this.hpMax > 0 ? Math.max(0, this.hp / this.hpMax) : 0; }
@@ -66,11 +66,12 @@ export class Boss {
   /** 스테이지 시작: 보스를 화면에 등장시킨다 (전투는 startStep 으로 시작) */
   appear() { this.reset(); this.visible = true; this.alpha = 0; this.alphaT = 1; this.x = this.tx = 0; this.z = this.tz = -6.5; }
 
+  /** 체력이 줄수록 강해지는 보스는 루나린스의 라스트 스킬뿐이다 (그 외에는 발악기 없음). grow: 0~1 */
   applyStats() {
-    const D = this.D, rage = this.enrage ? 1 : 0;
-    this.spd = D.spd * (1 + rage * 0.06) * (this.step.spd ?? 1);
-    this.rate = D.rate * (1 + rage * 0.14) * (this.step.rate ?? 1);
-    this.idleBase = (this.step.idle ?? 1.2) * (rage ? 0.8 : 1);
+    const D = this.D, g = this.grow || 0;
+    this.spd = D.spd * (1 + g * 0.2) * (this.step.spd ?? 1);
+    this.rate = D.rate * (1 + g * 0.45) * (this.step.rate ?? 1);
+    this.idleBase = (this.step.idle ?? 1.2) * (1 - g * 0.3);
   }
 
   /** 난이도 반영 개수 */
@@ -82,20 +83,21 @@ export class Boss {
   startStep(i, { quick = false } = {}) {
     const G = this.G;
     this.stepIdx = i; const st = this.step;
-    this.enrage = false; this.bag = []; this.last = null; this.routine = null; this.cur = null; this.shield = false;
+    this.enrage = false; this.grow = 0; this.bag = []; this.last = null; this.routine = null; this.cur = null; this.shield = false;
     this.cancelAttack();
-    this.hpMax = st.hp * this.D.hp; this.hp = this.hpMax; this.timeLeft = st.time; this.stepT = 0;
+    this.hpMax = st.hp * this.D.hp * (this.def.hpMul ?? 1); this.hp = this.hpMax; this.timeLeft = st.time; this.stepT = 0;
+    this.grow = 0; this._growT = 0;
     this.applyStats();
     this.vulnerable = false; this.state = 'declare';
     G.bullets.clearBoss(G.fx); G.zones.clear(); G.beams.clear(); G.flyers.clear();
     this.glide(0, -6.5, 0.8);
-    this.declT = quick ? 0.5 : st.kind === 'nonspell' ? 1.0 : 1.7;
+    this.declT = quick ? 0.5 : st.kind === 'nonspell' ? 1.0 : st.kind === 'ultimate' ? 2.4 : 1.7;
     if (this.onStepBegin) this.onStepBegin(st, i);
     G.onStepStart(this, st, i, quick);
   }
 
   beginRun() {
-    this.state = 'run'; this.vulnerable = true; this.idleT = 0.6; this.stepT = 0;
+    this.state = 'run'; this.vulnerable = this.step.kind !== 'ultimate'; this.idleT = this.step.kind === 'ultimate' ? 0 : 0.6; this.stepT = 0;
     this.G.ui.setBossTimer(this.timeLeft);
   }
 
@@ -202,7 +204,13 @@ export class Boss {
     } else if (this.state === 'run') {
       this.stepT += dt; this.timeLeft -= dt;
       this.analysis = Math.min(100, this.analysis + dt * (this.def.analysisRate || 0));
-      if (!this.enrage && this.hp < this.hpMax * 0.22 && this.step.kind !== 'nonspell') { this.enrage = true; this.applyStats(); this.G.onEnrage(this); }
+      if (this.def.id === 'lunarinth' && this.step.kind === 'last') {
+        this._growT -= dt;
+        if (this._growT <= 0) {
+          this._growT = 0.3; this.grow = clamp(1 - this.ratio, 0, 1); this.applyStats();
+          if (!this.enrage && this.grow > 0.6) { this.enrage = true; this.G.onEnrage(this); }
+        }
+      }
       if (this.timeLeft <= 0) { this.endStep('timeout'); return; }
       if (this.routine) {
         this.wait -= dt; this.accDt += dt;
@@ -284,7 +292,7 @@ export class Boss {
     this.spr.visible = visible;
     this.spr.position.set(px, this.bobY, pz);
     this.spr.scale.set(w, h, 1);
-    const tint = this.form.tint || [1, 1, 1];
+    const tint = (this.step && this.step.tint) || this.form.tint || [1, 1, 1];
     const f = this.flash > 0 ? 1.9 : 1;
     this.mat.color.setRGB(tint[0] * f, tint[1] * f, tint[2] * f);
     this.mat.opacity = this.alpha;

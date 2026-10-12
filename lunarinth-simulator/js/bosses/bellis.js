@@ -8,7 +8,7 @@ const PAL = { a: 0xc89bff, b: 0xa66bff, c: 0xffffff, glow: 0xb06bff, gold: 0xffd
 export const BELLIS = {
   id: 'bellis', name: '벨리스', en: 'BELLIS', epithet: '결함을 기록하는 냉철한 감사관',
   h: 4.9, hitR: 1.4, barkKey: 'bellis', pal: PAL, decoyColor: 0xd8b8ff, decoyBullet: 0xc89bff,
-  theme: 'arcane', music: 'bellis', hasAnalysis: true, analysisRate: 0.9,
+  hpMul: 0.8, theme: 'arcane', music: 'bellis', hasAnalysis: true, analysisRate: 0.9,
   forms: {
     audit: { label: '감사 형태', sub: '분석 · 검수', tint: [1, 1, 1] },
     script: { label: '서술 형태', sub: '마법 필기구로 쓰는 술식', tint: [1.02, 0.98, 1.08] },

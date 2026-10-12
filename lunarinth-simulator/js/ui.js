@@ -1,5 +1,5 @@
 // DOM 기반 UI: 타이틀·난이도/캐릭터 선택, HUD, 대사창, 스킬 선언 컷인, 컨티뉴/엔딩/결과, 설정집.
-import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES } from './lore.js';
+import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA } from './lore.js';
 import { OPSIR } from './bosses/opsir.js';
 import { BELLIS } from './bosses/bellis.js';
 import { LUNARINTH } from './bosses/lunarinth.js';
@@ -8,7 +8,8 @@ const $ = (s) => document.querySelector(s);
 const STAR = `<svg viewBox="0 0 32 32"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="var(--a1)"/></linearGradient></defs><path fill="url(#hg)" stroke="rgba(255,255,255,.85)" stroke-width="1.2" d="M22 3a13 13 0 1 0 0 26 10.5 10.5 0 1 1 0-26z"/></svg>`;
 const GEM = `<svg viewBox="0 0 24 24"><path d="M12 1 L21 12 L12 23 L3 12 Z" fill="currentColor" stroke="rgba(255,255,255,.85)" stroke-width="1.2"/></svg>`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const KIND_LABEL = { nonspell: '통상', spell: '스킬', last: '라스트 스킬', ult: '궁극기' };
+const KIND_LABEL = { nonspell: '통상', spell: '스킬', last: '라스트 스킬', ult: '궁극기', ultimate: '얼티메이트 스킬' };
+const BOSSES = [OPSIR, BELLIS, LUNARINTH];
 const SPELL_TAG = (st) => `${st.tag ? st.tag + ' ' : ''}「${st.name}」`;
 
 export class UI {
@@ -20,7 +21,7 @@ export class UI {
       warn: $('#warn'), bubble: $('#bubble'), banner: $('#banner'), announce: $('#announce'), dialog: $('#dialog'),
       dName: $('#d-name'), dText: $('#d-text'), dCanvas: $('#d-canvas'), dPortrait: document.querySelector('.d-portrait'),
       flash: $('#fx-flash'), veil: $('#fx-veil'), menu: $('#menu'), declare: $('#declare'), dcCanvas: $('#dc-canvas'),
-      ending: $('#ending'), selDiff: $('#sel-diff'), selChar: $('#sel-char'),
+      ending: $('#ending'), selDiff: $('#sel-diff'), selChar: $('#sel-char'), selPr: $('#sel-practice'),
       ana: $('#bb-ana'), anaFill: $('#ana-fill'), anaNum: $('#ana-num'),
     };
     this.on = {};
@@ -28,12 +29,15 @@ export class UI {
     this.portraits = {};
     this._warnT = 0; this._bubT = 0; this._annT = 0; this._dcT = 0;
     this.screen = null; this.diffIdx = 1; this.charIdx = 0; this.pickedDiff = DIFFS[1];
+    this.prBoss = 0; this.prStep = 0; this.prDiff = 1; this._kbuf = '';
     try { const d = localStorage.getItem('lunarinth.lastdiff'); if (d != null && DIFFS[+d]) this.diffIdx = +d; } catch (e) { /* noop */ }
     this._bindMenus();
     this._buildSelects();
+    this._buildPractice();
     this._buildCodex();
     this._bindKeys();
     this._titleFx();
+    this.refreshExtra();
   }
 
   // ───── 메뉴/모달 ─────
@@ -42,6 +46,14 @@ export class UI {
     document.addEventListener('mouseover', (e) => { if (e.target.closest && e.target.closest('button')) sfx.play('ui_hover'); });
     document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('button')) sfx.play('ui_click'); });
     $('#btn-start').onclick = () => this.openSelect('diff');
+    $('#btn-practice').onclick = () => this.openSelect('practice');
+    $('#btn-extra').onclick = () => {
+      if (this.extraUnlocked()) this.warn('EXTRA — 아직 구현되지 않았습니다 (준비 중)', 2000, true);
+      else this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true);
+      this.sfx.play('hurt', { vol: 0.25 });
+    };
+    $('#btn-pr-start').onclick = () => this.confirm();
+    $('#btn-pr-back').onclick = () => this.back();
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
     $('#btn-help').onclick = () => this.modal('#m-help', true);
@@ -101,7 +113,7 @@ export class UI {
   _paintDiff() {
     document.querySelectorAll('#diff-cards .card').forEach((b, i) => b.classList.toggle('sel', i === this.diffIdx));
     const d = DIFFS[this.diffIdx];
-    $('#diff-desc').innerHTML = `<b style="color:${d.color}">${d.name} — ${d.kr}</b><br>${d.sub}<br><small>탄수 ×${d.cnt} · 탄속 ×${d.spd} · 보스 체력 ×${d.hp} · 잔기 ${d.lives}${d.lv >= 2 ? ' · 추가 패턴 있음' : ''}</small>`;
+    $('#diff-desc').innerHTML = `<b style="color:${d.color}">${d.name} — ${d.kr}</b><br>${d.sub}<br><small>탄수 ×${d.cnt} · 탄속 ×${d.spd} · 보스 체력 ×${d.hp} · 내 체력 ${d.php}${d.lv >= 2 ? ' · 추가 패턴 있음' : ''}</small>`;
   }
   _paintChar() {
     document.querySelectorAll('#char-cards .card').forEach((b, i) => b.classList.toggle('sel', i === this.charIdx));
@@ -119,17 +131,22 @@ export class UI {
   openSelect(which) {
     this.screen = which;
     this.el.menu.hidden = true;
-    this.el.selDiff.hidden = which !== 'diff'; this.el.selChar.hidden = which !== 'char';
-    if (which === 'diff') this._paintDiff(); else { this._paintCharArt(); this._paintChar(); }
+    this.el.selDiff.hidden = which !== 'diff'; this.el.selChar.hidden = which !== 'char'; this.el.selPr.hidden = which !== 'practice';
+    if (which === 'diff') this._paintDiff(); else if (which === 'practice') this._paintPractice(); else { this._paintCharArt(); this._paintChar(); }
     document.body.dataset.screen = 'select';
   }
-  closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; }
+  closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; this.el.selPr.hidden = true; }
   back() {
     this.sfx.play('ui_hover');
     if (this.screen === 'char') this.openSelect('diff');
-    else if (this.screen === 'diff') { this.closeSelect(); this.showMenu(true); }
+    else if (this.screen === 'diff' || this.screen === 'practice') { this.closeSelect(); this.showMenu(true); }
   }
   confirm() {
+    if (this.screen === 'practice') {
+      const def = BOSSES[this.prBoss], diff = DIFFS[this.prDiff];
+      this.closeSelect(); this.sfx.play('ui_click'); this.on.practice && this.on.practice(diff, CHARS[0], def.id, this.prStep);
+      return;
+    }
     if (this.screen === 'diff') {
       this.pickedDiff = DIFFS[this.diffIdx];
       try { localStorage.setItem('lunarinth.lastdiff', String(this.diffIdx)); } catch (e) { /* noop */ }
@@ -151,6 +168,18 @@ export class UI {
       const open = ['#m-help', '#m-settings', '#m-codex'].find((s) => !$(s).hidden);
       if (open && no && $('#m-pause').hidden) { e.preventDefault(); this.modal(open, false); return; }
       if (this.anyModalOpen()) return;
+      if (this.screen === 'practice') {
+        const nb = BOSSES.length, steps = this._prSteps(BOSSES[this.prBoss]).length;
+        if (code === 'ArrowLeft' || code === 'KeyA') { this.prBoss = (this.prBoss + nb - 1) % nb; this.prStep = 0; this.sfx.play('ui_hover'); this._paintPractice(); }
+        else if (code === 'ArrowRight' || code === 'KeyD') { this.prBoss = (this.prBoss + 1) % nb; this.prStep = 0; this.sfx.play('ui_hover'); this._paintPractice(); }
+        else if (code === 'ArrowUp' || code === 'KeyW') { e.preventDefault(); this.prStep = (this.prStep + steps - 1) % steps; this.sfx.play('ui_hover'); this._paintPractice(); }
+        else if (code === 'ArrowDown' || code === 'KeyS') { e.preventDefault(); this.prStep = (this.prStep + 1) % steps; this.sfx.play('ui_hover'); this._paintPractice(); }
+        else if (code === 'KeyQ') { this.prDiff = (this.prDiff + DIFFS.length - 1) % DIFFS.length; this.sfx.play('ui_hover'); this._paintPractice(); }
+        else if (code === 'KeyE') { this.prDiff = (this.prDiff + 1) % DIFFS.length; this.sfx.play('ui_hover'); this._paintPractice(); }
+        else if (yes) { e.preventDefault(); this.confirm(); }
+        else if (no) { e.preventDefault(); this.back(); }
+        return;
+      }
       if (this.screen === 'diff' || this.screen === 'char') {
         const key = this.screen === 'diff' ? 'diffIdx' : 'charIdx', n = this.screen === 'diff' ? DIFFS.length : CHARS.length;
         if (code === 'ArrowLeft' || code === 'KeyA') { this[key] = (this[key] + n - 1) % n; this.sfx.play('ui_hover'); this.screen === 'diff' ? this._paintDiff() : this._paintChar(); }
@@ -160,6 +189,8 @@ export class UI {
         return;
       }
       if (!this.el.menu.hidden) {
+        // 타이틀에서 "claude" 를 입력하면 EXTRA 개방
+        if (/^Key[A-Z]$/.test(code)) { this._kbuf = (this._kbuf + code.slice(3).toLowerCase()).slice(-6); if (this._kbuf === 'claude' && !this.extraUnlocked()) { this.on.unlockExtra && this.on.unlockExtra(); this._kbuf = ''; } }
         const btns = [...document.querySelectorAll('#m-main button')], cur = btns.indexOf(document.activeElement);
         if (code === 'ArrowDown' || code === 'KeyS') { e.preventDefault(); btns[(cur + 1) % btns.length].focus(); }
         else if (code === 'ArrowUp' || code === 'KeyW') { e.preventDefault(); btns[(cur + btns.length - 1) % btns.length].focus(); }
@@ -167,6 +198,40 @@ export class UI {
         else if (yes && cur < 0) { e.preventDefault(); btns[0].click(); }
       }
     });
+  }
+
+  // ───── 프랙티스 (전부 기본 개방) ─────
+  _prSteps(def) {
+    const stage = def === OPSIR ? '옵서' : def === BELLIS ? '벨리스' : '루나린스';
+    return [{ i: -1, kind: 'mob', label: '병사', name: `${stage} 스테이지 — 병사 웨이브`, time: '' }].concat(def.steps.map((st, i) => ({ i, kind: st.kind, label: KIND_LABEL[st.kind], name: SPELL_TAG(st), time: st.time + 's' })));
+  }
+  _buildPractice() {
+    $('#pr-boss').innerHTML = BOSSES.map((d, i) => `<button data-i="${i}"><b>${d.en}</b><small>${d.name} · ${d.epithet}</small></button>`).join('');
+    $('#pr-boss').querySelectorAll('button').forEach((b) => { b.onclick = () => { this.prBoss = +b.dataset.i; this.prStep = 0; this._paintPractice(); }; });
+    $('#pr-diff').innerHTML = DIFFS.map((d, i) => `<button data-i="${i}" style="--c:${d.color}">${d.name}</button>`).join('');
+    $('#pr-diff').querySelectorAll('button').forEach((b) => { b.onclick = () => { this.prDiff = +b.dataset.i; this._paintPractice(); }; });
+  }
+  _paintPractice() {
+    const def = BOSSES[this.prBoss], steps = this._prSteps(def);
+    document.querySelectorAll('#pr-boss button').forEach((b, i) => b.classList.toggle('sel', i === this.prBoss));
+    document.querySelectorAll('#pr-diff button').forEach((b, i) => b.classList.toggle('sel', i === this.prDiff));
+    const box = $('#pr-steps');
+    box.innerHTML = steps.map((s, k) => `<button data-k="${k}" class="${k === this.prStep ? 'sel' : ''}"><span class="k ${s.kind}">${s.label}</span><span class="n">${s.name}</span><span class="t">${s.time}</span></button>`).join('');
+    box.querySelectorAll('button').forEach((b) => {
+      b.onclick = () => { this.prStep = +b.dataset.k; this._paintPractice(); };
+      b.ondblclick = () => this.confirm();
+    });
+    const cur = box.querySelector('.sel'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+    const d = DIFFS[this.prDiff], s = steps[this.prStep];
+    $('#pr-desc').innerHTML = `<b>${def.name} — ${s.name}</b><br><small>${d.name} · 내 체력 ${d.php} · 컨티뉴 무제한${s.kind === 'ultimate' ? ' · 잔기/궁극기 봉인 (한 번 맞으면 그 식 종료)' : ''} · 연습 종료 후 같은 단계를 바로 다시 할 수 있습니다</small>`;
+  }
+
+  // ───── EXTRA (미개방 · 미구현) ─────
+  extraUnlocked() { try { return localStorage.getItem('lunarinth.extra.v1') === '1'; } catch (e) { return false; } }
+  refreshExtra() {
+    const b = $('#btn-extra'), on = this.extraUnlocked();
+    b.classList.toggle('locked', !on);
+    b.innerHTML = on ? 'EXTRA <i class="lock">— 준비 중</i>' : 'EXTRA <i class="lock">🔒</i>';
   }
 
   // 타이틀 배경 파티클 (떨어지는 달 조각 / 별빛)
@@ -179,7 +244,7 @@ export class UI {
     const loop = (now) => {
       requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (this.el.menu.hidden && this.el.selDiff.hidden && this.el.selChar.hidden) return;
+      if (this.el.menu.hidden && this.el.selDiff.hidden && this.el.selChar.hidden && this.el.selPr.hidden) return;
       g.clearRect(0, 0, w, h);
       for (const p of P) {
         p.y += p.v * dt * 3; p.d += dt; if (p.y > 1.05) { p.y = -0.05; p.x = Math.random(); }
@@ -207,6 +272,10 @@ export class UI {
         <ul class="sk">${skills(def)}</ul>
       </div>`;
     $('#codex-body').innerHTML = `
+      <h3>스토리 ${tag('prop')}</h3>
+      ${STORY.lines.map((l) => `<p class="note">${l}</p>`).join('')}
+      <p class="note">※ ${STORY.hidden}</p>
+      <h3>병사 (통상 스테이지) ${tag('prop')}</h3><p class="note">${MOB_NOTE}</p>
       <h3>등장 보스</h3>
       ${bossCard(ROSTER[0], OPSIR)}${bossCard(ROSTER[1], BELLIS)}
       <div class="form"><b>${O.name} <small>LUNARINTH · FINAL STAGE</small></b> ${tag('off')}
@@ -220,6 +289,7 @@ export class UI {
       ${O.forms.map((f) => `<div class="form"><b>${f.name}</b> — ${f.moon} · ${f.theme}<ul>${li(f.notes)}</ul></div>`).join('')}
       <h3>공통 능력 ${tag('off')}</h3><ul>${li(O.abilities)}</ul>
       <h3>루센트 저택 ${tag('off')}</h3><ul>${O.house.map(([a, b]) => `<li><b>${a}</b> — ${b}</li>`).join('')}</ul>
+      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}. (현재 미구현 — 잠금 표시만 있습니다)</p>
       <h3>플레이어 ${tag('prop')}</h3>
       <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 궁극기 「성검 해방 — 징벌의 월광」</li></ul>
       <p class="note">“성검을 해방한 것은 루나린스가 처음”이라는 전제는 이 게임의 창작 설정입니다.</p>`;
@@ -262,11 +332,13 @@ export class UI {
     if (pct == null) { this.el.ana.hidden = true; return; }
     this.el.ana.hidden = false; this.el.anaFill.style.width = pct.toFixed(1) + '%'; this.el.anaNum.textContent = Math.round(pct) + '%';
   }
-  setLives(n, base) {
+  setHp(n, max) {
     const h = this.el.stars;
-    if (this.starCount !== base) { h.innerHTML = Array.from({ length: base }, () => `<div class="star">${STAR}</div>`).join(''); this.starCount = base; }
+    if (this.starCount !== max) { h.innerHTML = Array.from({ length: max }, () => `<div class="star">${STAR}</div>`).join(''); this.starCount = max; }
     [...h.children].forEach((c, i) => { const lost = i >= n; if (c.classList.contains('lost') !== lost) { c.classList.toggle('lost', lost); if (!lost) { c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } } });
   }
+  setSealed(on) { this.el.hud.classList.toggle('sealed', !!on); $('#sealtag').hidden = !on; }
+  showBossUI(show) { for (const s of ['#bossbar', '#bb-timer']) $(s).style.visibility = show ? '' : 'hidden'; if (!show) this.el.spell.hidden = true; }
   setUlt(n, max = 3) {
     const h = this.el.gems;
     if (this.gemCount !== max) { h.innerHTML = Array.from({ length: max }, () => `<div class="gem">${GEM}</div>`).join(''); this.gemCount = max; }
@@ -397,9 +469,9 @@ export class UI {
   }
   hideEnding() { this.el.ending.hidden = true; }
 
-  showResult(win, rows, kicker = '') {
-    $('#r-kicker').textContent = kicker;
-    $('#r-title').textContent = win ? '달이 저물었습니다' : '밤은 아직 끝나지 않았습니다';
+  showResult(win, rows, kicker = '', retryLabel = '처음부터 다시', title = null) {
+    $('#r-kicker').textContent = kicker; $('#btn-retry').textContent = retryLabel;
+    $('#r-title').textContent = title || (win ? '달이 저물었습니다' : '밤은 아직 끝나지 않았습니다');
     $('#r-stats').innerHTML = rows.map(([k, v]) => `${k} <b>${v}</b>`).join('<br>');
     $('#m-result').hidden = false;
   }

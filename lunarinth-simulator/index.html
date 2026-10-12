@@ -31,9 +31,10 @@
     <div class="bb-bot"><span id="bb-form"></span><span id="bb-pips"></span></div>
     <div id="bb-ana" hidden><small>분석률</small><div class="ana-track"><div id="ana-fill"></div></div><b id="ana-num">0%</b></div>
   </div>
+  <div id="sealtag" hidden>ULTIMATE SKILL<small>잔기 · 컨티뉴 · 궁극기 봉인 — 한 번 맞으면 끝</small></div>
   <div id="bb-timer">--</div>
   <div id="spellname" hidden></div>
-  <div id="lives"><small>잔기</small><div id="stars"></div></div>
+  <div id="lives"><small>체력</small><div id="stars"></div></div>
   <div id="ults"><small>궁극기</small><div id="ult-gems"></div><kbd>X</kbd></div>
   <div id="stats">
     <div><small>GRAZE</small> <b id="st-graze">0</b></div>
@@ -81,13 +82,15 @@
     <div class="m-tag">~ 옵서 · 벨리스 · 루나린스, 세 개의 밤을 넘어서 ~</div>
     <div class="m-btns" id="m-main">
       <button id="btn-start" class="primary">게임 시작</button>
+      <button id="btn-practice">프랙티스</button>
+      <button id="btn-extra" class="locked">EXTRA <i class="lock">🔒</i></button>
       <button id="btn-codex">설정집</button>
       <button id="btn-settings">소리 · 설정</button>
       <button id="btn-help">조작법</button>
     </div>
     <p class="m-foot">↑↓ 선택 · Z / Enter 결정 · X / Esc 취소 · 헤드폰 권장</p>
   </div>
-  <div class="m-ver">v2.0 · STAGE 1 · 5 · FINAL</div>
+  <div class="m-ver">v3.0 · STAGE 1 · 5 · FINAL · ULTIMATE · PRACTICE</div>
 </section>
 
 <!-- 난이도 선택 -->
@@ -96,6 +99,19 @@
   <div class="sel-cards" id="diff-cards"></div>
   <div class="sel-desc" id="diff-desc"></div>
   <p class="sel-foot">← → 선택 · Z / Enter 결정 · X / Esc 돌아가기</p>
+</section>
+
+<!-- 프랙티스 (전부 기본 개방) -->
+<section id="sel-practice" class="screen sel" hidden>
+  <div class="sel-head"><small>PRACTICE</small><h2>프랙티스</h2></div>
+  <div class="pr-wrap">
+    <div class="pr-col"><h3>보스</h3><div id="pr-boss"></div></div>
+    <div class="pr-col wide"><h3>단계 · 스킬</h3><div id="pr-steps"></div></div>
+  </div>
+  <div class="pr-diff" id="pr-diff"></div>
+  <div class="sel-desc" id="pr-desc"></div>
+  <div class="pr-btns"><button id="btn-pr-start" class="primary">연습 시작 (Z)</button><button id="btn-pr-back">돌아가기 (X)</button></div>
+  <p class="sel-foot">← → 보스 · ↑ ↓ 단계 · Q / E 난이도 · Z / Enter 시작 · X / Esc 돌아가기</p>
 </section>
 
 <!-- 캐릭터 선택 -->
@@ -119,9 +135,11 @@
     </table>
     <ul class="tips">
       <li>작은 붉은 점이 실제 피탄점입니다. 탄의 겉모양이 아니라 이 점이 닿을 때만 맞습니다.</li>
-      <li>잔기를 모두 잃으면 컨티뉴(기본 3회)를 쓸 수 있고, 현재 단계를 처음부터 다시 합니다. 컨티뉴를 한 번이라도 쓰면 엔딩이 달라집니다.</li>
+      <li>피격 시 체력이 1 줄고 잠시 무적이 됩니다. 체력을 모두 잃으면 컨티뉴(기본 3회)를 쓸 수 있고, 컨티뉴를 한 번이라도 쓰면 엔딩이 달라집니다.</li>
       <li>보스는 통상 → 스킬 순서로 이어지는 “단계”마다 체력과 제한시간이 따로 있습니다. 시간이 지나도 다음 단계로 넘어갑니다.</li>
       <li>루나린스는 궁극기에 저항하고, 라스트 스킬에는 완전히 면역입니다. 벨리스의 「리젝트」와 「파이널 베리딕트」는 궁극기를 무효화합니다.</li>
+      <li>⚠ 루나린스를 쓰러뜨렸다고 끝이 아닙니다. 진짜 발악 「얼티메이트 스킬」(5식)에서는 잔기·컨티뉴·궁극기가 봉인되고, 한 번 맞으면 즉사합니다. 버티거나 쓰러지면 다음 식으로 넘어갑니다.</li>
+      <li>타이틀의 「프랙티스」에서는 모든 스테이지와 스킬을 처음부터 골라 연습할 수 있습니다.</li>
       <li>붉은 원·선은 곧 터질 공격, 연한 선은 예고선입니다.</li>
     </ul>
     <button class="close">닫기</button>
@@ -164,7 +182,7 @@
   <div class="panel small continue">
     <h2>CONTINUE?</h2>
     <div id="cont-left"></div>
-    <p class="cont-note">잔기와 궁극기가 다시 채워지고, 지금 단계를 처음부터 시작합니다.<br>컨티뉴를 쓰면 엔딩이 달라집니다.</p>
+    <p class="cont-note">체력과 궁극기가 다시 채워지고, 지금 단계를 처음부터 시작합니다.<br>컨티뉴를 쓰면 엔딩이 달라집니다.</p>
     <button id="btn-cont-yes" class="primary">컨티뉴 (Z)</button>
     <button id="btn-cont-no">포기 (X)</button>
   </div>

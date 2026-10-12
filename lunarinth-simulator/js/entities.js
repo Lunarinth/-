@@ -41,7 +41,7 @@ export class Bullets {
     b.accel = o.accel || 0; b.minS = o.minS ?? 0; b.maxS = o.maxS ?? 99;
     b.spin = o.spin || 0; b.rot = o.rot ?? (b.kind === 'crescent' ? -a : 0);
     b.dmg = o.dmg ?? 1; b.grazed = false; b.reflected = false; b.trail = !!o.trail; b.trailT = 0;
-    b.delay = o.delay || 0;
+    b.delay = o.delay || 0; b.tag = o.tag || null; b.accelAt = o.accelAt || 0; b.orbit = o.orbit ? { ...o.orbit } : null;
     b.color = o.color ?? 0xffffff;
     b.mat.map = this.T[['crescent', 'shard', 'ring', 'star', 'glyph'].includes(b.kind) ? (b.kind === 'star' ? 'spark' : b.kind) : 'orb'];
     b.mat.color.setHex(b.color); b.mat.opacity = 0; b.mat.rotation = b.rot;
@@ -89,11 +89,15 @@ export class Bullets {
         const c = Math.cos(b.turn * dt), s = Math.sin(b.turn * dt), vx = b.vx * c - b.vz * s;
         b.vz = b.vx * s + b.vz * c; b.vx = vx;
       }
-      if (b.accel) {
+      if (b.accel && b.age >= b.accelAt) {
         const sp = Math.hypot(b.vx, b.vz) || 0.0001, ns = Math.max(b.minS, Math.min(b.maxS, sp + b.accel * dt));
         b.vx *= ns / sp; b.vz *= ns / sp;
       }
-      b.x += b.vx * dt; b.z += b.vz * dt;
+      if (b.orbit) {
+        // 한 점을 중심으로 공전하는 탄 (빛의 고리 등)
+        const ob = b.orbit; ob.ang += ob.w * dt; if (ob.dr) ob.r += ob.dr * dt;
+        b.x = ob.cx + Math.cos(ob.ang) * ob.r; b.z = ob.cz + Math.sin(ob.ang) * ob.r;
+      } else { b.x += b.vx * dt; b.z += b.vz * dt; }
       b.life -= dt;
       if (b.life <= 0 || b.x * b.x + b.z * b.z > 20 * 20) { this.kill(b); continue; }
       if (b.spin) b.mat.rotation += b.spin * dt;

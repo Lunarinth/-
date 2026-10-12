@@ -228,6 +228,16 @@ export class Sfx {
       [81, 77, 74, 69].forEach((m, i) => E.bell(b, t + i * 0.45, m - 12, 0.12, 3, 0.9, 0));
       E.tone(b, { type: 'sine', f: 110, f1: 40, glide: 2.5, t, dur: 2.8, vol: 0.3, a: 0.01, d: 2.5, s: 0.01, r: 0.3 });
     } };
+    D.rumble = { len: 4, important: true, fn: (E, b, t) => {
+      E.noise(b, { t, dur: 3.6, vol: 0.22, type: 'lowpass', f: 160, f1: 60, q: 0.8, a: 0.6, rev: 0.4 });
+      E.tone(b, { type: 'sine', f: 42, f1: 30, glide: 3, t, dur: 3.6, vol: 0.3, a: 0.8, d: 2.5, s: 0.5, r: 0.8 });
+    } };
+    D.ultimate = { len: 4, important: true, fn: (E, b, t) => {
+      E.taiko(b, t, 1.2, 0.9);
+      E.tone(b, { type: 'sawtooth', f: 55, f1: 110, glide: 1.2, t, dur: 2, vol: 0.18, a: 0.05, d: 1.5, s: 0.4, r: 0.6, cut: 700, cutTo: 3000, rev: 0.7 });
+      E.noise(b, { t, dur: 1.6, vol: 0.28, type: 'highpass', f: 3500, rev: 0.7 });
+      [69, 76, 81, 88].forEach((m, i) => E.bell(b, t + 0.05 + i * 0.09, m, 0.12, 3, 0.9, 0));
+    } };
     D.gauge = { cd: 80, len: 0.3, vol: 0.5, fn: (E, b, t, p) => {
       E.tone(b, { type: 'sine', f: 1000 * p, f1: 2000 * p, glide: 0.08, t, dur: 0.1, vol: 0.08, a: 0.002, d: 0.08, s: 0.01, r: 0.03 });
     } };

@@ -290,7 +290,149 @@ const ENDING = calm({
   scale: [81, 83, 85, 86, 88, 90, 93, 95],
 });
 
-const SCENES = { menu: MENU, lumina: LUMINA, umbra: UMBRA, luna: LUNA, victory: VICTORY, defeat: DEFEAT, opsir: OPSIR, bellis: BELLIS, ending: ENDING };
+
+// ───────── 스테이지(잡몹) 테마: 보스 곡과 구분되는 진행용 BGM ─────────
+// opts: bpm, chords[{r,n}], phrases[[ [step,midi,len] ]], arp: 'pluck'|'bell'|'saw', kick, hatMode, bassMode, choir, padCut
+function stageTheme(o) {
+  return {
+    bpm: o.bpm,
+    tick(m, sc, t, s, bar) {
+      const E = m.E, b = sc.b, sd = 60 / o.bpm / 4, bi = bar % o.chords.length, ch = o.chords[bi];
+      const rnd = mulberry32(bar * 557 + s * 23 + (o.seed || 1));
+      if (s === 0) {
+        E.pad(b, t, ch.n, sd * 16.3, o.padVol || 0.04, { a: 0.5, r: 1.0, cut: o.padCut || 1000, cutTo: (o.padCut || 1000) * 2.4, rev: 0.5 });
+        if (o.choir && bar % 4 === 0) E.choir(b, t, [ch.n[2] + 12, ch.n[4] + 12], sd * 64, 0.03, { vowel: o.vowel || 'a', rev: 0.8 });
+      }
+      // 드럼
+      if (o.kick && s % 4 === 0) E.kick(b, t, 0.55, 0.95);
+      if (o.snare !== false && (s === 4 || s === 12)) E.snare(b, t, 0.22, 0.3);
+      if (o.hat === 16) { if (s % 2 === 1 || s % 4 === 0) E.hat(b, t, s % 4 === 2 ? 0.1 : 0.05, s % 4 === 2); }
+      else if (s % 2 === 0) E.hat(b, t, 0.045);
+      // 베이스
+      if (o.bass === 'pump') { if (s % 2 === 0) E.bass(b, t, ch.r + (s % 8 === 6 ? 12 : 0), sd * 1.7, 0.22, { cut: 560, grit: 0.4 }); }
+      else if (s % 4 === 0) E.bass(b, t, ch.r + (s === 8 ? 7 : 0), sd * 3.4, 0.22, { cut: 480 });
+      // 아르페지오
+      const idx = (o.arpPat || [0, 2, 4, 2, 1, 3, 4, 3])[s % 8];
+      const note = ch.n[idx % ch.n.length] + (o.arpOct ?? 12);
+      if (o.arp === 'bell') { if (s % 2 === 0) E.bell(b, t, note + 12, 0.05, 1.5, 0.6, 0.35); }
+      else E.pluck(b, t, note, 0.045, sd * 1.5, { type: o.arp === 'saw' ? 'sawtooth' : 'triangle', cut: 2200 + (bar % 8) * 250, rev: 0.2, dly: 0.25 });
+      // 선율
+      if (bar >= 2 && o.phrases) for (const [st, midi, d] of o.phrases[bi % o.phrases.length]) if (st === s) {
+        E.lead(b, t, midi, sd * d * 0.9, 0.05, { type: o.leadType || 'triangle', cut: 3200, cutTo: 2200, vib: 12, a: 0.02, rev: 0.45, dly: 0.3 });
+      }
+      if (o.sparkle && s % 4 === 2 && rnd() < 0.4) E.bell(b, t, o.sparkle[(rnd() * o.sparkle.length) | 0], 0.035, 1.8, 0.8, 0.45);
+    },
+  };
+}
+
+// STAGE 1 (성좌의 병사): 밝고 곧은 진행. 옵서 곡(Em)과 달리 장조 기반의 행진.
+const STAGE1 = stageTheme({
+  bpm: 126, kick: true, hat: 8, arp: 'bell', bass: 'plain', seed: 3, sparkle: [88, 90, 93, 95], padCut: 1100,
+  chords: [
+    { r: 38, n: [50, 57, 62, 66, 69] }, // D
+    { r: 43, n: [43, 50, 55, 59, 62] }, // G
+    { r: 40, n: [52, 56, 59, 64, 68] }, // E
+    { r: 45, n: [45, 52, 57, 61, 64] }, // A
+  ],
+  phrases: [
+    [[0, 78, 3], [4, 81, 2], [6, 85, 2], [8, 81, 4], [12, 78, 4]],
+    [[0, 79, 3], [4, 83, 2], [6, 86, 2], [8, 83, 4], [12, 79, 4]],
+    [[0, 80, 3], [4, 83, 2], [6, 88, 2], [8, 83, 4], [12, 80, 4]],
+    [[0, 81, 2], [2, 85, 2], [4, 88, 4], [8, 85, 4], [12, 81, 4]],
+  ],
+});
+
+// STAGE 5 (서술의 병사): 하프시코드풍 진행, 단조. 벨리스 곡보다 가볍고 빠르다.
+const STAGE5 = stageTheme({
+  bpm: 140, kick: true, hat: 16, arp: 'pluck', arpPat: [0, 3, 2, 4, 1, 3, 2, 4], bass: 'pump', seed: 7, leadType: 'square', choir: true, vowel: 'o', padCut: 1000,
+  chords: [
+    { r: 33, n: [45, 52, 57, 60, 64] }, // Am
+    { r: 29, n: [41, 48, 53, 57, 60] }, // F
+    { r: 36, n: [48, 55, 60, 64, 67] }, // C
+    { r: 31, n: [43, 50, 55, 59, 62] }, // G
+    { r: 33, n: [45, 52, 57, 60, 64] },
+    { r: 29, n: [41, 48, 53, 57, 60] },
+    { r: 28, n: [40, 47, 52, 56, 59] }, // E
+    { r: 28, n: [40, 47, 52, 56, 62] },
+  ],
+  phrases: [
+    [[0, 81, 2], [2, 84, 2], [4, 88, 4], [8, 86, 2], [10, 84, 2], [12, 81, 4]],
+    [[0, 84, 2], [2, 81, 2], [4, 89, 4], [8, 88, 2], [10, 84, 2], [12, 81, 4]],
+    [[0, 88, 2], [2, 84, 2], [4, 91, 4], [8, 88, 4], [12, 84, 4]],
+    [[0, 86, 2], [2, 83, 2], [4, 91, 4], [8, 86, 4], [12, 83, 4]],
+  ],
+});
+
+// FINAL STAGE (달의 병사): 장엄한 달의 행렬. 합창과 타이코가 깔린 D 마이너.
+const STAGE6 = stageTheme({
+  bpm: 132, kick: true, hat: 16, arp: 'saw', arpPat: [0, 2, 4, 2, 3, 1, 4, 2], bass: 'pump', seed: 11, choir: true, vowel: 'a', padCut: 1300, padVol: 0.045,
+  chords: [
+    { r: 38, n: [50, 57, 62, 65, 69] }, // Dm
+    { r: 34, n: [46, 53, 58, 62, 65] }, // Bb
+    { r: 41, n: [41, 48, 53, 57, 60] }, // F
+    { r: 36, n: [48, 55, 60, 64, 67] }, // C
+    { r: 38, n: [50, 57, 62, 65, 69] },
+    { r: 34, n: [46, 53, 58, 62, 65] },
+    { r: 33, n: [45, 52, 57, 61, 64] }, // A
+    { r: 33, n: [45, 52, 57, 61, 67] },
+  ],
+  phrases: [
+    [[0, 86, 3], [4, 89, 2], [6, 93, 2], [8, 89, 4], [12, 86, 4]],
+    [[0, 85, 3], [4, 89, 2], [6, 94, 2], [8, 89, 4], [12, 85, 4]],
+    [[0, 84, 3], [4, 89, 2], [6, 93, 2], [8, 89, 4], [12, 84, 4]],
+    [[0, 84, 2], [2, 88, 2], [4, 91, 4], [8, 88, 4], [12, 84, 4]],
+  ],
+  sparkle: [93, 96, 98, 100],
+});
+
+// ───────── 얼티메이트 스킬 (루나린스의 진짜 발악) ─────────
+// intensity(0~1)에 따라 레이어가 쌓인다: 0 합창+타이코 → .25 킥 → .5 아르페지오 → .75 리드 → 1 더블타임.
+const ULT_CHORDS = [
+  { r: 33, n: [45, 52, 57, 60, 64] }, // Am
+  { r: 32, n: [44, 51, 56, 59, 63] }, // G#dim 느낌 (E7 위의 긴장)
+  { r: 29, n: [41, 48, 53, 57, 60] }, // F
+  { r: 28, n: [40, 47, 52, 56, 59] }, // E
+  { r: 33, n: [45, 52, 57, 60, 64] },
+  { r: 26, n: [38, 45, 50, 53, 57] }, // Dm
+  { r: 31, n: [43, 50, 55, 58, 62] }, // Gm
+  { r: 28, n: [40, 47, 52, 56, 62] }, // E7
+];
+const ULT_LEAD = [
+  [[0, 81, 2], [2, 84, 2], [4, 88, 4], [8, 87, 2], [10, 84, 2], [12, 81, 4]],
+  [[0, 80, 2], [2, 83, 2], [4, 87, 4], [8, 86, 2], [10, 83, 2], [12, 80, 4]],
+  [[0, 84, 2], [2, 81, 2], [4, 89, 4], [8, 88, 2], [10, 84, 2], [12, 81, 4]],
+  [[0, 83, 2], [2, 80, 2], [4, 88, 4], [8, 92, 4], [12, 88, 4]],
+];
+const ULTIMATE = {
+  bpm: 168, bpmEnrage: 8,
+  init(m, sc) { const c = m.E.ctx; sc.pump = c.createGain(); sc.pump.connect(sc.bus); sc.bp = { dry: sc.pump, rev: sc.b.rev, dly: sc.b.dly }; },
+  tick(m, sc, t, s, bar) {
+    const E = m.E, b = sc.b, I = m.intensity, sd = 60 / (this.bpm + this.bpmEnrage * I) / 4, bi = bar % 8, ch = ULT_CHORDS[bi];
+    const rnd = mulberry32(bar * 877 + s * 31 + 13);
+    if (s % 4 === 0) { const g = sc.pump.gain; g.cancelScheduledValues(t); g.setValueAtTime(0.35, t); g.linearRampToValueAtTime(1, t + sd * 3.4); }
+    if (s === 0) {
+      E.pad(sc.bp, t, ch.n, sd * 16.3, 0.045, { a: 0.3, r: 0.7, cut: 1400, cutTo: 3400, rev: 0.45 });
+      if (bar % 2 === 0) E.choir(sc.bp, t, [ch.n[1] + 12, ch.n[3] + 12, ch.n[4] + 12], sd * 32, 0.055, { rev: 0.85 });
+    }
+    // 타이코 오스티나토 (항상)
+    if (s === 0 || s === 6 || s === 10) E.taiko(b, t, s === 0 ? 0.7 : 0.45, 0.6);
+    if (s === 14 && bar % 2 === 1) E.taiko(b, t, 0.5, 0.6);
+    // 베이스 (항상 8분)
+    if (s % 2 === 0) E.bass(b, t, ch.r + (s % 4 === 2 ? 12 : 0), sd * 1.7, 0.28, { cut: 650, grit: 0.6 });
+    if (I >= 0.25) { if (s % 4 === 0) E.kick(b, t, 0.85, 1); if (s === 4 || s === 12) E.snare(b, t, 0.45, 0.3); if (s % 4 === 2) E.hat(b, t, 0.11, true); }
+    if (I >= 0.5) E.pluck(b, t, ch.n[[0, 2, 4, 2, 1, 3, 4, 3][s % 8] % ch.n.length] + 12, 0.05, sd * 1.5, { type: 'sawtooth', cut: 1800 + (bar % 8) * 480, rev: 0.15, dly: 0.28 });
+    if (I >= 0.75) for (const [st, midi, d] of ULT_LEAD[bi % 4]) if (st === s) {
+      E.lead(sc.b, t, midi - 12, sd * d * 0.95, 0.085, { type: 'sawtooth', cut: 3800, cutTo: 2600, vib: 22, detune: 8, dly: 0.3, a: 0.01 });
+      if (I >= 1) E.lead(sc.b, t, midi, sd * d * 0.9, 0.04, { type: 'square', cut: 4200, cutTo: 3000, vib: 16, dly: 0.2 });
+    }
+    if (I >= 1) { if (s % 2 === 1) E.hat(b, t, 0.08); if (bar % 4 === 3 && s >= 12) E.snare(b, t, 0.2 + (s - 12) * 0.1, 0.2); }
+    // 낮은 강도에서는 속삭임/광기의 웃음 같은 질감
+    if (I < 0.5 && rnd() < 0.12) E.noise(b, { t, dur: 0.8, vol: 0.05, type: 'bandpass', f: 2600 + rnd() * 2400, f1: 1800, q: 8, a: 0.2, rev: 0.8 });
+    if (s % 4 === 2 && rnd() < 0.3) E.bell(b, t, [93, 96, 99, 100][(rnd() * 4) | 0], 0.04, 1.8, 0.8, 0.5);
+  },
+};
+
+const SCENES = { stage1: STAGE1, stage5: STAGE5, stage6: STAGE6, ultimate: ULTIMATE, menu: MENU, lumina: LUMINA, umbra: UMBRA, luna: LUNA, victory: VICTORY, defeat: DEFEAT, opsir: OPSIR, bellis: BELLIS, ending: ENDING };
 
 // ───────── 디렉터 ─────────
 

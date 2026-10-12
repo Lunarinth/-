@@ -239,6 +239,45 @@ export function makeTextures() {
   // 별 모양 탄 (옵서의 별자리). 4각 별 + 중심 광점.
   T.star = T.spark;
 
+
+  // ───── 병사 문양 (스테이지 잡몹): 캐릭터가 아니라 문양/성좌/달 모양의 사역물 ─────
+  const sig = (draw) => mk(256, 256, (g) => { g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 5; g.lineJoin = 'round'; g.shadowColor = '#fff'; g.shadowBlur = 14; draw(g); });
+  const circ = (g, r, lw = 5) => { g.lineWidth = lw; g.beginPath(); g.arc(128, 128, r, 0, Math.PI * 2); g.stroke(); };
+  T.mob_star = sig((g) => { // 별 문양 (옵서의 성좌 병사)
+    circ(g, 112); circ(g, 94, 2.5);
+    g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 36 : 82; g.lineTo(128 + Math.cos(a) * r, 128 + Math.sin(a) * r); } g.closePath();
+    g.globalAlpha = 0.28; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.beginPath(); g.arc(128, 128, 9, 0, Math.PI * 2); g.fill();
+  });
+  T.mob_lens = sig((g) => { // 렌즈 문양 (관측)
+    circ(g, 112); circ(g, 84, 3); g.setLineDash([8, 10]); circ(g, 62, 2.5); g.setLineDash([]);
+    g.lineWidth = 3; for (const [x0, y0, x1, y1] of [[128, 8, 128, 70], [128, 186, 128, 248], [8, 128, 70, 128], [186, 128, 248, 128]]) { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }
+    g.beginPath(); g.arc(128, 128, 14, 0, Math.PI * 2); g.fill();
+  });
+  T.mob_rune = sig((g) => { // 마법진 문양 (벨리스의 룬 병사)
+    circ(g, 112); circ(g, 100, 2);
+    for (const rot of [0, Math.PI]) { g.lineWidth = 4; g.beginPath(); for (let i = 0; i < 3; i++) { const a = rot - Math.PI / 2 + (i * 2 * Math.PI) / 3; g.lineTo(128 + Math.cos(a) * 84, 128 + Math.sin(a) * 84); } g.closePath(); g.stroke(); }
+    g.lineWidth = 3; for (let i = 0; i < 12; i++) { const a = (i * Math.PI) / 6; g.beginPath(); g.moveTo(128 + Math.cos(a) * 100, 128 + Math.sin(a) * 100); g.lineTo(128 + Math.cos(a) * 112, 128 + Math.sin(a) * 112); g.stroke(); }
+    circ(g, 26, 4);
+  });
+  T.mob_page = sig((g) => { // 서장 문양 (펼쳐진 마도서)
+    circ(g, 112); circ(g, 96, 2);
+    g.lineWidth = 4; g.beginPath(); g.moveTo(128, 70); g.lineTo(128, 188); g.stroke();
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(128, 76); g.quadraticCurveTo(128 + s * 50, 58, 128 + s * 82, 84); g.lineTo(128 + s * 82, 176); g.quadraticCurveTo(128 + s * 50, 150, 128, 188); g.stroke();
+      g.lineWidth = 2.5; for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(128 + s * 14, 96 + k * 18); g.lineTo(128 + s * 66, 94 + k * 18); g.stroke(); } g.lineWidth = 4; }
+  });
+  T.mob_moon = sig((g) => { // 달 문양 (루나린스의 월병)
+    circ(g, 112); circ(g, 98, 2);
+    crescentPath(g, 118, 128, 64, 0.84, 0.34);
+    for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4; g.beginPath(); g.arc(128 + Math.cos(a) * 105, 128 + Math.sin(a) * 105, 4.5, 0, Math.PI * 2); g.fill(); }
+  });
+  T.mob_eclipse = sig((g) => { // 월식 문양 (그늘진 월병)
+    circ(g, 112, 4);
+    g.globalAlpha = 0.5; g.beginPath(); g.arc(128, 128, 66, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+    g.lineWidth = 3; for (let i = 0; i < 16; i++) { const a = (i * Math.PI) / 8; g.beginPath(); g.moveTo(128 + Math.cos(a) * 74, 128 + Math.sin(a) * 74); g.lineTo(128 + Math.cos(a) * (i % 2 ? 92 : 104), 128 + Math.sin(a) * (i % 2 ? 92 : 104)); g.stroke(); }
+    circ(g, 66, 3);
+  });
+
   T.dot = mk(32, 32, (g) => {
     const gr = g.createRadialGradient(16, 16, 0, 16, 16, 15);
     gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
