@@ -96,7 +96,7 @@ export class Boss {
     this.stepIdx = i; const st = this.step;
     this.enrage = false; this.grow = 0; this.bag = []; this.last = null; this.routine = null; this.cur = null; this.shield = false;
     this.cancelAttack();
-    this.hpMax = st.hp * this.D.hp * (this.def.hpMul ?? 1) * (this.def.id === 'lunarinth' ? 1 : HP_K); this.hp = this.hpMax; this.timeLeft = st.time; this.stepT = 0;
+    this.hpMax = st.fixedHp ?? st.hp * this.D.hp * (this.def.hpMul ?? 1) * (this.def.id === 'lunarinth' ? 1 : HP_K); this.hp = this.hpMax; this.timeLeft = st.time; this.stepT = 0;
     this.grow = 0; this._growT = 0;
     this.applyStats();
     this.vulnerable = false; this.state = 'declare';

@@ -290,6 +290,9 @@ export function makeTextures() {
     moongarden: T.ruins,
   };
   T.envRuins.theaterHell = T.envRuins.theater;
+  // APOTHEOSIS: 흑백의 직조실 — 검은 바닥에 흰 선, 바늘 같은 실루엣
+  T.envFloor.apo = floorVar('#0b0b0b', '#050505', '#000000', 'rgba(255,255,255,.34)', 'tiles');
+  T.envRuins.apo = silhouette(97, (g, x, h, bw, bh, k) => { if (k < 0.6) { g.moveTo(x, h); g.lineTo(x + bw * 0.5, h - bh * 1.15); g.lineTo(x + bw * 0.6, h); } else { g.rect(x + bw * 0.4, h - bh * 0.7, bw * 0.12, bh * 0.7); } });
 
   // 룬 문자 탄 (벨리스의 마도서 문자). 얇은 고리 안에 각진 룬 한 글자.
   T.glyph = mk(128, 128, (g) => {
@@ -429,6 +432,18 @@ export function makeTextures() {
     for (const s of [-1, 1]) { g.beginPath(); g.moveTo(128 + s * 18, 104); g.quadraticCurveTo(128 + s * 40, 84, 128 + s * 58, 104); g.quadraticCurveTo(128 + s * 40, 118, 128 + s * 18, 104); g.fill(); }
     g.beginPath(); g.arc(128, 142, 34, 0.25, Math.PI - 0.25); g.stroke();
     g.lineWidth = 2.5; g.beginPath(); g.moveTo(128, 112); g.lineTo(122, 140); g.lineTo(134, 140); g.stroke(); g.beginPath(); g.arc(170, 132, 3, 0, 7); g.fill();
+  });
+  T.mob_spider = sig((g) => { // 거대한 흰 거미 (APOTHEOSIS)
+    g.lineWidth = 7;
+    for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+      const y0 = 100 + i * 22, k = (i - 1.5) * 0.22;
+      g.beginPath(); g.moveTo(128 + s * 26, y0); g.quadraticCurveTo(128 + s * 78, y0 - 52 + k * 40, 128 + s * 110, y0 + 4 + i * 8); g.lineTo(128 + s * 120, y0 + 40 + i * 10); g.stroke();
+    }
+    g.beginPath(); g.ellipse(128, 156, 34, 44, 0, 0, Math.PI * 2); g.globalAlpha = 0.5; g.fill(); g.globalAlpha = 1; g.stroke();
+    g.beginPath(); g.ellipse(128, 100, 22, 20, 0, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'destination-out';
+    for (const s of [-1, 1]) { g.beginPath(); g.arc(128 + s * 8, 96, 4, 0, Math.PI * 2); g.fill(); }
+    g.globalCompositeOperation = 'source-over';
   });
   T.mob_spool = sig((g) => { // 붉은 실패
     circ(g, 112, 3);

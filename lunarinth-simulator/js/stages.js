@@ -490,7 +490,55 @@ const stageEx = (H) => ({
   ],
 });
 
-const SCRIPTS = { opsir: stage1, astra: stage2, tramont: stage3, index: stage4, bellis: stage5, lunarinth: stage6, arkesia: stageEx(false), arkesiaHell: stageEx(true) };
+// ═══════════════════════════ APOTHEOSIS · 색이 빠져나간 직조실 ═══════════════════════════
+// 흰 실의 인형과 거미줄. 뒷부분: 병사가 단단해져 사라지지 않고, 중앙에 거대한 메테오가 떨어져 흰 거미가 나타나며, 40초 뒤 모두 사라진다.
+const stageApo = {
+  a: [
+    stageEx(true).a[0],
+    function* whiteSwarm(S) { // 흰 실의 인형 떼: 빠른 변속탄
+      const { M } = S;
+      for (let i = 0; i < 12; i++) { const x0 = rnd(-9, 9), ph = rnd(0, TAU); M.spawn({ type: 'doll', x: x0, z: -12, hp: 6, size: 1.7, life: 12, path: (t) => [x0 + Math.sin(t * 1.4 + ph) * 3.6, -12 + t * 3.1], fire: F.aim(S, 3, 0.7, 5.6, 1.4, 0.8 + i * 0.1, { kind: 'shard', speeds: [[0, 1.4], [0.5, 0.2], [0.8, 2.0]], wob: [1.4, 2.4] }) }); yield 0.45; }
+      yield* S.clear(14); yield 0.5;
+    },
+    stageEx(true).a[1],
+    function* threadCross(S) { // 줄이 십자로 쓸고 간다
+      const { G } = S;
+      for (let w = 0; w < 6; w++) { for (let k = 0; k < 5; k++) { const x = -9 + k * 4.5 + rnd(-1, 1); G.beams.spawn({ x, z: -11, a: Math.PI / 2, w: 0.6, len: 24, warn: 0.8, dur: 0.15, color: 0xffffff }); } yield 1.1; for (let k = 0; k < 4; k++) { const z = -7 + k * 5 + rnd(-1, 1); G.beams.spawn({ x: -12, z, a: 0, w: 0.6, len: 26, warn: 0.8, dur: 0.15, color: 0xffffff }); } yield 1.1; }
+      yield 0.6;
+    },
+  ],
+  b: [
+    function* hardened(S) {
+      const { M, G } = S;
+      // 단단해져서 사라지지 않는 병사 (40초 뒤에 한꺼번에 사라진다)
+      const dolls = [];
+      for (let i = 0; i < 8; i++) {
+        const x = -9 + i * 2.6;
+        dolls.push(M.spawn({ type: i % 2 ? 'doll' : 'mask', x, z: -12, hp: 99999, size: 1.9, life: 999, hr: 0.7, path: (t) => [x + Math.sin(t * 0.8 + i) * 1.5, t < 1.8 ? -12 + t * 3.4 : -6 + Math.sin(t * 1.2 + i) * 2.2],
+          fire: (() => { let c = 1.2 + i * 0.15, k = 0; return (m, dt) => { c -= dt; if (c <= 0) { c = 1.1; k++; M.fan(m, S.n(4, 3), 0.9, M.aim(m), { speed: 6.2, kind: 'shard', speeds: [[0, 1.5], [0.5, 0.15], [0.9, 2.1]], wob: [1.6 * (k % 2 ? 1 : -1), 2.4] }); if (k % 3 === 0) M.ring(m, S.n(10, 6), { speed: 4.4, kind: 'orb' }); } }; })() }));
+      }
+      let t = 0, meteor = false, spiderOn = false;
+      while (t < 40) {
+        const dt = yield 0; t += dt;
+        if (!meteor && t > 7) {
+          meteor = true; G.ui.warn('하늘이 무너진다', 1800); G.audio.sfx.play('moon_throw', { vol: 1 });
+          G.zones.spawn({ x: 0, z: -2, r: 7, warn: 2.2, dur: 0.5, color: 0xffffff });
+          G.flyers.launch({ x0: 0, z0: -16, y0: 22, x1: 0, z1: -2, dur: 2.2, size: 11, color: 0xffffff, arc: 6, onLand: () => {
+            G.world.shake(1.4, 0.9); G.ui.flash('#ffffff', 700, 0.8); G.audio.sfx.play('moon_impact', { vol: 1 }); G.fx.ring(0, 0.5, -2, 0xffffff, 18, 0.9);
+            M.spawn({ type: 'spider', x: 0, z: -2, hp: 99999, size: 9, life: 999, hr: 2.2, spin: 0.05, path: (tt) => [Math.sin(tt * 0.35) * 3.5, -3.5 + Math.sin(tt * 0.5) * 1.2],
+              fire: (() => { let c = 1.0, k = 0; return (m, d) => { c -= d; if (c <= 0) { c = 0.85; k++; M.ring(m, S.n(24, 14), { a0: k * 0.2, speed: 4.4, kind: 'orb', speeds: [[0, 1.5], [0.6, 0.3], [1.1, 1.7]] }); M.fan(m, S.n(7, 4), 1.6, M.aim(m), { speed: 7.5, kind: 'shard', wob: [1.4, 2.6] }); if (k % 3 === 0) for (let b = 0; b < 8; b++) G.beams.spawn({ x: m.x, z: m.z, a: k * 0.3 + (b * TAU) / 8, w: 0.5, len: 20, warn: 0.9, dur: 0.15, color: 0xffffff }); } }; })() });
+            spiderOn = true;
+          } });
+        }
+      }
+      void spiderOn; void dolls;
+      G.ui.flash('#ffffff', 900, 0.9); G.audio.sfx.play('boss_down', { vol: 0.7 }); M.clear(false);
+      yield 1.2;
+    },
+  ],
+};
+
+const SCRIPTS = { manager: stageApo, opsir: stage1, astra: stage2, tramont: stage3, index: stage4, bellis: stage5, lunarinth: stage6, arkesia: stageEx(false), arkesiaHell: stageEx(true) };
 
 function* run(S, id, part) {
   const list = (SCRIPTS[id] || SCRIPTS.opsir)[part];

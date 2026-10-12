@@ -1,6 +1,7 @@
 // STAGE 5 — 벨리스: 결함을 기록하는 냉철한 감사관 (마도서술사 · 비전 / 환영 / 봉인).
 // 시그니처: ① 플레이어를 따라다니다 굳어서 터지는 "표식" 마법진 ② 줄 지어 흘러가는 글줄 탄 ③ 설치했다가 가동하는 마법진 ④ 반려 인장(방어막)과 먹물 봉인.
 // 분석률은 시간·그레이즈·궁극기 사용으로 쌓이고, 라스트 「파이널 베리딕트」의 위력에 비례해 반영된다.
+import * as THREE from '../../vendor/three.module.min.js';
 import { Boss, TAU, rnd, clamp } from '../boss.js';
 
 const PAL = { a: 0xc89bff, b: 0xa66bff, c: 0xffffff, glow: 0xb06bff, gold: 0xffd36b };
@@ -30,6 +31,9 @@ export const BELLIS = {
   ],
 };
 
+// 쓰러진 벨리스 뒤로 루나린스의 잔상이 나타나 힘을 건넨다: 99초 동안 계속 바뀌는 패턴을 버티는 시련 (무적, 체력 5 고정)
+BELLIS.steps.push({ kind: 'last', tag: '신탁', name: '빌려온 달', form: 'verdict', time: 99, attacks: ['spProxy'], hp: 5, fixedHp: 5, idle: 0, ultMode: 'immune', endure: true, fake: 'bellis' });
+
 // 6스테이지 중간 보스로 다시 나타난 벨리스: 통상 1개 + (하드 이상) 스킬 1개
 export const BELLIS_MID = {
   ...BELLIS, music: 'midboss', hpMul: MMUL, epithet: '문 앞의 감사관',
@@ -45,6 +49,21 @@ const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if
 export class Bellis extends Boss {
   constructor(scene, T, tex, aspect, G, def = BELLIS) { super(scene, T, tex, aspect, G, def); this.marks = []; }
 
+  /** 루나린스의 잔상: 벨리스 뒤에 겹쳐 보인다 */
+  renderExtra(dt, t, px, pz, visible) {
+    const on = this.step && this.step.fake === 'bellis' && this.state !== 'idle';
+    if (!this.ghost) {
+      const src = this.G.bosses.lunarinth; if (!src) return;
+      this.ghost = new THREE.Sprite(new THREE.SpriteMaterial({ map: src.mat.map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, color: 0xcfc0ff }));
+      this.ghost.renderOrder = 4; this.scene.add(this.ghost); this.ghostAspect = src.aspect;
+    }
+    this._gv = (this._gv || 0) + (((on || this.ghostForce) && visible ? 1 : 0) - (this._gv || 0)) * Math.min(1, dt * 3);
+    this.ghost.visible = this._gv > 0.02;
+    if (this.ghost.visible) {
+      const h = this.h * 1.45, w = h * this.ghostAspect;
+      this.ghost.position.set(px + Math.sin(t * 0.8) * 0.5, this.bobY + 0.5, pz - 0.6); this.ghost.scale.set(w, h, 1); this.ghost.material.opacity = this._gv * (0.4 + Math.sin(t * 2) * 0.08);
+    }
+  }
   addAnalysis(v) { this.analysis = Math.min(100, this.analysis + v); }
   /** 분석률에 비례한 증폭 (라스트에서 사용). 1.0 ~ 1.35 */
   get amp() { return 1 + (this.analysis / 100) * 0.35; }
@@ -284,6 +303,23 @@ export class Bellis extends Boss {
 
   // ═════════ 라스트: 최종 판결「파이널 베리딕트」 ═════════
   // 거대한 표식 + 판결문 낭독(글줄) + 일곱 봉인 + 판결의 선 + 링 폭풍. 분석률(this.amp)에 비례해 탄 수·탄속이 증가한다.
+  /** 신탁 「빌려온 달」: 벨리스의 술식과 달빛 탄이 번갈아 바뀐다 (버티기) */
+  *atk_spProxy() {
+    const G = this.G, pal = this.pal;
+    this.cast('moon_throw'); this.glide(0, -6.4, 1.0); G.ui.warn('달의 잔상이 벨리스에게 힘을 건넨다 — 99초를 버텨라', 2200); yield 1.2;
+    const moon = [
+      function* (s) { for (let k = 0; k < 5; k++) { s.fan(s.n(7, 4), 1.4, s.aim(), { kind: 'crescent', speed: 5.6, size: 1.3, color: 0xe3d6ff, spin: 5 }); s.sfx('fan'); yield s.t(0.6); } },
+      function* (s) { for (let k = 0; k < 4; k++) { s.ring(s.n(18, 10), { kind: 'crescent', speed: 4.4, size: 1.2, color: 0xfff1c9, spin: 5, accel: 1.2, accelAt: 0.8, maxS: 8 }); s.sfx('orb'); yield s.t(0.7); } },
+      function* (s) { for (let k = 0; k < 6; k++) { s.shoot({ a: s.aim() + rnd(-0.7, 0.7), speed: 3.8, kind: 'orb', size: 1.5, hr: 0.4, homing: 1.1, homeT: 2.4, color: 0xa07bff, trail: true, life: 6 }); yield s.t(0.45); } yield 0.5; },
+    ];
+    const bel = ['stampLines', 'ruleCircle', 'redPen', 'polyBloom', 'penStroke', 'glyphRain'];
+    let flip = 0;
+    while (true) {
+      flip++;
+      if (flip % 2) yield* moon[(Math.random() * moon.length) | 0](this); else yield* this['atk_' + bel[(Math.random() * bel.length) | 0]]();
+      yield 0.3;
+    }
+  }
   *atk_spVerdict() {
     const G = this.G, P = G.player, pal = this.pal;
     this.cast('moon_throw'); this.glide(0, -6.6, 1.0); G.ui.warn(`판결 개시 — 결함 기록 ${Math.round(this.analysis)}% 완료`, 1800); yield 1.4;

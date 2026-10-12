@@ -13,6 +13,7 @@ const THEMES = {
   terrace: { top: 0x2a0f2e, mid: 0xa8466a, bot: 0xffb27a, moon: 0xffe6c9, rune: 0xffc59a, cloud: 0xffa89a, ruin: 0x2a0f22, ruinFar: 0x9a4a63, star: 0.45, moonScale: 58, nx: -0.45, ny: 0.4, mc: [1, 0, 0] },
   library: { top: 0x080a06, mid: 0x1e3a22, bot: 0x8ab04a, moon: 0xf4f0c0, rune: 0xe8d88a, cloud: 0x5a8a4a, ruin: 0x0a0f06, ruinFar: 0x35572a, star: 0.35, moonScale: 40, nx: 0.45, ny: 0.55, mc: [0, 1, 0] },
   theater: { top: 0x080106, mid: 0x4a0a1c, bot: 0xe0405a, moon: 0xffc0c8, rune: 0xff6a80, cloud: 0xb0304a, ruin: 0x10020a, ruinFar: 0x6a1428, star: 0.3, moonScale: 36, nx: 0.0, ny: 0.55, mc: [0, 1, 0] },
+  mono: { top: 0x000000, mid: 0x000000, bot: 0x0c0c0c, moon: 0xffffff, rune: 0xffffff, cloud: 0x777777, ruin: 0x101010, ruinFar: 0x2a2a2a, star: 0.35, moonScale: 10, nx: 0, ny: 0.5, mc: [0, 0, 0] },
   hell: { top: 0x040001, mid: 0x3c0612, bot: 0xff2b3d, moon: 0xff9a9a, rune: 0xff3045, cloud: 0xa01426, ruin: 0x080002, ruinFar: 0x4e0a1a, star: 0.25, moonScale: 44, nx: 0.0, ny: 0.55, mc: [0, 1, 0] },
   luna: { top: 0x1c0530, mid: 0x6a1a6e, bot: 0xff8ac8, moon: 0xffe9b0, rune: 0xff7ac8, cloud: 0xff9ad0, ruin: 0x1d0828, ruinFar: 0x8a2f85, star: 0.55, moonScale: 200, nx: 0.0, ny: 0.34, mc: [0, 0, 1] },
 };
@@ -56,6 +57,10 @@ const ENV_FX = {
     { tex: 'dot', color: [0xffc0c8, 0xff6a80], n: 50, s: [0.1, 0.26], op: 0.5, vx: [-0.12, 0.12], vy: [0.05, 0.3], vz: [0, 0], tw: 0.7, box: BOX },
     { tex: 'spark', color: 0xffd0d8, n: 10, s: [0.25, 0.5], op: 0.5, vx: [-0.1, 0.1], vy: [-0.1, 0.1], vz: [0, 0], tw: 0.9, box: BOX },
   ],
+  apo: [
+    { tex: 'pillar', color: 0xffffff, n: 30, s: [0.08, 9], op: 0.3, thread: true, sway: [0.7, 1.2], box: { x: [-22, 22], y: [10, 10], z: [-17, 9] } },
+    { tex: 'dot', color: 0xffffff, n: 40, s: [0.1, 0.26], op: 0.55, vx: [-0.1, 0.1], vy: [0.05, 0.4], vz: [0, 0], tw: 0.7, box: BOX },
+  ],
   theaterHell: [
     { tex: 'pillar', color: [0xff2b3d, 0xff5060], n: 34, s: [0.1, 8], op: 0.36, thread: true, sway: [0.6, 1.1], box: { x: [-22, 22], y: [10, 10], z: [-17, 9] } },
     { tex: 'spark', color: [0xff3045, 0xff7a7a], n: 44, s: [0.22, 0.6], op: 0.65, vx: [-0.3, 0.3], vy: [0.8, 2.2], vz: [0, 0], tw: 0.8, box: { ...BOX, y: [0, 7] }, fadeTop: 7 },
@@ -71,6 +76,7 @@ const ENV_CFG = {
   archive: { cloud: 0.8, cloudSp: 0.5, rune: 1.1, tint: 0xe8d8ff, sway: [1, 0.03] },
   moongarden: { cloud: 1.15, cloudSp: 1.0, rune: 1.0, tint: 0xffffff, sway: [3, 0.04] },
   theater: { cloud: 0.8, cloudSp: 0.3, rune: 0.55, tint: 0xffe6ea, sway: [5, 0.22] },
+  apo: { cloud: 0.25, cloudSp: 0.15, rune: 0, tint: 0xffffff, sway: [3, 0.1] },
   theaterHell: { cloud: 1.1, cloudSp: 0.8, rune: 0.8, tint: 0xffd0d0, sway: [8, 0.5] },
 };
 const DEF_CFG = { cloud: 1, cloudSp: 1, rune: 1, tint: 0xffffff, sway: [1.5, 0.03] };

@@ -10,15 +10,18 @@ import { Tramont } from './bosses/tramont.js';
 import { Indexer, INDEX_MID } from './bosses/indexer.js';
 import * as ArkMod from './bosses/arkesia.js';
 import { LUNARINTH_MID } from './bosses/lunarinth.js';
+import { Manager, ErrorArkesia, APO_MID } from './bosses/manager.js';
 import { SigilMid, makeSigilDef, SIGIL_KEYS } from './bosses/sigilmid.js';
 import { Lunarinth, PAL } from './bosses/lunarinth.js';
 import { Mobs } from './mobs.js';
 import { makeStageScript } from './stages.js';
-import { STAGES, EXTRA_STAGE, HELL_STAGE, EXTRA_DIFF, HELL_DIFF, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
+import { STAGES, EXTRA_STAGE, HELL_STAGE, APO_STAGE, APO_DIFF, EXTRA_DIFF, HELL_DIFF, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT } from './lore.js';
 
 const EXTRA_KEY = 'lunarinth.extra.v1';
 const ASTRA_KEY = 'lunarinth.unlock.astra';
 const HELL_KEY = 'lunarinth.hell.v1';
+const APO_KEY = 'lunarinth.apo.open';
+const APO_DONE = 'lunarinth.apo.done';
 import { UI } from './ui.js';
 import { Input } from './input.js';
 import { AudioEngine } from './audio/engine.js';
@@ -39,6 +42,7 @@ const BOSS_ASSETS = {
   bellis: { cls: Bellis, img: 'assets/bellis.png' },
   lunarinth: { cls: Lunarinth, img: 'assets/lunarinth.png' },
   arkesia: { cls: ArkMod.Arkesia, img: 'assets/arkesia.png' },
+  manager: { cls: Manager, img: 'assets/manager.png' },
 };
 // 대사창 초상화 크롭 (이미지 대비 비율)
 const FACE = {
@@ -50,6 +54,7 @@ const FACE = {
   tramont: { sx: 0.3, sy: 0.0, sw: 0.4 },
   index: { sx: 0.36, sy: 0.1, sw: 0.46 },
   arkesia: { sx: 0.24, sy: 0.07, sw: 0.5 },
+  manager: { sx: 0.3, sy: 0.08, sw: 0.4 },
 };
 
 class Settings {
@@ -76,7 +81,7 @@ export class Game {
   newStats() { return { hits: 0, graze: 0, damage: 0, attacks: 0, ults: 0, spellsSeen: 0, spellsCaptured: 0, mobs: 0, ultDeaths: 0, ultSurvived: 0 }; }
   makeRun(diff, char, extra = false) {
     const dbg = !!this.debugInf; // 테스트용 암호: EXTRA · HELL 에서도 적용된다
-    return { diff, char, extra, hell: !!diff.hell, stages: diff.hell ? [HELL_STAGE] : extra ? [EXTRA_STAGE] : STAGES, stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0 };
+    return { diff, char, extra, hell: !!diff.hell, apo: !!diff.apo, stages: diff.apo ? [APO_STAGE] : diff.hell ? [HELL_STAGE] : extra ? [EXTRA_STAGE] : STAGES, stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0 };
   }
   get stageList() { return this.run.stages || STAGES; }
 
@@ -128,6 +133,7 @@ export class Game {
     // HELL: 아르케시아(15기술) + 중간 보스 루나린스
     if (ArkMod.ARKESIA_HELL) { const a = imgs.arkesia; this.bosses.arkesiaHell = new ArkMod.Arkesia(scene, this.T, mkTex(a), a.width / a.height, this, ArkMod.ARKESIA_HELL); }
     { const l = imgs.lunarinth; this.bosses.m_lunarinth_mid = new Lunarinth(scene, this.T, mkTex(l), l.width / l.height, this, LUNARINTH_MID); }
+    { const a = imgs.arkesia; this.bosses.m_apo_mid = new ErrorArkesia(scene, this.T, mkTex(a), a.width / a.height, this, APO_MID); }
     this.bosses.m_index = new Indexer(scene, this.T, mkTex(imgs.index), imgs.index.width / imgs.index.height, this, INDEX_MID);
     this.boss = this.bosses.opsir;
     // 두 번째 기체 아스트라의 스프라이트
@@ -136,7 +142,7 @@ export class Game {
 
     // 초상화 (대사창 / 스킬 컷인)
     const portraits = {};
-    for (const [who, key] of [['luna', 'lunarinth'], ['opsir', 'opsir'], ['bellis', 'bellis'], ['claire', 'claire'], ['astra', 'astra'], ['tramont', 'tramont'], ['index', 'index'], ['arkesia', 'arkesia']]) {
+    for (const [who, key] of [['luna', 'lunarinth'], ['opsir', 'opsir'], ['bellis', 'bellis'], ['claire', 'claire'], ['astra', 'astra'], ['tramont', 'tramont'], ['index', 'index'], ['arkesia', 'arkesia'], ['manager', 'manager']]) {
       const img = imgs[key]; if (!img) continue;
       const f = FACE[who];
       portraits[who] = { kind: 'img', img, sx: img.width * f.sx, sy: img.height * f.sy, sw: img.width * f.sw, sh: img.width * f.sw };
@@ -147,18 +153,22 @@ export class Game {
     this._wireUI();
     this.input.onAny = () => { this.engine.init(); };
 
+    this.ui.refreshExtra();
     this.toMenu(true);
     document.getElementById('loading').classList.add('done');
     setTimeout(() => document.getElementById('loading').remove(), 1200);
     requestAnimationFrame((ts) => this._frame(ts));
-    document.addEventListener('visibilitychange', () => { if (document.hidden && (this.state === 'fight' || this.state === 'stage') && !this.paused) this.setPause(true); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && !(this.run && this.run.apo) && (this.state === 'fight' || this.state === 'stage') && !this.paused) this.setPause(true); });
     window.__lunarinth = this; // 디버그/테스트 훅
   }
 
   _wireUI() {
     const ui = this.ui;
+    ui.apoOpen = () => this.isApoOpen();
     ui.on.start = (diff, char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff, char, false); };
     ui.on.startExtra = (char, diff) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff || EXTRA_DIFF, char, true); };
+    ui.on.startApo = (char) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(APO_DIFF, char, true); };
+    ui.on.unlockApo = () => { if (this.isApoDone()) return; this.unlockApo(); this.sfx.play('heal'); this.ui.warn('……무언가 열렸다', 2600); };
     ui.on.unlockHell = () => { this.unlockHell(); this.sfx.play('heal'); this.ui.warn('HELL 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
     ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.char, this.run.extra); };
     ui.on.unlockExtra = () => { this.unlockExtra(); this.sfx.play('heal'); this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
@@ -181,7 +191,7 @@ export class Game {
     for (const id of ['#warn', '#announce', '#banner']) { const el = document.querySelector(id); if (el) { el.classList.remove('show'); if (id !== '#warn') el.hidden = true; } }
     this.engine.resume();
     this.ui.closeModals(); this.ui.hideResult(); this.ui.showHud(false); this.ui.hideBark(); this.ui.hideEnding(); this.ui.hideDeclare();
-    this.ui.setTheme('lumina'); this.world.setTheme('lumina'); this.world.setDolly(0);
+    this.setMono(false); this.ui.setTheme('lumina'); this.world.setTheme('lumina'); this.world.setEnv('moongarden'); this.world.setDolly(0);
     this.ui.showMenu(true); this.ui.setVeil(0); this.ui.madness(false); this.veil = false; this.madnessT = 0;
     this.clearField();
     for (const b of Object.values(this.bosses)) { b.reset(); b.visible = false; b.alpha = 0; }
@@ -228,9 +238,10 @@ export class Game {
     this.state = 'cutscene'; this.clearField(); this.ui.showHud(false);
     for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
     this.world.setTheme('lumina'); this.ui.setTheme('lumina'); this.world.setDolly(0.4);
-    this.world.setEnv('moongarden');
-    this.music.play('ending', { fade: 1.5, immediate: true });
-    await this.talk(extra ? SCRIPT.arkesia.pre || SCRIPT.arkesia.prologue || [] : SCRIPT.prologue); if (my !== this._token) return;
+    this.setMono(!!diff.apo);
+    this.world.setEnv(diff.apo ? 'apo' : 'moongarden'); if (diff.apo) { this.world.setTheme('mono'); this.ui.setTheme('mono'); }
+    this.music.play(diff.apo ? 'stageApo' : 'ending', { fade: 1.5, immediate: true });
+    await this.talk(diff.apo ? SCRIPT.apoStart : extra ? SCRIPT.arkesia.pre || SCRIPT.arkesia.prologue || [] : SCRIPT.prologue); if (my !== this._token) return;
     await this.playStage(0);
   }
 
@@ -240,7 +251,7 @@ export class Game {
     this.run.stageIdx = idx;
     const st = this.stageList[idx], B = this.bosses[st.id], def = B.def;
     for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
-    this.boss = B; B.reset(); // 보스는 웨이브가 끝난 뒤 등장
+    this.boss = B; B.reset(); B.ghostForce = false; // 보스는 웨이브가 끝난 뒤 등장
     this.state = 'cutscene'; this.timeScale = 1; this.sealed = false; this.ui.setSealed(false); this.world.setFall(null); this.veilLv = 0.98;
     this.clearField(); this.ui.showHud(true); this.ui.hideBark(); this.ui.showBossUI(false);
     const P = this.player;
@@ -267,10 +278,10 @@ export class Game {
     this.ui.banner('WARNING', st.warn.replace('WARNING — ', ''), 2400);
     await sleep(2300); if (my !== this._token) return;
     this.world.setDolly(0.5); B.appear();
-    const veiled = st.id === 'arkesia' && !this.run.hell; // 정체는 본인이 밝히기 전까지 ？？？
+    const veiled = (st.id === 'arkesia' && !this.run.hell) || st.id === 'manager'; // 정체는 본인이 밝히기 전까지 ？？？
     this.ui.setBossHeader(veiled ? { ...def, name: '？？？', epithet: '' } : def); this.ui.setBossStep(B, 0); this.ui.setBossInstant(1); this.ui.setBossTimer(null); this.ui.setAnalysis(null); this.ui.showBossUI(true);
     this.music.play(f0.music || def.music, { fade: 1.8, immediate: true });
-    this.ui.banner(veiled ? '？？？' : def.en, veiled ? '실 끝에서 웃는 그림자' : `${def.name} — ${def.epithet}`, 3000);
+    this.ui.banner(veiled ? '？？？' : def.en, veiled ? (st.id === 'manager' ? '실을 쥔 손' : '실 끝에서 웃는 그림자') : `${def.name} — ${def.epithet}`, 3000);
     await sleep(1800); if (my !== this._token) return;
     await this.talk(SCRIPT[this.scriptKey(st)].intro); if (my !== this._token) return;
     if (veiled) this.ui.setBossHeader(def);
@@ -280,7 +291,7 @@ export class Game {
     B.startStep(0);
   }
 
-  scriptKey(st) { return st.id === 'arkesiaHell' ? 'hellArkesia' : st.id; }
+  scriptKey(st) { return st.id === 'arkesiaHell' ? 'hellArkesia' : st.id === 'manager' ? 'apoManager' : st.id; }
 
   /** 중간 보스전. 문양 파수병은 말이 없고, 벨리스 · 인덱스는 짧은 대사가 있다. 격파되면 resolve */
   async playMid(st, my) {
@@ -306,7 +317,7 @@ export class Game {
   }
 
   midLines(st) {
-    const k = st.mid === 'bellis' ? 'bellisMid' : st.mid === 'index' ? 'midIndex' : st.mid === 'lunarinth_mid' ? 'hellMid' : null;
+    const k = st.mid === 'bellis' ? 'bellisMid' : st.mid === 'index' ? 'midIndex' : st.mid === 'lunarinth_mid' ? 'hellMid' : st.mid === 'apo_mid' ? 'apoMid' : null;
     return (k && SCRIPT[k]) || {};
   }
 
@@ -401,11 +412,13 @@ export class Game {
         this.ui.warn(!this.run.stepHit && !this.run.stepUlt ? '스킬 격파 — 노 미스·노 궁극기' : '스킬 격파', 1700);
       }
     } else {
-      this.sfx.play('telegraph');
-      this.ui.warn(isSpell ? '스킬 시간 초과' : '통상 시간 초과', 1300);
+      this.sfx.play(step.endure ? 'heal' : 'telegraph');
+      this.ui.warn(step.endure ? '버텨냈습니다' : isSpell ? '스킬 시간 초과' : '통상 시간 초과', 1300);
       this.fx.ring(B.x, B.bobY, B.z, B.pal.glow, 10, 0.6);
     }
     if (!this.player.alive && this.sealed) this.player.revive(this);
+    const nextFake = B.def.steps[i + 1] && B.def.steps[i + 1].fake;
+    if (nextFake) { await this.fakeScene(B, i, nextFake); return; }
     if (nextUlt) { await this.fakeDefeat(B, i); return; }
     if (last) { if (B.isMid) this.midClear(B); else this.stageClear(B); return; }
     this.timeScale = 0.3; await sleep(500); this.timeScale = 1; if (my !== this._token) return;
@@ -415,6 +428,50 @@ export class Game {
     if (my !== this._token) return;
     this.state = 'fight';
     B.startStep(i + 1);
+  }
+
+  setMono(on) {
+    document.body.classList.toggle('mono', on); Bullets.mono = on; Mobs.mono = on;
+  }
+
+  /** 쓰러진 척하는 연출 (무대 관리자 / 벨리스 뒤의 루나린스 잔상) → 숨은 마지막 단계 시작 */
+  async fakeScene(B, i, kind) {
+    const my = this._token;
+    this.state = 'cutscene';
+    this.sfx.play('boss_down'); this.ui.flash('#ffffff', 1100, 1); this.world.shake(1.0, 0.8);
+    this.fx.burst(B.x, B.bobY, B.z, 50, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 10, size: 1.0, life: 1.1, up: 1.4 });
+    this.timeScale = 0.3; await sleep(700); this.timeScale = 1; if (my !== this._token) return;
+    if (kind === 'manager') {
+      this.music.stop(0.6); B.alphaT = 0.1; await sleep(1500); if (my !== this._token) return;
+      B.alphaT = 1; this.sfx.play('twang'); this.world.setDolly(0.5);
+      await this.talk(SCRIPT.apoManager.reveal); if (my !== this._token) return;
+      this.ui.setBossHeader(B.def); this.world.setDolly(0);
+      this.music.play('manager', { fade: 0.4, immediate: true });
+      this.ui.banner('무대 관리자', '모든 대본의 난사 — 99초', 2600);
+    } else {
+      B.kick(0, 1.2); B.ghostForce = true; this.sfx.play('laugh', { vol: 0.5 });
+      await sleep(800); if (my !== this._token) return;
+      await this.talk(SCRIPT.bellisProxy); if (my !== this._token) return;
+      this.ui.banner('빌려온 달', '99초를 버텨라', 2600);
+    }
+    this.state = 'fight';
+    B.startStep(i + 1);
+  }
+
+  isApoOpen() { try { return localStorage.getItem(APO_KEY) === '1' && localStorage.getItem(APO_DONE) !== '1'; } catch (e) { return false; } }
+  isApoDone() { try { return localStorage.getItem(APO_DONE) === '1'; } catch (e) { return false; } }
+  unlockApo() { try { if (localStorage.getItem(APO_DONE) !== '1') localStorage.setItem(APO_KEY, '1'); } catch (e) { /* noop */ } this.ui.refreshExtra(); }
+
+  /** APOTHEOSIS 종료: 대사 → 버튼이 영구히 사라진다 */
+  async apoEnd(B) {
+    const my = this._token;
+    this.state = 'ending'; this.music.stop(1.5); B.alphaT = 0.3;
+    this.ui.showHud(false);
+    await this.talk(SCRIPT.apoManager.outro); if (my !== this._token) return;
+    try { localStorage.setItem(APO_DONE, '1'); localStorage.removeItem(APO_KEY); } catch (e) { /* noop */ }
+    this.ui.showEnding('APOTHEOSIS', '풀어진 직조기', '그 문은 처음부터 없었다');
+    await sleep(6500); if (my !== this._token) return;
+    this.ui.hideEnding(); this.toMenu();
   }
 
   /** 단계 사이 연출: 대사 + (형태가 바뀔 때) 변신 연출 */
@@ -497,6 +554,7 @@ export class Game {
       await sleep(130); if (my !== this._token) return;
     }
     this.timeScale = 1;
+    if (this.run.apo) { await this.apoEnd(B); return; }
     B.alphaT = 0; B.scaleT = 1; this.world.setFall(null); this.veilLv = 0.98;
     this.world.setTheme('lumina'); this.ui.setTheme('lumina');
     await sleep(700); if (my !== this._token) return;
@@ -533,6 +591,7 @@ export class Game {
     await this.talk(typeof E.lines === 'function' ? E.lines(n === 0 ? this.stats.ultDeaths : n) : E.lines); if (my !== this._token) return;
     this.ui.showEnding(E.title, E.name, E.sub);
     // EXTRA 개방 조건: NORMAL 이상에서 노 컨티뉴 클리어
+    if (ex && !this.run.apo && !this.run.debugUsed) this.unlockApo(); // EXTRA · HELL 을 깨면 숨은 무대가 열린다
     if (ex && !hell && !this.run.debugUsed && !this.isHellUnlocked()) { this.unlockHell(); setTimeout(() => this.ui.warn('HELL 개방 — 타이틀에서 선택할 수 있습니다', 2800), 2600); }
     const unlocked = !ex && n === 0 && this.run.diff.lv >= 1 && !this.run.debugUsed;
     if (unlocked) { const was = this.isExtraUnlocked(); this.unlockExtra(); if (!was) setTimeout(() => this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2800), 2600); }
@@ -710,6 +769,10 @@ export class Game {
     if (this.hitstopT > 0) { this.hitstopT -= rawDt; this._render(rawDt, 0); return; }
 
     const input = this.input;
+    if (this.run.apo && (this.state === 'fight' || this.state === 'stage') && input.take('pause')) {
+      // APOTHEOSIS: 멈출 수 없다. 오히려 5초간 조작이 뒤집힌다.
+      this.player.invertT = 5; this.ui.warn('실이 몸을 틀어쥔다 — 나갈 수 없다', 1800); this.sfx.play('glitch', { vol: 0.8 }); this.ui.flash('#ffffff', 300, 0.3);
+    }
     if (input.take('pause')) {
       if (!document.getElementById('m-settings').hidden && this.paused) this.ui.modal('#m-settings', false);
       else if (this.state === 'fight' || this.state === 'stage' || this.paused) this.setPause(!this.paused);

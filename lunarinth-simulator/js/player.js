@@ -26,6 +26,8 @@ export class Player {
     this.core.renderOrder = 30; scene.add(this.core);
     this.dotRim = new THREE.Sprite(new THREE.SpriteMaterial({ map: T.orb, transparent: true, depthWrite: false, depthTest: false, color: 0xff3b6b, opacity: 0.9 }));
     this.dotRim.renderOrder = 29; scene.add(this.dotRim);
+    this.glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: T.orb, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffffff, opacity: 0 }));
+    this.glow.renderOrder = 5; this.glow.visible = false; scene.add(this.glow);
     this.focusRing = new THREE.Sprite(new THREE.SpriteMaterial({ map: T.ring, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, color: 0xfff1c9, opacity: 0 }));
     this.focusRing.renderOrder = 28; scene.add(this.focusRing);
     // 궁극기: 성검의 빛줄기
@@ -126,6 +128,9 @@ export class Player {
     if (this.safe) return false;
     if (G.state !== 'fight' && G.state !== 'stage') return false; // 연출 중의 피탄은 무효
     if (G.sealed) { if (G.run.debugInf) return false; G.onUltimateDeath(); return true; }
+    if (G.run.apo) { // APOTHEOSIS: 체력은 무한이다 (맞아도 흔들릴 뿐)
+      this.inv = 0.6; G.stats.hits++; G.audio.sfx.play('hurt', { pan: G.audio.pan(this.x), vol: 0.5 }); G.fx.burst(this.x, 1, this.z, 12, { color: [0xffffff], speed: 5, size: 0.7, life: 0.5 }); return true;
+    }
     this.hp = Math.max(0, this.hp - 1); this.inv = PLAYER.hitInv;
     G.stats.hits++; G.run.stepHit = true;
     G.ui.setHp(this.hp, this.maxHp);
@@ -212,6 +217,9 @@ export class Player {
     this.spr.material.opacity = blink ? 0.3 : this.focus ? 0.8 : 1;
     const odd = this.invertT > 0 || (this.G && this.G.zones && (this.G.zones.invert || this.G.zones.lag)); this.spr.material.color.setRGB(1, odd ? 0.65 : 1, odd ? 1.3 : 1);
     this.shadow.position.x = this.x; this.shadow.position.z = this.z; this.shadow.scale.set(1.7, 1, 1.7);
+    const apo = !!(this.G && this.G.run && this.G.run.apo);
+    this.glow.visible = apo && this.alive;
+    if (apo) { this.glow.position.set(this.x, h / 2, this.z - 0.1); const gs = h * 1.9 + Math.sin(t * 3) * 0.2; this.glow.scale.set(gs, gs, 1); this.glow.material.opacity = 0.55 + Math.sin(t * 4) * 0.1; this.spr.material.color.setRGB(2.4, 2.4, 2.4); }
 
     // 피탄점 (항상 표시: 작은 점 / 저속 시 테두리 링 확대)
     const dy = 0.95, cs = 0.15 + this.focusK * 0.05;

@@ -418,7 +418,33 @@ const ENDING = compose({
   },
 });
 
+// APOTHEOSIS: 색이 빠진 무대 — 기계적인 펄스와 갈라지는 잡음 (보스전 곡은 외부 음원 manager)
+const STAGE_APO = compose({
+  bpm: 188, seed: 111, form: 'iabcbd', crash: 0.1, pump: 0.4, scale: { root: 9, mode: 'phrygian' }, range: [69, 96], rhythms: [R_STAC, R_ODD, R_RUN],
+  prog: [C(33, 'min'), C(34, 'maj'), C(33, 'min'), C(28, 'dom7'), C(33, 'min'), C(34, 'maj'), C(31, 'maj'), C(28, 'dom7')],
+  modul: { c: 1, d: -2 }, bpmSec: { c: 1.06, d: 0.85 }, secVol: { i: 0.8, a: 0.95, b: 1, c: 1.1, d: 0.8 },
+  layers: {
+    pad: { s: ALL, vol: 0.03, cut: 700, cutTo: 2400 }, drone: { s: 'abcd', vol: 0.14 },
+    arp: { s: 'abcd', voice: 'pulse', pat: [0, 3, 5, 3, 1, 4, 6, 4], oct: 12, vol: 0.04 },
+    drums: { s: 'abc', pat: { a: 'drive', b: 'dnb', c: 'fast16' }, vol: 0.95 }, bass: { s: 'abc', pat: 'dnb', voice: 'pulse', vol: 0.12 },
+    lead: { s: 'bcd', voice: { b: 'pulse', c: 'supersaw', d: 'bell' }, vol: 0.06 }, tick: { s: 'abcd' }, whisper: { s: ALL, p: 0.1 },
+  },
+});
+// 오류 아르케시아: 박자가 계속 어긋나는 글리치
+const MID_APO = compose({
+  bpm: 172, seed: 113, form: 'iabab', crash: 0.12, scale: { root: 6, mode: 'phrygian' }, range: [66, 94], rhythms: [R_ODD, R_STAC],
+  prog: [C(30, 'min'), C(31, 'maj'), C(30, 'dim'), C(37, 'dom7'), C(30, 'min'), C(31, 'maj'), C(36, 'dim'), C(37, 'dom7')],
+  modul: { b: 3 }, bpmSec: { a: 1.0, b: 1.12 }, secVol: { i: 0.85, a: 1, b: 1.1 },
+  layers: {
+    pad: { s: ALL, vol: 0.035, cut: 900, cutTo: 3000 }, drums: { s: 'abcd', pat: { a: 'break', b: 'dnb' }, vol: 1 },
+    bass: { s: 'abcd', pat: 'synco', voice: 'pulse', vol: 0.13 }, tremolo: { s: 'abcd', every16: true, vol: 0.03 },
+    arp: { s: 'abcd', voice: 'pulse', pat: [0, 5, 2, 6, 1, 4, 3, 7], oct: 12, vol: 0.04 },
+    lead: { s: 'abcd', voice: { a: 'pulse', b: 'supersaw' }, vol: 0.065, rhythms: [R_ODD, R_STAC] }, whisper: { s: ALL, p: 0.2 }, tick: { s: 'abcd' },
+  },
+});
+
 export const TRACKS = {
+  stageApo: STAGE_APO, midApo: MID_APO,
   menu: MENU, stage1: STAGE1, stage2: STAGE2, stage3: STAGE3, stage4: STAGE4, stage5: STAGE5, stage6: STAGE6, stageEx: STAGE_EX, stageHell: STAGE_HELL,
   midboss: MIDBOSS, opsir: OPSIR, astra: ASTRA, tramont: TRAMONT, index: INDEX, bellis: BELLIS, arkesia: ARKESIA, arkesiaHell: ARKESIA_HELL,
   lumina: LUMINA, umbra: UMBRA, luna: LUNA, ultimate: ULTIMATE, victory: VICTORY, defeat: DEFEAT, ending: ENDING,

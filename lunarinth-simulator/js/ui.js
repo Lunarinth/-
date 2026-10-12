@@ -1,5 +1,5 @@
 // DOM 기반 UI: 타이틀·난이도/캐릭터 선택, HUD, 대사창, 스킬 선언 컷인, 컨티뉴/엔딩/결과, 설정집.
-import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, HELL_DIFF } from './lore.js';
+import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, HELL_DIFF, APO_DIFF } from './lore.js';
 import { OPSIR } from './bosses/opsir.js';
 import { ASTRA } from './bosses/astra.js';
 import { TRAMONT } from './bosses/tramont.js';
@@ -53,6 +53,7 @@ export class UI {
       if (this.extraUnlocked()) { this.extraMode = true; this.pickedDiff = EXTRA_DIFF; this.openSelect('char'); }
       else { this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true); this.sfx.play('hurt', { vol: 0.25 }); }
     };
+    $('#btn-apo').onclick = () => { if (this.apoOpen && this.apoOpen()) { this.extraMode = true; this.apoMode = true; this.pickedDiff = APO_DIFF; this.openSelect('char'); } };
     $('#btn-hell').onclick = () => { if (this.hellUnlocked()) { this.extraMode = true; this.pickedDiff = HELL_DIFF; this.openSelect('char'); } };
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
@@ -83,6 +84,7 @@ export class UI {
       const v = pw.value.trim().toLowerCase(), on = v === 'lunacute';
       if (on !== !!this._dbg) { this._dbg = on; this.on.debugInf && this.on.debugInf(on); }
       if (v === 'lunaugly' && !this.hellUnlocked()) { this.on.unlockHell && this.on.unlockHell(); }
+      if (v === 'claude') { this.on.unlockApo && this.on.unlockApo(); }
     };
     document.body.classList.toggle('calm', S.calm);
   }
@@ -153,7 +155,7 @@ export class UI {
   closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; }
   back() {
     this.sfx.play('ui_hover');
-    if (this.screen === 'char' && this.extraMode) { this.extraMode = false; this.closeSelect(); this.showMenu(true); }
+    if (this.screen === 'char' && this.extraMode) { this.extraMode = false; this.apoMode = false; this.closeSelect(); this.showMenu(true); }
     else if (this.screen === 'char') this.openSelect('diff');
     else if (this.screen === 'diff') { this.closeSelect(); this.showMenu(true); }
   }
@@ -165,9 +167,11 @@ export class UI {
     } else if (this.screen === 'char') {
       const c = CHARS[this.charIdx];
       if (!c) { this.warn('아직 선택할 수 없는 슬롯입니다', 1200, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
+      if (this.apoMode && c.id !== 'claire') { this.warn('이 무대에는 클레르만 설 수 있다', 1400, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
       if (!this.craftUnlocked(c.id)) { this.warn('아직 잠겨 있는 기체입니다', 1400, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
       this.closeSelect();
-      if (this.extraMode) { this.extraMode = false; this.on.startExtra && this.on.startExtra(c, this.pickedDiff); }
+      if (this.apoMode) { this.apoMode = false; this.extraMode = false; this.on.startApo && this.on.startApo(c); }
+      else if (this.extraMode) { this.extraMode = false; this.on.startExtra && this.on.startExtra(c, this.pickedDiff); }
       else this.on.start && this.on.start(this.pickedDiff, c);
     }
   }
@@ -192,7 +196,7 @@ export class UI {
       }
       if (!this.el.menu.hidden) {
         // 타이틀에서 "claude" 를 입력하면 EXTRA 개방
-        if (/^Key[A-Z]$/.test(code)) { this._kbuf = (this._kbuf + code.slice(3).toLowerCase()).slice(-6); if (this._kbuf === 'claude' && !this.extraUnlocked()) { this.on.unlockExtra && this.on.unlockExtra(); this._kbuf = ''; } }
+        if (/^Key[A-Z]$/.test(code)) { this._kbuf = (this._kbuf + code.slice(3).toLowerCase()).slice(-6); if (this._kbuf === 'claude') { if (!this.extraUnlocked()) this.on.unlockExtra && this.on.unlockExtra(); this.on.unlockApo && this.on.unlockApo(); this._kbuf = ''; } }
         const btns = [...document.querySelectorAll('#m-main button')], cur = btns.indexOf(document.activeElement);
         if (code === 'ArrowDown' || code === 'KeyS') { e.preventDefault(); btns[(cur + 1) % btns.length].focus(); }
         else if (code === 'ArrowUp' || code === 'KeyW') { e.preventDefault(); btns[(cur + btns.length - 1) % btns.length].focus(); }
@@ -207,6 +211,7 @@ export class UI {
   hellUnlocked() { try { return localStorage.getItem('lunarinth.hell.v1') === '1'; } catch (e) { return false; } }
   refreshExtra() {
     $('#btn-hell').hidden = !this.hellUnlocked();
+    $('#btn-apo').hidden = !(this.apoOpen && this.apoOpen());
     const b = $('#btn-extra'), on = this.extraUnlocked();
     b.classList.toggle('locked', !on);
     b.innerHTML = on ? 'EXTRA <i class="lock">— 개방됨</i>' : 'EXTRA <i class="lock">🔒</i>';
@@ -290,7 +295,7 @@ export class UI {
     const def = B.def, st = def.steps[i], f = def.forms[st.form];
     this.el.form.innerHTML = `<b>${f.label}</b> · ${f.sub}`;
     // 얼티메이트 스킬은 발동 전까지 존재를 보이지 않는다. 발동하면 그 5식만 표시된다.
-    const ult = st.kind === 'ultimate', list = def.steps.map((s, k) => ({ s, k })).filter((o) => (o.s.kind === 'ultimate') === ult);
+    const ult = st.kind === 'ultimate', list = def.steps.map((s, k) => ({ s, k })).filter((o) => (o.s.kind === 'ultimate') === ult && (!o.s.fake || o.k === i));
     this.el.pips.innerHTML = list.map(({ s, k }) => `<i class="pip ${s.kind === 'nonspell' ? 'n' : 's'} ${k < i ? 'done' : k === i ? 'cur' : ''}"></i>`).join('');
     const sp = this.el.spell; sp.hidden = false; sp.className = st.kind;
     sp.innerHTML = `<small>${KIND_LABEL[st.kind]}</small>${SPELL_TAG(st)}`;

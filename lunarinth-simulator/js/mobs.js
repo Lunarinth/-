@@ -27,10 +27,12 @@ export const MOB_TYPES = {
   phase: { tex: 'mob_phase', color: 0xfff1c9, glow: 0xd9c8ff, bullet: { kind: 'crescent', color: 0xfff1c9, alt: 0xe3d6ff } },
   doll: { tex: 'mob_doll', color: 0xff8a9a, glow: 0xff4f6a, bullet: { kind: 'shard', color: 0xff6a80, alt: 0xffffff } },
   mask: { tex: 'mob_mask', color: 0xffd0d8, glow: 0xff4f6a, bullet: { kind: 'shard', color: 0xffa0b0, alt: 0xffffff } },
+  spider: { tex: 'mob_spider', color: 0xffffff, glow: 0xffffff, bullet: { kind: 'shard', color: 0xffffff, alt: 0xffffff } },
   spool: { tex: 'mob_spool', color: 0xff5a70, glow: 0xff2b4d, bullet: { kind: 'orb', color: 0xff5a70, alt: 0xffffff } },
 };
 
 export class Mobs {
+  static mono = false; // APOTHEOSIS: 병사는 전부 흰색
   constructor(scene, T, G, n = 48) {
     this.G = G; this.T = T; this.list = []; this._uid = 0; this.linkPool = [];
     // 실(링크) 풀: 병사와 병사를 잇는 선. 주기적으로 팽팽해져 피해를 줄 수 있다 (경고 → 판정)
@@ -61,7 +63,7 @@ export class Mobs {
       uid: ++this._uid, face: !!o.face, faceA: 0, sway: o.sway || 0, swayF: o.swayF || 2.2, swayPh: o.swayPh ?? Math.random() * 6, tint: o.tint ?? null, rimOn: o.rim !== false, op: o.op ?? 0.95, px: o.x, pz: o.z,
     });
     m.hp = m.hpMax; m.hr = o.hr ?? m.size * 0.42;
-    m.mat.map = this.T[ty.tex]; m.mat.color.setHex(ty.color); m.rmat.color.setHex(ty.glow);
+    m.mat.map = this.T[ty.tex]; m.mat.color.setHex(Mobs.mono ? 0xffffff : ty.color); m.rmat.color.setHex(ty.glow);
     m.spr.visible = m.rim.visible = m.sh.visible = true; m.mat.opacity = 0; m.rmat.opacity = 0;
     return m;
   }

@@ -14,6 +14,7 @@ const wrapPi = (a) => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += 
 
 // ───────────────────────── 탄 ─────────────────────────
 export class Bullets {
+  static mono = false; // APOTHEOSIS: 적 탄은 전부 흰색
   constructor(scene, T, n = 900) {
     this.T = T; this.cursor = 0;
     this.list = [];
@@ -44,7 +45,7 @@ export class Bullets {
     b.dmg = o.dmg ?? 1; b.grazed = false; b.reflected = false; b.trail = !!o.trail; b.trailT = 0;
     b.delay = o.delay || 0; b.tag = o.tag || null; b.accelAt = o.accelAt || 0; b.orbit = o.orbit ? { ...o.orbit } : null;
     b.speeds = o.speeds || null; b.baseS = sp; b.wob = o.wob || null; b.wobPh = o.wobPh ?? 0; b.fn = o.fn || null;
-    b.color = o.color ?? 0xffffff;
+    b.color = (Bullets.mono && b.owner === 'boss') ? 0xffffff : (o.color ?? 0xffffff);
     b.mat.map = this.T[KIND_TEX[b.kind] || 'orb'];
     b.mat.color.setHex(b.color); b.mat.opacity = 0; b.mat.rotation = b.rot;
     const hot = (b.kind === 'orb' || b.kind === 'shard' || b.kind === 'star' || b.kind === 'pixel') && b.owner !== 'player';
