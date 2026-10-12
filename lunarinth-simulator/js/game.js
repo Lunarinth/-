@@ -294,7 +294,7 @@ export class Game {
     const f0 = def.forms[def.steps[0].form], th = def.theme || f0.theme;
     this.world.setTheme(th); this.ui.setTheme(th);
     this.music.play(def.music || 'midboss', { fade: 0.8, immediate: true });
-    this.ui.banner('MID BOSS', `${def.name}`, 2200);
+    this.ui.banner('길목의 수호자', `${def.name}`, 2200);
     await sleep(1500); if (my !== this._token) return;
     const line = this.midLines(st).intro;
     if (line) await this.talk(line); if (my !== this._token) return;
@@ -398,11 +398,11 @@ export class Game {
       this.fx.ring(B.x, B.bobY, B.z, 0xffffff, last ? 20 : 14, 0.8);
       if (isSpell) {
         this.stats.spellsCaptured += (!this.run.stepHit && !this.run.stepUlt) ? 1 : 0;
-        this.ui.warn(!this.run.stepHit && !this.run.stepUlt ? '스킬 격파 — 노 미스·노 궁극기' : '스킬 격파', 1700);
+        this.ui.warn(!this.run.stepHit && !this.run.stepUlt ? '격파 — 흠 없는 승리' : '격파', 1700);
       }
     } else {
       this.sfx.play('telegraph');
-      this.ui.warn(isSpell ? '스킬 시간 초과' : '통상 시간 초과', 1300);
+      this.ui.warn('술식이 흩어졌다', 1300);
       this.fx.ring(B.x, B.bobY, B.z, B.pal.glow, 10, 0.6);
     }
     if (!this.player.alive && this.sealed) this.player.revive(this);
@@ -476,12 +476,12 @@ export class Game {
     this.sfx.play('laugh_big'); setTimeout(() => this.sfx.play('laugh_big', { pitch: 1.1 }), 500); setTimeout(() => this.sfx.play('laugh', { pitch: 0.9 }), 1100);
     this.ui.flash('#000000', 900, 0.9); this.world.shake(1.0, 1.2); this.world.beat(1.5); this.ui.madness(true); setTimeout(() => this.ui.madness(false), 2200);
     this.music.setIntensity(0); this.music.play('ultimate', { fade: 0.5, immediate: true });
-    this.ui.banner('ULTIMATE SKILL', '진짜 발악 — 한 번이라도 닿으면 끝', 3000);
+    this.ui.banner('달의 오의', '스치기만 해도 끝', 3000);
     await sleep(1800); if (my !== this._token) return;
     await this.talk(SCRIPT.lunarinth.ultimateStart); if (my !== this._token) return;
     this.world.setDolly(0);
     this.sealed = true; this.ui.setSealed(true);
-    this.ui.warn('잔기 · 컨티뉴 · 궁극기 — 전부 봉인', 2200);
+    this.ui.warn('성검의 빛이 달빛에 가로막혔다', 2200);
     this.state = 'fight';
     B.startStep(i + 1);
   }
@@ -508,7 +508,7 @@ export class Game {
       this.ui.banner('NEW CRAFT', '아스트라 — 두 번째 기체 해금', 2600); await sleep(2700); if (my !== this._token) return;
     }
     if (idx + 1 < this.stageList.length) {
-      this.ui.banner('STAGE CLEAR', `${B.def.name} 격파`, 2200);
+      this.ui.banner('길이 열렸다', `${B.def.name} 격파`, 2200);
       await sleep(2300); if (my !== this._token) return;
       await this.playStage(idx + 1);
     } else {
@@ -625,9 +625,9 @@ export class Game {
     this.sfx.play('ult');
     P.beginUlt(this, mode);
     if (!inStage) {
-      if (mode === 'reject') { this.ui.warn('궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
-      else if (mode === 'immune') { this.ui.warn('이 기술에는 궁극기가 통하지 않습니다', 1800); }
-      else if (mode === 'resist') { this.ui.warn('궁극기의 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
+      if (mode === 'reject') { this.ui.warn('성광이 되돌려졌다', 1800); B.barkFor(B.def.id + 'Ult'); }
+      else if (mode === 'immune') { this.ui.warn('성광이 통하지 않는다', 1800); }
+      else if (mode === 'resist') { this.ui.warn('성광이 크게 약해진다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
       else if (Math.random() < 0.5) B.barkFor(B.def.id + 'Ult');
       if (B.addAnalysis) B.addAnalysis(10);
     }

@@ -12,7 +12,7 @@ const $ = (s) => document.querySelector(s);
 const STAR = `<svg viewBox="0 0 32 32"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="var(--a1)"/></linearGradient></defs><path fill="url(#hg)" stroke="rgba(255,255,255,.85)" stroke-width="1.2" d="M22 3a13 13 0 1 0 0 26 10.5 10.5 0 1 1 0-26z"/></svg>`;
 const GEM = `<svg viewBox="0 0 24 24"><path d="M12 1 L21 12 L12 23 L3 12 Z" fill="currentColor" stroke="rgba(255,255,255,.85)" stroke-width="1.2"/></svg>`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const KIND_LABEL = { nonspell: '통상', spell: '스킬', last: '라스트 스킬', ult: '궁극기', ultimate: '얼티메이트 스킬' };
+const KIND_LABEL = { nonspell: '전초', spell: '술식', last: '최종 술식', ult: '성광', ultimate: '달의 오의' };
 const SPELL_TAG = (st) => `${st.tag ? st.tag + ' ' : ''}「${st.name}」`;
 
 export class UI {
@@ -241,7 +241,7 @@ export class UI {
     const O = OFFICIAL;
     const tag = (t) => `<span class="tag ${t}">${t === 'off' ? '공식 설정' : t === 'prov' ? '제공 설정' : '창작 제안'}</span>`;
     const li = (a) => a.map((x) => `<li>${x}</li>`).join('');
-    const skills = (def) => def.steps.filter((st) => st.kind !== 'ultimate').map((st, i) => `<li><span class="k ${st.kind}">${i + 1}. ${KIND_LABEL[st.kind]}</span> ${SPELL_TAG(st)} <small>— ${def.forms[st.form].label}${st.ultMode === 'immune' ? ' · 궁극기 면역' : st.ultMode === 'reject' ? ' · 궁극기 무효' : st.ultMode === 'resist' ? ' · 궁극기 저항' : ''}</small></li>`).join('');
+    const skills = (def) => def.steps.filter((st) => st.kind !== 'ultimate').map((st, i) => `<li><span class="k ${st.kind}">${i + 1}. ${KIND_LABEL[st.kind]}</span> ${SPELL_TAG(st)} <small>— ${def.forms[st.form].label}${st.ultMode === 'immune' ? ' · 성광 면역' : st.ultMode === 'reject' ? ' · 성광 무효' : st.ultMode === 'resist' ? ' · 성광 저항' : ''}</small></li>`).join('');
     const defs = { opsir: OPSIR, astra: ASTRA, tramont: TRAMONT, index: INDEX, bellis: BELLIS, arkesia: { ...ARKESIA, steps: ARKESIA.allSteps.flatMap((x) => (x.variant ? Object.values(x.variant).map((v) => ({ ...x, ...v })) : [x])) } };
     const bossCard = (r, def) => `
       <div class="form"><b>${r.name} <small>${r.en} · STAGE ${r.stage}</small></b> ${tag(r.tag)}

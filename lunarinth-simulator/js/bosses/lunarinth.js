@@ -347,7 +347,7 @@ export class Lunarinth extends Boss {
     const G = this.G, P = G.player, pal = this.pal;
     this.cast('madness'); G.ui.warn('광기가 밀려옵니다…', 1400); yield 1.1;
     const inv = this.enrage ? 2.6 : 2.2;
-    P.invertT = inv; G.setMadness(inv + 0.5); G.ui.warn('조작 반전!', 1700);
+    P.invertT = inv; G.setMadness(inv + 0.5); G.ui.warn('달빛이 방향감각을 뒤튼다', 1700);
     for (let w = 0; w < 5; w++) {
       this.fan(this.n(7, 4), 1.6, this.aim() + rnd(-0.2, 0.2), { kind: 'orb', speed: 5.6, size: 1.1, color: w % 2 ? pal.a : pal.b });
       this.ring(this.n(10, 6), { kind: 'crescent', speed: 3.8, size: 1.05, color: pal.c, spin: 6 });
@@ -398,7 +398,7 @@ export class Lunarinth extends Boss {
   // ═════ 라스트 스킬 「트리니티 이클립스」: 세 개의 달이 겹치는 밤 (궁극기 면역) ═════
   *atk_spTrinity() {
     const G = this.G;
-    this.cast('moon_throw'); this.sfx('laugh_big'); G.ui.warn('삼위일체 — 궁극기는 닿지 않습니다', 1800); yield 1.0;
+    this.cast('moon_throw'); this.sfx('laugh_big'); G.ui.warn('삼위일체 — 성검의 빛이 닿지 않는다', 1800); yield 1.0;
     while (true) {
       const seq = shuffle(['trinityBarrage', 'lunaticSpiral', 'moonfall', 'madnessWave', 'moonThrow']);
       for (const name of seq) yield* this['atk_' + name]();
