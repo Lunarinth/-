@@ -440,8 +440,11 @@ export class Game {
   }
 
   _checkDoors(dt) {
-    if (this._doorCd > 0) { this._doorCd -= dt; return; }
     const room = this.room, P = this.player;
+    // 거절 표시는 그 자리에서 벗어나는 순간 지운다 (문 앞에서만 검사하면 영원히 남아 진행이 막힌다)
+    const dc = this._declined;
+    if (dc && ((P.x - dc.x) ** 2 + (P.z - dc.z) ** 2 > 2.4 * 2.4 || dc.room !== room)) this._declined = null;
+    if (this._doorCd > 0) { this._doorCd -= dt; return; }
     if (!room || this.roomCombat || !(room.cleared || room.data.declined) || !P.alive) return;
     for (const d of Object.keys(DOOR_POS)) {
       const k = room.doors[d]; if (!k) continue;
@@ -535,7 +538,12 @@ export class Game {
     if (!this.input.take('take') || !P.alive || this.roomCombat) return;
     const p = this.pickups.nearTake(P.x, P.z);
     if (p) { if (this.collectPickup(p)) this.pickups.kill(p); return; }
-    if (this.nearNpc()) { if (this.room.merchant) this.talkMerchant(); else this.useFountain(); }
+    if (this.nearNpc()) { if (this.room.merchant) this.talkMerchant(); else this.useFountain(); return; }
+    // 거절했던 보스방 문 · 달빛 통로 앞에서 E 를 누르면 다시 묻는다
+    if (this._declined) { this._declined = null; this._doorCd = 0; return; }
+    // 물러났던 도전방: 방 안 어디서든 E 로 다시 도전
+    const R = this.room;
+    if (R && R.type === 'challenge' && !R.cleared && R.data.declined) { R.data.declined = false; this.askChallenge(R, this._token); }
   }
   /** 상인 · 샘물 앞에 서 있는가 */
   nearNpc() {
@@ -594,7 +602,7 @@ export class Game {
     const k = await this.ui.choose(title, [yes, no], { cancel: 1 });
     if (my !== this._token) return false;
     this.state = 'room';
-    if (k !== 0) this._declined = { x, z };
+    if (k !== 0) this._declined = { x, z, room: this.room };
     return k === 0;
   }
   declinedNear(x, z) {
@@ -1363,7 +1371,8 @@ export class Game {
       const act = !inReach ? '<small>가까이 가서</small> <kbd>E</kbd>' : cost ? (P.coins >= cost ? `<kbd>E</kbd> 구매 ◎ ${cost}` : `<span class="poor">동전이 모자랍니다 ◎ ${cost}</span>`) : '<kbd>E</kbd> 줍기';
       if (near.type === 'item') { const it = ITEM_BY_ID[near.itemId], R = RARITY[it.rarity]; this.ui.hint(`<b style="color:${R.color}">${it.name}</b> <small>${R.name}${it.active ? ' · 액티브(C)' : ''}</small><br>${it.desc}<div class="act">${act}</div>`); }
       else this.ui.hint(`<b>${PICKUPS[near.type].name}</b><div class="act">${act}</div>`);
-    } else if (this.nearNpc()) this.ui.hint(this.room.merchant ? `<b>${this.room.merchant === 'sitra' ? '시트라' : '인피니트'}</b><div class="act"><kbd>E</kbd> 말 걸기</div>` : `<b>샘물</b><div class="act"><kbd>E</kbd> 살펴본다</div>`);
+    } else if (this.state === 'room' && (this._declined || (this.room && this.room.type === 'challenge' && !this.room.cleared && this.room.data.declined))) this.ui.hint('<div class="act"><kbd>E</kbd> 다시 고르기</div>');
+    else if (this.nearNpc()) this.ui.hint(this.room.merchant ? `<b>${this.room.merchant === 'sitra' ? '시트라' : '인피니트'}</b><div class="act"><kbd>E</kbd> 말 걸기</div>` : `<b>샘물</b><div class="act"><kbd>E</kbd> 살펴본다</div>`);
     else this.ui.hint(null);
   }
 

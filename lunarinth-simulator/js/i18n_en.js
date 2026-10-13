@@ -1307,5 +1307,6 @@ export const EN = {
 "문양이 빚은 중간 보스": "A mid-boss shaped from sigils",
 "수호 형태": "Guardian form",
 "언어": "Language",
-"바꾸면 타이틀로 돌아갑니다": "Changing it returns you to the title screen"
+"바꾸면 타이틀로 돌아갑니다": "Changing it returns you to the title screen",
+"다시 고르기": "Choose again"
 };
