@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LUCENT NOCTURNE — 루센트 야상곡</title>
+<meta name="description" content="루센트 저택의 달의 정원. 여섯 개의 전장과 EXTRA, 2.5D 탄막 보스전.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23cdb8ff' d='M40 6a26 26 0 1 0 0 52 22 22 0 1 1 0-52z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-phase="lumina" data-screen="loading">
+
+<canvas id="gl"></canvas>
+<div id="fx-grade"></div>
+<div id="fx-veil"></div>
+<div id="fx-vignette"></div>
+<div id="fx-flash"></div>
+
+<!-- 전투 HUD -->
+<div id="hud" hidden>
+  <div id="stagetag"><span id="hud-stage">STAGE 1</span><span id="hud-diff">NORMAL</span></div>
+  <div id="bossbar">
+    <div class="bb-top"><span id="bb-name">루나린스</span><span id="bb-epi"></span></div>
+    <div class="bb-track">
+      <div class="bb-ghost" id="bb-ghost"></div>
+      <div class="bb-fill" id="bb-fill"></div>
+    </div>
+    <div class="bb-bot"><span id="bb-form"></span><span id="bb-pips"></span></div>
+    <div id="bb-ana" hidden><small>분석률</small><div class="ana-track"><div id="ana-fill"></div></div><b id="ana-num">0%</b></div>
+  </div>
+  <div id="sealtag" hidden>ULTIMATE SKILL<small>컨티뉴 · 성광 봉인 — 한 번 맞으면 그 식은 끝 · 루나린스는 무적</small></div>
+  <div id="bb-timer">--</div>
+  <div id="spellname" hidden></div>
+  <div id="lives"><small>체력</small><div id="stars"></div></div>
+  <div id="ults"><small>성광</small><div id="ult-gems"></div><kbd>X</kbd></div>
+  <div id="rogue">
+    <div class="r-row"><span class="ri coin"></span><b id="r-coins">00</b><span class="ri key"></span><b id="r-keys">01</b></div>
+    <div id="r-power"><small>POWER</small><div class="pw-track"><i id="pw-fill"></i><em style="left:25%"></em><em style="left:50%"></em><em style="left:75%"></em></div><b id="pw-num">0.00</b></div>
+  </div>
+  <div id="active-slot" hidden><img id="act-img" alt=""><div class="act-body"><small id="act-name"></small><div id="act-bars"></div></div><kbd>C</kbd></div>
+  <div id="items-strip"></div>
+  <canvas id="minimap" width="200" height="150"></canvas>
+  <div id="stats">
+    <div><small>SCORE</small> <b id="sc-num">000000000</b></div>
+    <div><small>GRAZE</small> <b id="st-graze">0</b></div>
+    <div><small>CONTINUE</small> <b id="st-cont">0 / 3</b></div>
+  </div>
+</div>
+
+<div id="warn"></div>
+<div id="bubble" hidden></div>
+<div id="banner" hidden><div class="b-form"></div><div class="b-title"></div></div>
+<div id="announce" hidden></div>
+<div id="itembanner" hidden><img alt=""><div><div class="ib-name"></div><div class="ib-desc"></div></div></div>
+<div id="tags"></div>
+<div id="hint" hidden></div>
+
+<!-- 스킬 선언 컷인 (적 스킬 / 플레이어 궁극기 공용) -->
+<div id="declare" hidden>
+  <div class="dc-band"></div>
+  <div class="dc-portrait"><canvas id="dc-canvas" width="420" height="420"></canvas></div>
+  <div class="dc-text"><div class="dc-kind"></div><div class="dc-tag"></div><div class="dc-name"></div></div>
+</div>
+
+<!-- 대사 -->
+<div id="dialog" hidden>
+  <div class="d-portrait"><canvas id="d-canvas" width="256" height="256"></canvas></div>
+  <div class="d-body">
+    <div class="d-name" id="d-name"></div>
+    <div class="d-text" id="d-text"></div>
+    <div class="d-choices" hidden></div>
+    <div class="d-hint">Z · Enter · 클릭 <span class="d-skip">| Esc 건너뛰기</span></div>
+  </div>
+</div>
+
+<!-- 선택창 -->
+<div id="choice" hidden><div class="ch-panel"><div class="ch-title"></div><div class="ch-list"></div><div class="ch-hint">↑↓ 선택 · Z / Enter 결정</div></div></div>
+
+<!-- 엔딩 카드 -->
+<div id="ending" hidden>
+  <div class="e-title"></div><div class="e-name"></div><div class="e-sub"></div>
+</div>
+
+<!-- 타이틀 -->
+<section id="menu" class="screen" hidden>
+  <div class="m-bg"><i class="m-ring r1"></i><i class="m-ring r2"></i><i class="m-ring r3"></i><canvas id="m-fx"></canvas></div>
+  <img class="m-char m-claire" src="assets/claire.png" alt="">
+  <img class="m-char m-luna" src="assets/lunarinth.png" alt="">
+  <div class="m-trio"><img src="assets/opsir.png" alt=""><img src="assets/astra.png" alt=""><img src="assets/sitra.png" alt=""><img src="assets/tramont.png" alt=""><img src="assets/index.png" alt=""><img src="assets/bellis.png" alt=""></div>
+  <div class="m-inner">
+    <div class="m-kicker">LUNARINTH · 달의 삼위일체</div>
+    <h1>LUCENT NOCTURNE</h1>
+    <div class="m-sub">루센트 야상곡</div>
+    <div class="m-tag">~ 여섯 개의 무대를 지나, 달의 정원으로 ~</div>
+    <div class="m-btns" id="m-main">
+      <button id="btn-start" class="primary">게임 시작</button>
+      <button id="btn-extra" class="locked">EXTRA <i class="lock">🔒</i></button>
+      <button id="btn-apo" hidden>APOTHEOSIS</button>
+      <button id="btn-codex">설정집</button>
+      <button id="btn-settings">소리 · 설정</button>
+      <button id="btn-help">조작법</button>
+    </div>
+    <p class="m-foot">↑↓ 선택 · Z / Enter 결정 · X / Esc 취소 · 헤드폰 권장</p>
+  </div>
+  <div class="m-ver">v5.1 · STAGE 1 – 6 · EXTRA</div>
+</section>
+
+<!-- 난이도 선택 -->
+<section id="sel-diff" class="screen sel" hidden>
+  <div class="sel-head"><small>DIFFICULTY</small><h2>난이도 선택</h2></div>
+  <div class="sel-cards" id="diff-cards"></div>
+  <div class="sel-desc" id="diff-desc"></div>
+  <p class="sel-foot">← → 선택 · Z / Enter 결정 · X / Esc 돌아가기</p>
+</section>
+
+<!-- 모달들 -->
+<section id="m-help" class="modal" hidden>
+  <div class="panel">
+    <h2>조작법</h2>
+    <table class="keys">
+      <tr><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>이동</td></tr>
+      <tr><td><kbd>Z</kbd></td><td>샷 (누르고 있으면 연사) · 대사 넘기기 · 결정</td></tr>
+      <tr><td><kbd>X</kbd></td><td>성광(폭탄) — 무적 + 탄 소거 + 큰 피해. 바닥의 성광을 주워 채웁니다</td></tr>
+      <tr><td><kbd>C</kbd></td><td>액티브 스킬 — 물건으로 얻고, 방을 정리할 때마다 충전됩니다</td></tr>
+      <tr><td><kbd>E</kbd> · <kbd>Space</kbd></td><td>받침대 위 물건 줍기 · 상점에서 구매 (동전 · 하트 · P 는 닿으면 자동으로 줍습니다)</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>저속 이동 + 피탄점 표시 · 샷이 정면에 집중됩니다</td></tr>
+      <tr><td><kbd>Esc</kbd> · <kbd>P</kbd></td><td>일시정지 · 취소 · 대사 건너뛰기</td></tr>
+    </table>
+    <ul class="tips">
+      <li>각 무대는 여러 방으로 이어져 있습니다. 방의 적을 모두 쓰러뜨리면 문이 열립니다. 미니맵의 ☠ 방에 무대의 주인이 있고, 쓰러뜨리면 다음 무대로 가는 달빛 통로가 열립니다.</li>
+      <li>★ 보물방(STAGE 2부터는 열쇠 필요) · ◎ 휴식방(가끔 상인 시트라가 있습니다) · ◆ 문지기의 방 · ⚔ 도전방. 첫 클리어 이후에는 끝없는 복도의 상인 ∞ 인피니트가 나타납니다.</li>
+      <li>빨간 P는 파워입니다. 파워가 오를수록 탄 줄이 늘어나고, 맞으면 조금 줄어듭니다. 동전으로 상점에서 물건을 삽니다.</li>
+      <li>물건은 탄의 모양 · 성질 · 옵션 · 능력치를 바꿉니다. 같은 계열 물건 3개를 모으면 변신합니다.</li>
+      <li>작은 붉은 점이 실제 피탄점입니다. 탄의 겉모양이 아니라 이 점이 닿을 때만 맞습니다.</li>
+      <li>피격 시 체력이 1 줄고 잠시 무적이 됩니다. 체력을 모두 잃으면 컨티뉴(기본 3회)를 쓸 수 있고, 컨티뉴를 한 번이라도 쓰면 엔딩이 달라집니다. EXTRA에는 컨티뉴가 없습니다.</li>
+      <li>보스는 통상 → 스킬 순서로 이어지는 “단계”마다 체력과 제한시간이 따로 있습니다. 시간이 지나도 다음 단계로 넘어갑니다.</li>
+      <li>보스에 따라 성광이 통하지 않거나 크게 줄어드는 기술이 있습니다. 화면에 알림이 나옵니다.</li>
+      <li>스테이지 중간에는 길을 막는 중간 보스가 나옵니다. 하드 이상에서는 기술이 하나 더 붙습니다.</li>
+      <li>붉은 원·선은 곧 터질 공격, 연한 선은 예고선입니다.</li>
+    </ul>
+    <button class="close">닫기</button>
+  </div>
+</section>
+
+<section id="m-settings" class="modal" hidden>
+  <div class="panel">
+    <h2>소리 · 설정</h2>
+    <label class="row">마스터 <input type="range" id="v-master" min="0" max="100"><output></output></label>
+    <label class="row">음악 <input type="range" id="v-music" min="0" max="100"><output></output></label>
+    <label class="row">효과음 <input type="range" id="v-sfx" min="0" max="100"><output></output></label>
+    <label class="chk"><input type="checkbox" id="o-mute"> 음소거</label>
+    <label class="chk"><input type="checkbox" id="o-shake"> 화면 흔들림</label>
+    <label class="chk"><input type="checkbox" id="o-calm"> 깜빡임 줄이기 (플래시·색 왜곡 완화)</label>
+    <label class="row lang">언어 · Language <select id="o-lang"><option value="ko">한국어</option><option value="en">English</option></select></label>
+    <p class="lang-note">바꾸면 타이틀로 돌아갑니다</p>
+    <label class="row pass">암호 <input type="text" id="o-pass" autocomplete="off" spellcheck="false" placeholder="테스트용"></label>
+    <button class="close">닫기</button>
+  </div>
+</section>
+
+<section id="m-codex" class="modal" hidden>
+  <div class="panel wide">
+    <h2>설정집 <small>LUCENT MANOR</small></h2>
+    <div id="codex-body"></div>
+    <button class="close">닫기</button>
+  </div>
+</section>
+
+<!-- 일시정지 -->
+<section id="m-pause" class="modal" hidden>
+  <div class="panel small">
+    <h2>일시정지</h2>
+    <div id="pause-items"></div>
+    <button id="btn-resume" class="primary">계속하기</button>
+    <button id="btn-pause-settings">소리 · 설정</button>
+    <button id="btn-pause-menu">타이틀로</button>
+  </div>
+</section>
+
+<!-- 컨티뉴 -->
+<section id="m-continue" class="modal" hidden>
+  <div class="panel small continue">
+    <h2>CONTINUE?</h2>
+    <div id="cont-left"></div>
+    <p class="cont-note">체력이 다시 채워지고, 지금 있던 곳에서 이어집니다. 모은 물건은 그대로입니다.<br>컨티뉴를 쓰면 엔딩이 달라집니다.</p>
+    <button id="btn-cont-yes" class="primary">컨티뉴 (Z)</button>
+    <button id="btn-cont-no">포기 (X)</button>
+  </div>
+</section>
+
+<!-- 결과 -->
+<section id="m-result" class="modal" hidden>
+  <div class="panel small result">
+    <div id="r-kicker"></div>
+    <h2 id="r-title"></h2>
+    <div id="r-stats"></div>
+    <button id="btn-retry" class="primary">처음부터 다시</button>
+    <button id="btn-result-menu">타이틀로</button>
+  </div>
+</section>
+
+<div id="loading"><div class="l-moon"></div><div class="l-text">달이 차오르는 중…</div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
