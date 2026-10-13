@@ -330,7 +330,7 @@ export class Game {
   enterRoom(room, dir) {
     const my = ++this._token, F = this.floor, P = this.player, prev = this.room;
     if (prev && prev !== room) prev.pickups = this.pickups.snapshot();
-    this.clearField(); this.skills.wells.length = 0; this.freezeT = 0; document.body.classList.remove('timestop');
+    this.clearField(); this.skills.reset(); this.freezeT = 0; // 예약된 별똥별 · 레몬 폭발 · 우물이 다음 방으로 따라오지 않게 document.body.classList.remove('timestop');
     this.room = room; room.visited = true; room.known = true; room.data.declined = false;
     for (const k of Object.values(room.doors)) F.grid.get(k).known = true;
     if (dir) { const [dx, dz] = DOOR_POS[OPP[dir]], l = Math.hypot(dx, dz); P.x = dx - (dx / l) * 1.9; P.z = dz - (dz / l) * 1.9; }
