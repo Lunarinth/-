@@ -71,9 +71,13 @@
   <div class="d-body">
     <div class="d-name" id="d-name"></div>
     <div class="d-text" id="d-text"></div>
+    <div class="d-choices" hidden></div>
     <div class="d-hint">Z · Enter · 클릭 <span class="d-skip">| Esc 건너뛰기</span></div>
   </div>
 </div>
+
+<!-- 선택창 -->
+<div id="choice" hidden><div class="ch-panel"><div class="ch-title"></div><div class="ch-list"></div><div class="ch-hint">↑↓ 선택 · Z / Enter 결정</div></div></div>
 
 <!-- 엔딩 카드 -->
 <div id="ending" hidden>
@@ -90,11 +94,10 @@
     <div class="m-kicker">LUNARINTH · 달의 삼위일체</div>
     <h1>LUCENT NOCTURNE</h1>
     <div class="m-sub">루센트 야상곡</div>
-    <div class="m-tag">~ 여섯 층의 저택을 지나, 달의 정원으로 ~</div>
+    <div class="m-tag">~ 여섯 개의 무대를 지나, 달의 정원으로 ~</div>
     <div class="m-btns" id="m-main">
       <button id="btn-start" class="primary">게임 시작</button>
       <button id="btn-extra" class="locked">EXTRA <i class="lock">🔒</i></button>
-      <button id="btn-hell" class="hell" hidden>EXTRA · HELL</button>
       <button id="btn-apo" hidden>APOTHEOSIS</button>
       <button id="btn-codex">설정집</button>
       <button id="btn-settings">소리 · 설정</button>
@@ -102,7 +105,7 @@
     </div>
     <p class="m-foot">↑↓ 선택 · Z / Enter 결정 · X / Esc 취소 · 헤드폰 권장</p>
   </div>
-  <div class="m-ver">v5.0 · 저택 6층 · EXTRA</div>
+  <div class="m-ver">v5.1 · STAGE 1 – 6 · EXTRA</div>
 </section>
 
 <!-- 난이도 선택 -->
@@ -122,12 +125,13 @@
       <tr><td><kbd>Z</kbd></td><td>샷 (누르고 있으면 연사) · 대사 넘기기 · 결정</td></tr>
       <tr><td><kbd>X</kbd></td><td>성광(폭탄) — 무적 + 탄 소거 + 큰 피해. 바닥의 성광을 주워 채웁니다</td></tr>
       <tr><td><kbd>C</kbd></td><td>액티브 스킬 — 물건으로 얻고, 방을 정리할 때마다 충전됩니다</td></tr>
+      <tr><td><kbd>E</kbd> · <kbd>Space</kbd></td><td>받침대 위 물건 줍기 · 상점에서 구매 (동전 · 하트 · P 는 닿으면 자동으로 줍습니다)</td></tr>
       <tr><td><kbd>Shift</kbd></td><td>저속 이동 + 피탄점 표시 · 샷이 정면에 집중됩니다</td></tr>
       <tr><td><kbd>Esc</kbd> · <kbd>P</kbd></td><td>일시정지 · 취소 · 대사 건너뛰기</td></tr>
     </table>
     <ul class="tips">
-      <li>저택의 각 층은 여러 방으로 이어져 있습니다. 방의 적을 모두 쓰러뜨리면 문이 열립니다. 미니맵의 ☠ 방에 층의 주인이 있습니다.</li>
-      <li>★ 보물방(2층부터는 열쇠 필요) · ◎ 휴식방(가끔 상인 시트라가 있습니다) · ◆ 수호자의 방 · ⚔ 도전방. 첫 클리어 이후에는 끝없는 복도의 상인 ∞ 인피니트가 나타납니다.</li>
+      <li>각 무대는 여러 방으로 이어져 있습니다. 방의 적을 모두 쓰러뜨리면 문이 열립니다. 미니맵의 ☠ 방에 무대의 주인이 있고, 쓰러뜨리면 다음 무대로 가는 달빛 통로가 열립니다.</li>
+      <li>★ 보물방(STAGE 2부터는 열쇠 필요) · ◎ 휴식방(가끔 상인 시트라가 있습니다) · ◆ 수호자의 방 · ⚔ 도전방. 첫 클리어 이후에는 끝없는 복도의 상인 ∞ 인피니트가 나타납니다.</li>
       <li>빨간 P는 파워입니다. 파워가 오를수록 탄 줄이 늘어나고, 맞으면 조금 줄어듭니다. 동전으로 상점에서 물건을 삽니다.</li>
       <li>물건은 탄의 모양 · 성질 · 옵션 · 능력치를 바꿉니다. 같은 계열 물건 3개를 모으면 변신합니다.</li>
       <li>작은 붉은 점이 실제 피탄점입니다. 탄의 겉모양이 아니라 이 점이 닿을 때만 맞습니다.</li>

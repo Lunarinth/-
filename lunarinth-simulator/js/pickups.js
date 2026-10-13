@@ -38,6 +38,8 @@ export class Pickups {
   collectAll() { for (const p of this.list) if (p.active && (p.type === 'p' || p.type === 'P' || p.type === 'point')) { p.auto = true; p.delay = Math.min(p.delay, 0.25); } }
   kill(p) { p.active = false; p.spr.visible = false; p.ped.visible = false; }
   clear() { for (const p of this.list) if (p.active) this.kill(p); }
+  /** 플레이어가 고를 수 있는 가장 가까운 물건 (받침대 · 상점) */
+  nearTake(x, z, r = 1.5) { let best = null, bd = r * r; for (const p of this.list) { if (!p.active || p.delay > 0 || p.lock || !(p.type === 'item' || p.shop)) continue; const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; best = p; } } return best; }
   items() { return this.list.filter((p) => p.active && p.type === 'item'); }
 
   snapshot() { return this.list.filter((p) => p.active).map((p) => ({ type: p.type, x: p.x, z: p.z, itemId: p.itemId, price: p.price, shop: p.shop, value: p.value, pool: p.pool, seller: p.seller })); }
@@ -67,8 +69,9 @@ export class Pickups {
       if (isItem) { p.ped.position.set(p.x, 0.06, p.z); const ps = 2.6 + Math.sin(p.age * 2) * 0.1; p.ped.scale.set(ps, 1, ps); p.ped.material.opacity = 0.55 + 0.2 * Math.sin(p.age * 3); }
       // 줍기
       if (p.lock && (P.x - p.x) ** 2 + (P.z - p.z) ** 2 > 2.6) p.lock = false; // 내려놓은 물건은 한 번 떨어졌다가 다시 밟아야 집는다
-      if (p.delay <= 0 && P.alive && !p.lock) {
-        const r = isItem ? 1.1 : 0.85;
+      // 받침대 위 물건 · 상점 물건은 닿아도 집히지 않는다 (E · Space 로 고른다 — Game.tryTake)
+      if (p.delay <= 0 && P.alive && !p.lock && !isItem && !p.shop) {
+        const r = 0.85;
         if ((P.x - p.x) ** 2 + (P.z - p.z) ** 2 < r * r) { if (G.collectPickup(p)) this.kill(p); }
       }
     }

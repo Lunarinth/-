@@ -1,13 +1,14 @@
 // 키보드 입력 (동방식). 게임은 매 프레임 poll 하고, 일회성 입력은 take() 로 소비한다.
 //   방향키 / WASD : 이동        Z : 샷(누르고 있으면 연사)
 //   X : 궁극기                  Shift : 저속 이동(피탄점 표시)
+//   C : 액티브 스킬              E · Space : 물건 줍기 / 구매
 //   Esc / P : 일시정지          Enter · Z : 확인
 
 const MOVE_KEYS = {
   KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
   KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
 };
-const OWNED = ['Space', 'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC'];
+const OWNED = ['Space', 'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE'];
 
 export class Input {
   constructor() {
@@ -40,6 +41,7 @@ export class Input {
       case 'KeyZ': return 'shot';
       case 'KeyX': return 'ult';
       case 'KeyC': return 'skill';
+      case 'KeyE': case 'Space': return 'take';
       case 'ShiftLeft': case 'ShiftRight': return 'focus';
       case 'Escape': case 'KeyP': return 'pause';
       case 'Enter': return 'confirm';

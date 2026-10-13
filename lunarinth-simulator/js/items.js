@@ -78,7 +78,7 @@ export const ITEMS = [
   { id: 'grazeCharm', name: '그레이즈 부적', desc: '탄을 스칠 때마다 파워가 조금 오른다', rarity: 'common', pools: [T, S], icon: { shape: 'feather', col: '#fff', glyph: '符' }, flags: { grazePower: 1 } },
   { id: 'keyRing', name: '열쇠 꾸러미', desc: '열쇠 +3', rarity: 'common', pools: [S, T], icon: { shape: 'key', col: '#ffd34a', glyph: '3' }, onGet: (G, P) => { P.keys += 3; } },
   { id: 'bombBag', name: '성광 주머니', desc: '성광 +2 · 최대 성광 +2', rarity: 'common', pools: [S, T], icon: { shape: 'bomb', col: '#ffe9a6' }, stats: { bombMax: 2 }, onGet: (G, P) => { P.ults += 2; } },
-  { id: 'map', name: '저택 지도', desc: '이 층과 이후 층의 지도가 모두 보인다', rarity: 'common', pools: [S, T], tags: ['book'], icon: { shape: 'book', col: '#e8d8a0', glyph: '圖' }, flags: { map: 1 }, onGet: (G) => G.revealMap(true) },
+  { id: 'map', name: '저택 지도', desc: '이 무대와 이후 무대의 지도가 모두 보인다', rarity: 'common', pools: [S, T], tags: ['book'], icon: { shape: 'book', col: '#e8d8a0', glyph: '圖' }, flags: { map: 1 }, onGet: (G) => G.revealMap(true) },
   { id: 'compass', name: '나침반', desc: '특수 방의 위치가 보인다', rarity: 'common', pools: [S, T], tags: ['star'], icon: { shape: 'circle', col: '#bfe', glyph: '✧' }, flags: { compass: 1 }, onGet: (G) => G.revealMap(false) },
   { id: 'secondChance', name: '두 번째 기회', desc: '쓰러지면 한 번 체력 2로 되살아난다', rarity: 'legendary', pools: [I], icon: { shape: 'heart', col: '#ffe9a6', glyph: '再' }, flags: { revive: 1 } },
   { id: 'coupon', name: '시트라의 할인 쿠폰', desc: '상점 가격 -25%', rarity: 'rare', pools: [S], tags: ['lemon'], icon: { shape: 'lemon', col: '#ffef9a', glyph: '%' }, flags: { discount: 0.25 } },

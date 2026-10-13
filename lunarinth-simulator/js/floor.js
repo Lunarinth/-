@@ -82,7 +82,7 @@ export class RoomView {
       plate.renderOrder = -9; plate.visible = false; plate.position.y = 0.07; scene.add(plate);
       this.doors[d] = { arch, bars, icon, plate, t: 0 };
     }
-    this.trap = new THREE.Mesh(plateGeo, new THREE.MeshBasicMaterial({ map: RT.trapdoor, transparent: true, depthWrite: false }));
+    this.trap = new THREE.Mesh(plateGeo, new THREE.MeshBasicMaterial({ map: RT.trapdoor, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.trap.renderOrder = -8; this.trap.position.y = 0.08; this.trap.visible = false; scene.add(this.trap);
     this.npc = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); this.npc.renderOrder = 5; this.npc.visible = false; scene.add(this.npc);
     this.deco = new THREE.Sprite(new THREE.SpriteMaterial({ map: RT.fountain, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); this.deco.renderOrder = 4; this.deco.visible = false; scene.add(this.deco);
@@ -105,7 +105,7 @@ export class RoomView {
     this.npc.visible = false; this.deco.visible = false;
     if (room.type === 'rest') {
       if (room.merchant && this.npcTex[room.merchant]) { const n = this.npcTex[room.merchant]; this.npc.material.map = n.tex; this.npc.material.needsUpdate = true; this.npc.visible = true; this.npcAspect = n.aspect; }
-      else this.deco.visible = true;
+      else this.deco.visible = !room.data.fountainUsed; // 쓴 샘물은 마른다
     }
   }
   setOpen(open) { this.open = open; for (const D of Object.values(this.doors)) D.bars.visible = D.arch.visible && !open; }

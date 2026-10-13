@@ -347,3 +347,18 @@ body.mono #stats > div:nth-child(2) { visibility: hidden; }
 .dex-it b { color: var(--rc); font-size: 13px; } .dex-it small { color: var(--ink-dim); } .dex-it span { color: var(--ink); }
 body.timestop #gl { filter: saturate(.25) hue-rotate(200deg) brightness(.9); }
 @media (max-width: 720px) { #minimap { width: 140px; height: 105px; } #items-strip { max-width: 160px; } .pw-track { width: 100px; } }
+#hint .act { margin-top: 4px; font-size: 13px; color: var(--a2); } #hint kbd { font-size: 11px; padding: 0 5px; } #hint .poor { color: #ff8a8a; }
+
+/* ───── 선택창 · 대화 선택지 ───── */
+#choice { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(6, 3, 18, .45); z-index: 12; animation: chIn .18s ease; }
+@keyframes chIn { from { opacity: 0; } }
+.ch-panel { min-width: min(420px, 88vw); max-width: 92vw; padding: 20px 22px 14px; border-radius: 16px; background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--glow), 0 10px 40px rgba(0,0,0,.6); text-align: center; }
+.ch-title { font-size: 17px; line-height: 1.6; color: var(--ink); margin-bottom: 14px; }
+.ch-title b { color: var(--a2); } .ch-title small { color: var(--ink-dim); font-size: 12px; }
+.ch-list { display: grid; gap: 8px; }
+.ch-list button, .d-choices button { font: inherit; font-size: 15px; padding: 9px 16px; border-radius: 10px; border: 1px solid var(--glass-edge); background: rgba(255,255,255,.04); color: var(--ink); cursor: pointer; text-align: left; transition: background .12s, transform .12s; }
+.ch-list button.sel, .d-choices button.sel { background: color-mix(in srgb, var(--a1) 28%, transparent); border-color: var(--a1); color: #fff; transform: translateX(4px); box-shadow: 0 0 12px color-mix(in srgb, var(--a1) 50%, transparent); }
+.ch-list button.sel::before, .d-choices button.sel::before { content: '▸ '; color: var(--a2); }
+.ch-hint { margin-top: 10px; font-size: 11px; color: var(--ink-dim); letter-spacing: .08em; }
+.d-choices { display: grid; gap: 6px; margin-top: 10px; }
+.d-choices button { font-size: 14px; padding: 6px 14px; }

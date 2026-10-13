@@ -90,7 +90,15 @@ export function makeRogueTextures() {
   T.doorBars = mk(256, 256, (g) => { g.strokeStyle = '#fff'; g.shadowColor = '#fff'; g.shadowBlur = 10; g.lineWidth = 9; for (const x of [96, 128, 160]) { g.beginPath(); g.moveTo(x, 236); g.lineTo(x, 90); g.stroke(); } g.lineWidth = 7; g.beginPath(); g.moveTo(72, 150); g.lineTo(184, 150); g.stroke(); });
   T.doorLock = mk(128, 128, (g) => { g.fillStyle = '#ffd34a'; g.strokeStyle = '#4a2a00'; g.lineWidth = 5; g.beginPath(); g.rect(34, 58, 60, 46); g.fill(); g.stroke(); g.beginPath(); g.arc(64, 58, 20, Math.PI, 0); g.stroke(); g.fillStyle = '#4a2a00'; g.beginPath(); g.arc(64, 78, 7, 0, 7); g.fill(); g.fillRect(61, 80, 6, 14); });
   T.skull = mk(128, 128, (g) => { g.fillStyle = '#fff'; g.beginPath(); g.arc(64, 54, 36, 0, 7); g.fill(); g.fillRect(44, 76, 40, 26); g.fillStyle = '#300'; g.beginPath(); g.arc(50, 54, 10, 0, 7); g.arc(78, 54, 10, 0, 7); g.fill(); g.fillRect(52, 90, 6, 12); g.fillRect(70, 90, 6, 12); });
-  T.trapdoor = mk(256, 256, (g) => { const gr = g.createRadialGradient(128, 128, 10, 128, 128, 120); gr.addColorStop(0, '#000'); gr.addColorStop(0.7, '#1a0a30'); gr.addColorStop(1, 'rgba(26,10,48,0)'); g.fillStyle = gr; g.beginPath(); g.arc(128, 128, 120, 0, 7); g.fill(); g.strokeStyle = '#d9c8ff'; g.lineWidth = 6; g.shadowColor = '#d9c8ff'; g.shadowBlur = 16; g.beginPath(); g.arc(128, 128, 96, 0, 7); g.stroke(); g.lineWidth = 3; for (let i = 0; i < 12; i++) { const a = (i * Math.PI) / 6; g.beginPath(); g.moveTo(128 + Math.cos(a) * 70, 128 + Math.sin(a) * 70); g.lineTo(128 + Math.cos(a) * 96, 128 + Math.sin(a) * 96); g.stroke(); } });
+  // 달빛 통로: 다음 무대로 이어지는 빛의 원 (보스를 쓰러뜨리면 열린다)
+  T.trapdoor = mk(256, 256, (g) => {
+    const gr = g.createRadialGradient(128, 128, 4, 128, 128, 124); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(0.35, 'rgba(220,205,255,.7)'); gr.addColorStop(0.75, 'rgba(150,120,255,.25)'); gr.addColorStop(1, 'rgba(120,90,255,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();
+    g.strokeStyle = '#fff'; g.shadowColor = '#d9c8ff'; g.shadowBlur = 16; g.lineWidth = 5; g.beginPath(); g.arc(128, 128, 100, 0, 7); g.stroke();
+    g.lineWidth = 2; g.beginPath(); g.arc(128, 128, 82, 0, 7); g.stroke();
+    for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; g.beginPath(); g.moveTo(128 + Math.cos(a) * 84, 128 + Math.sin(a) * 84); g.lineTo(128 + Math.cos(a) * 98, 128 + Math.sin(a) * 98); g.stroke(); }
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(128, 128, 40, 0, 7); g.fill(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(146, 118, 36, 0, 7); g.fill(); g.globalCompositeOperation = 'source-over';
+  });
   T.fountain = mk(256, 256, (g) => { g.strokeStyle = '#bff'; g.shadowColor = '#bff'; g.shadowBlur = 14; g.lineWidth = 6; g.beginPath(); g.ellipse(128, 180, 90, 34, 0, 0, 7); g.stroke(); g.beginPath(); g.moveTo(110, 180); g.lineTo(116, 90); g.lineTo(140, 90); g.lineTo(146, 180); g.stroke(); g.fillStyle = 'rgba(160,240,255,.35)'; g.beginPath(); g.ellipse(128, 180, 86, 30, 0, 0, 7); g.fill(); g.beginPath(); g.moveTo(128, 88); g.quadraticCurveTo(170, 40, 196, 150); g.moveTo(128, 88); g.quadraticCurveTo(86, 40, 60, 150); g.stroke(); });
   return T;
 }

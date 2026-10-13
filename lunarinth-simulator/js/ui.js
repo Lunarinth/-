@@ -1,5 +1,5 @@
 // DOM 기반 UI: 타이틀·난이도/캐릭터 선택, HUD, 대사창, 스킬 선언 컷인, 컨티뉴/엔딩/결과, 설정집.
-import { OFFICIAL, ROSTER, DIFFS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, HELL_DIFF, APO_DIFF } from './lore.js';
+import { OFFICIAL, ROSTER, DIFFS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, APO_DIFF } from './lore.js';
 import { ITEMS, ITEM_BY_ID, RARITY, TRANSFORMS } from './items.js';
 import { itemIcon } from './icons.js';
 import { SKILLS } from './skills.js';
@@ -57,7 +57,6 @@ export class UI {
       else { this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true); this.sfx.play('hurt', { vol: 0.25 }); }
     };
     $('#btn-apo').onclick = () => { if (this.apoOpen && this.apoOpen()) { this.showMenu(false); this.on.startApo && this.on.startApo(APO_DIFF); } };
-    $('#btn-hell').onclick = () => { if (this.hellUnlocked()) { this.showMenu(false); this.on.startExtra && this.on.startExtra(HELL_DIFF); } };
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
     $('#btn-help').onclick = () => this.modal('#m-help', true);
@@ -86,7 +85,6 @@ export class UI {
     if (pw) pw.oninput = () => {
       const v = pw.value.trim().toLowerCase(), on = v === 'lunacute';
       if (on !== !!this._dbg) { this._dbg = on; this.on.debugInf && this.on.debugInf(on); }
-      if (v === 'lunaugly' && !this.hellUnlocked()) { this.on.unlockHell && this.on.unlockHell(); }
       if (v === 'claude') { this.on.unlockApo && this.on.unlockApo(); }
     };
     document.body.classList.toggle('calm', S.calm);
@@ -171,7 +169,7 @@ export class UI {
   extraUnlocked() { try { return localStorage.getItem('lunarinth.extra.v1') === '1'; } catch (e) { return false; } }
   hellUnlocked() { try { return localStorage.getItem('lunarinth.hell.v1') === '1'; } catch (e) { return false; } }
   refreshExtra() {
-    $('#btn-hell').hidden = !this.hellUnlocked();
+    // HELL 은 장난용이라 타이틀에서 고를 수 없다
     $('#btn-apo').hidden = !(this.apoOpen && this.apoOpen());
     const b = $('#btn-extra'), on = this.extraUnlocked();
     b.classList.toggle('locked', !on);
@@ -234,7 +232,7 @@ export class UI {
       ${O.forms.map((f) => `<div class="form"><b>${f.name}</b> — ${f.moon} · ${f.theme}<ul>${li(f.notes)}</ul></div>`).join('')}
       <h3>공통 능력 ${tag('off')}</h3><ul>${li(O.abilities)}</ul>
       <h3>루센트 저택 ${tag('off')}</h3><ul>${O.house.map(([a, b]) => `<li><b>${a}</b> — ${b}</li>`).join('')}</ul>
-      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}.<br>규칙: ${EXTRA.rules}<br>${EXTRA.hell}</p>
+      <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}.<br>규칙: ${EXTRA.rules}</p>
       ${this.extraUnlocked() ? bossCard(ROSTER.find((r) => r.id === 'arkesia'), defs.arkesia) : '<div class="form"><b>？？？ <small>EXTRA</small></b><p class="note">EXTRA를 개방하면 기록됩니다.</p></div>'}
       <h3>플레이어 ${tag('prop')}</h3>
       <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 성광(폭탄) 「성검 해방 — 징벌의 월광」</li></ul>
@@ -431,13 +429,30 @@ export class UI {
   /** lines 를 순서대로 타자 효과로 보여주고 끝나면 resolve. Esc는 전체 건너뛰기. */
   playDialogue(lines, hooks = {}) {
     return new Promise((resolve) => {
-      let i = 0, typing = false, full = '', pos = 0, timer = 0, done = false;
+      lines = [...lines];
+      let i = 0, typing = false, full = '', pos = 0, timer = 0, done = false, chOn = false, chCur = 0;
+      const chEl = this.el.dialog.querySelector('.d-choices');
+      const showChoices = (ln) => {
+        chOn = true; chCur = 0; chEl.hidden = false;
+        chEl.innerHTML = ln.choices.map((c, k) => `<button data-k="${k}">${c.text}</button>`).join('');
+        const paint = () => [...chEl.children].forEach((b, k) => b.classList.toggle('sel', k === chCur));
+        [...chEl.children].forEach((b, k) => { b.onclick = (e) => { e.stopPropagation(); pick(k); }; b.onmouseenter = () => { chCur = k; paint(); }; });
+        chEl._paint = paint; paint();
+      };
+      const pick = (k) => {
+        const ln = lines[i], c = ln.choices[k]; chOn = false; chEl.hidden = true; chEl.innerHTML = '';
+        this.sfx.play('ui_click');
+        if (c.then) lines.splice(i + 1, 0, ...(typeof c.then === 'function' ? c.then() : c.then));
+        if (c.fn) c.fn();
+        if (hooks.onChoice) hooks.onChoice(ln, k);
+        i++; show();
+      };
       const d = this.el.dialog, nameEl = this.el.dName, textEl = this.el.dText;
       d.hidden = false;
       const finish = () => {
         if (done) return; done = true; clearInterval(timer);
         window.removeEventListener('keydown', onKey); d.removeEventListener('click', advance);
-        d.hidden = true; resolve();
+        chEl.hidden = true; chEl.innerHTML = ''; d.hidden = true; resolve();
       };
       const show = () => {
         const ln = lines[i];
@@ -453,15 +468,31 @@ export class UI {
         timer = setInterval(() => {
           pos++; textEl.textContent = full.slice(0, pos);
           if (pos % 2 === 0 && full[pos - 1] !== ' ') this.sfx.play('blip_' + ln.who);
-          if (pos >= full.length) { typing = false; clearInterval(timer); }
+          if (pos >= full.length) { typing = false; clearInterval(timer); if (ln.choices) showChoices(ln); }
         }, ln.who === 'luna' && /키+킥|키키/.test(ln.text) ? 34 : 36);
       };
       const advance = () => {
-        if (typing) { clearInterval(timer); typing = false; textEl.textContent = full; return; }
+        if (chOn) return;
+        if (typing) { clearInterval(timer); typing = false; textEl.textContent = full; if (lines[i] && lines[i].choices) showChoices(lines[i]); return; }
         i++; show();
       };
       const onKey = (e) => {
-        if (e.code === 'Escape') { e.preventDefault(); finish(); return; }
+        if (chOn) {
+          e.preventDefault(); if (e.repeat) return;
+          const n = lines[i].choices.length;
+          if (['ArrowDown', 'KeyS'].includes(e.code)) { chCur = (chCur + 1) % n; chEl._paint(); this.sfx.play('ui_hover'); }
+          else if (['ArrowUp', 'KeyW'].includes(e.code)) { chCur = (chCur + n - 1) % n; chEl._paint(); this.sfx.play('ui_hover'); }
+          else if (['Enter', 'Space', 'KeyZ', 'KeyJ', 'KeyE'].includes(e.code)) pick(chCur);
+          else if (e.code === 'Escape' || e.code === 'KeyX') pick(lines[i].cancel ?? n - 1);
+          return;
+        }
+        if (e.code === 'Escape') {
+          e.preventDefault();
+          // 선택지가 남아 있으면 건너뛰기는 그 선택지에서 멈춘다
+          const ci = lines.findIndex((l, k) => k >= i && l.choices);
+          if (ci >= 0) { clearInterval(timer); i = ci; show(); clearInterval(timer); typing = false; textEl.textContent = full; showChoices(lines[i]); return; }
+          finish(); return;
+        }
         if (['Enter', 'Space', 'KeyZ', 'KeyJ'].includes(e.code)) { e.preventDefault(); if (!e.repeat) advance(); }
       };
       window.addEventListener('keydown', onKey);
@@ -491,6 +522,29 @@ export class UI {
     $('#r-title').textContent = title || (win ? '달이 저물었습니다' : '밤은 아직 끝나지 않았습니다');
     $('#r-stats').innerHTML = rows.map(([k, v]) => `${k} <b>${v}</b>`).join('<br>');
     $('#m-result').hidden = false;
+  }
+  /** 선택창: 고른 번호를 돌려준다. o.cancel: X · Esc 로 고를 번호 */
+  choose(title, options, o = {}) {
+    return new Promise((resolve) => {
+      const el = $('#choice'), list = el.querySelector('.ch-list');
+      el.querySelector('.ch-title').innerHTML = title;
+      list.innerHTML = options.map((t, i) => `<button data-i="${i}">${t}</button>`).join('');
+      const btns = [...list.children]; let cur = o.def || 0;
+      const paint = () => btns.forEach((b, i) => b.classList.toggle('sel', i === cur));
+      const done = (i) => { window.removeEventListener('keydown', onKey, true); el.hidden = true; this.choiceOpen = false; this.sfx.play('ui_click'); resolve(i); };
+      const onKey = (e) => {
+        const c = e.code;
+        if (['ArrowDown', 'KeyS', 'ArrowRight', 'KeyD'].includes(c)) { if (!e.repeat) { cur = (cur + 1) % btns.length; paint(); this.sfx.play('ui_hover'); } }
+        else if (['ArrowUp', 'KeyW', 'ArrowLeft', 'KeyA'].includes(c)) { if (!e.repeat) { cur = (cur + btns.length - 1) % btns.length; paint(); this.sfx.play('ui_hover'); } }
+        else if (['KeyZ', 'Enter', 'Space', 'KeyE'].includes(c)) { if (!e.repeat) done(cur); }
+        else if (c === 'KeyX' || c === 'Escape') { if (!e.repeat && o.cancel != null) done(o.cancel); }
+        else return;
+        e.preventDefault(); e.stopImmediatePropagation();
+      };
+      btns.forEach((b, i) => { b.onclick = () => done(i); b.onmouseenter = () => { cur = i; paint(); }; });
+      paint(); el.hidden = false; this.choiceOpen = true; this.sfx.play('cast', { vol: 0.4 });
+      window.addEventListener('keydown', onKey, true);
+    });
   }
   hideResult() { $('#m-result').hidden = true; }
   showPause(show) { $('#m-pause').hidden = !show; }

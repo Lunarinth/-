@@ -18,7 +18,7 @@ import { Lunarinth, PAL } from './bosses/lunarinth.js';
 import { Mobs } from './mobs.js';
 import { makeStageScript } from './stages.js';
 import { STAGES, EXTRA_STAGE, HELL_STAGE, APO_STAGE, APO_DIFF, EXTRA_DIFF, DIFFS, CHARS, SCRIPT, ENDINGS, PLAYER_ULT, SHOP } from './lore.js';
-import { ITEMS, ITEM_BY_ID, RARITY, TRANSFORMS, rollItem } from './items.js';
+import { ITEMS, ITEM_BY_ID, RARITY, TRANSFORMS, PICKUPS, rollItem } from './items.js';
 import { makeRogueTextures } from './icons.js';
 import { Pickups } from './pickups.js';
 import { genFloor, RoomView, DOOR_POS, OPP } from './floor.js';
@@ -46,7 +46,7 @@ const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else 
 const pickW = (arr) => { let t = 0; for (const [, w] of arr) t += Math.max(0, w); let r = Math.random() * t; for (const [v, w] of arr) { r -= Math.max(0, w); if (r <= 0) return v; } return arr[0][0]; };
 
 // 층별 적 체력 보정: 처음엔 약한 하녀장이 물건과 파워로 강해지는 만큼 보스도 층마다 단단해진다
-const HP_SCALE = [0.45, 0.58, 0.7, 0.82, 0.94, 1.05];
+const HP_SCALE = [0.4, 0.5, 0.62, 0.73, 0.84, 0.94];
 // 보스를 쓰러뜨리면 떨어지는 유물
 const RELIC = { opsir: 'opsirScope', astra: 'astraCircuit', tramont: 'tramontRapier', index: 'indexKey', bellis: 'bellisTome', arkesia: 'arkesiaThread', arkesiaHell: 'arkesiaThread' };
 
@@ -104,7 +104,7 @@ export class Game {
     return {
       diff, char: CHARS[0], extra, hell: !!diff.hell, apo: !!diff.apo, stages: special ? [special] : STAGES, special: !!special,
       stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0,
-      hpScale: special ? (diff.apo ? 0.8 : 1.0) : HP_SCALE[0],
+      hpScale: special ? (diff.apo ? 0.75 : 0.9) : HP_SCALE[0],
     };
   }
   get stageList() { return this.run.stages || STAGES; }
@@ -199,7 +199,6 @@ export class Game {
     ui.on.startExtra = (diff) => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(diff || EXTRA_DIFF, true); };
     ui.on.startApo = () => { this.engine.init(); this.sfx.play('ui_start'); this.startRun(APO_DIFF, true); };
     ui.on.unlockApo = () => { const was = this.isApoOpen(); this.unlockApo(); if (!was) { this.sfx.play('heal'); this.ui.warn('……무언가 열렸다', 2600); } };
-    ui.on.unlockHell = () => { this.unlockHell(); this.sfx.play('heal'); this.ui.warn('HELL 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
     ui.on.retry = () => { ui.hideResult(); this.startRun(this.run.diff, this.run.extra); };
     ui.on.unlockExtra = () => { this.unlockExtra(); this.sfx.play('heal'); this.ui.warn('EXTRA 개방 — 타이틀에서 선택할 수 있습니다', 2600); };
     ui.on.debugInf = (on) => { this.debugInf = on; if (this.run) this.run.debugInf = on; this.sfx.play(on ? 'heal' : 'hurt', { vol: 0.5 }); this.ui.warn(on ? '테스트 모드 — 컨티뉴 무제한' : '테스트 모드 해제', 2200); };
@@ -301,8 +300,8 @@ export class Game {
     const my = ++this._token, run = this.run, P = this.player;
     run.stageIdx = i;
     const st = this.stageList[i];
-    run.hpScale = run.special ? (run.apo ? 0.8 : 1.0) : HP_SCALE[i] ?? 1; // APOTHEOSIS 는 체력 무한이라 길어지기만 하므로 줄인다
-    run.lunaK = st.id === 'lunarinth' ? 1.8 : 1; // 루나린스는 HP_K 가 없는 대신 최종층에서 보정 (후반의 강해진 하녀장 기준)
+    run.hpScale = run.special ? (run.apo ? 0.75 : 0.9) : HP_SCALE[i] ?? 1; // APOTHEOSIS 는 체력 무한이라 길어지기만 하므로 줄인다
+    run.lunaK = st.id === 'lunarinth' ? 1.6 : 1; // 루나린스는 HP_K 가 없는 대신 최종층에서 보정 (후반의 강해진 하녀장 기준)
     this.floor = genFloor({ idx: run.special ? 2 : i, rooms: run.special ? 13 : 8 + i, infinite: this.isInfiniteUnlocked(), mid: !!st.mid });
     if (P.flags.map) this.revealMap(true); else if (P.flags.compass) this.revealMap(false);
     for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
@@ -312,7 +311,7 @@ export class Game {
     this.ui.showHud(true); this.ui.hideBark(); this.ui.showBossUI(false); this.ui.setBossTimer(null);
     this.applyFloorLook(st);
     this.music.setIntensity(0); this.music.play(st.stageMusic, { fade: 1.6, immediate: true });
-    this.ui.setStage(run.special ? st.label : `${i + 1}층 · ${st.place}`);
+    this.ui.setStage(`${st.label} · ${st.place}`);
     this.ui.banner(st.label, `${st.place} — ${st.mobName}`, 2800);
     P.x = 0; P.z = 4; P.inv = 1.5; P.alive = true;
     this.refreshHud();
@@ -331,7 +330,7 @@ export class Game {
     const my = ++this._token, F = this.floor, P = this.player, prev = this.room;
     if (prev && prev !== room) prev.pickups = this.pickups.snapshot();
     this.clearField(); this.skills.wells.length = 0; this.freezeT = 0; document.body.classList.remove('timestop');
-    this.room = room; room.visited = true; room.known = true;
+    this.room = room; room.visited = true; room.known = true; room.data.declined = false;
     for (const k of Object.values(room.doors)) F.grid.get(k).known = true;
     if (dir) { const [dx, dz] = DOOR_POS[OPP[dir]], l = Math.hypot(dx, dz); P.x = dx - (dx / l) * 1.9; P.z = dz - (dz / l) * 1.9; }
     else { P.x = 0; P.z = 4; }
@@ -345,8 +344,11 @@ export class Game {
     this.state = 'room';
     this.stats.rooms++;
     switch (room.type) {
-      case 'normal': case 'challenge':
+      case 'normal':
         if (!room.cleared) this.startEncounter(room);
+        break;
+      case 'challenge':
+        if (!room.cleared) this.askChallenge(room, my);
         break;
       case 'treasure':
         if (!room.data.spawned) { room.data.spawned = true; this.spawnItem('treasure', 0, -1.5); }
@@ -363,6 +365,17 @@ export class Game {
         break;
       default: break;
     }
+  }
+
+  async askChallenge(room, my) {
+    this.roomCombat = true; this.roomView.setOpen(false);
+    await sleep(350); if (my !== this._token) return;
+    this.state = 'choice'; this.input.down.clear();
+    const k = await this.ui.choose('도전방 — 세 번의 습격을 버티면 귀한 물건을 얻습니다.<br><small>시작하면 끝날 때까지 문이 잠깁니다</small>', ['도전한다', '물러난다'], { cancel: 1 });
+    if (my !== this._token) return;
+    this.state = 'room';
+    if (k === 0) this.startEncounter(room);
+    else { this.roomCombat = false; room.data.declined = true; this.roomView.setOpen(true); }
   }
 
   themeId() { return this.stageList[this.run.stageIdx].id; }
@@ -394,6 +407,7 @@ export class Game {
     }
     this._checkDoors(dt);
     this._merchantTouch(dt);
+    this.tryTake();
   }
 
   /** 방의 적을 모두 쓰러뜨림 → 문이 열리고 보상이 떨어진다 */
@@ -407,7 +421,7 @@ export class Game {
     this.chargeActive(1);
     if (room.type === 'challenge') {
       this.spawnItem('challenge', 0, -1); this.pickups.burst('coin', 0, 0, 3);
-      this.ui.announce('도전 성공 — 보상이 나타났다', 1800);
+      this.ui.announce('도전 성공 — 보상이 놓였다', 1800);
       return;
     }
     const luck = P.st.luck;
@@ -428,7 +442,7 @@ export class Game {
   _checkDoors(dt) {
     if (this._doorCd > 0) { this._doorCd -= dt; return; }
     const room = this.room, P = this.player;
-    if (!room || this.roomCombat || !room.cleared || !P.alive) return;
+    if (!room || this.roomCombat || !(room.cleared || room.data.declined) || !P.alive) return;
     for (const d of Object.keys(DOOR_POS)) {
       const k = room.doors[d]; if (!k) continue;
       const to = this.floor.grid.get(k), [x, z] = DOOR_POS[d];
@@ -441,11 +455,22 @@ export class Game {
         } else if (this.t - (this._lockWarn || 0) > 1.5) { this._lockWarn = this.t; this.ui.warn('열쇠가 필요합니다', 1000); this.sfx.play('hurt', { vol: 0.2, pitch: 1.6 }); }
         return;
       }
+      if (to.type === 'boss' && !to.cleared) {
+        if (this.declinedNear(x, z)) return;
+        const st = this.stageList[this.run.stageIdx];
+        this.confirmAt(x, z, `<b>${st.warn.replace('WARNING — ', '')}</b><br>이 문 너머에서 이 무대의 주인이 기다리고 있습니다.<br><small>들어가면 결판이 날 때까지 나올 수 없습니다</small>`, '들어간다', '아직 준비가 덜 됐다')
+          .then((ok) => { if (ok && this.room === room) { this.sfx.play('door'); this.enterRoom(to, d); } });
+        return;
+      }
       this.sfx.play('door'); this.enterRoom(to, d);
       return;
     }
-    // 함정문: 다음 층으로
-    if (room.data.trap && P.x * P.x + (P.z + 1) ** 2 < 1.3 * 1.3) this.nextFloor();
+    // 달빛 통로: 다음 무대로 (선택)
+    if (room.data.trap && P.x * P.x + (P.z + 1) ** 2 < 1.3 * 1.3 && !this.declinedNear(0, -1)) {
+      const next = this.stageList[this.run.stageIdx + 1], left = this.pickups.items().length;
+      this.confirmAt(0, -1, `다음 무대 — <b>${next.place}</b><br>달빛 통로를 지나 다음 무대로 향하시겠습니까?<br><small>지나가면 이 무대로 돌아올 수 없습니다${left ? ` · 아직 집지 않은 물건이 ${left}개 있습니다` : ''}</small>`, '다음 무대로', '조금 더 둘러본다')
+        .then((ok) => { if (ok) this.nextFloor(); });
+    }
   }
 
   async nextFloor() {
@@ -504,6 +529,79 @@ export class Game {
   }
 
   // ───── 픽업 ─────
+  /** E · Space: 발밑의 물건을 줍거나 산다 */
+  tryTake() {
+    const P = this.player;
+    if (!this.input.take('take') || !P.alive || this.roomCombat) return;
+    const p = this.pickups.nearTake(P.x, P.z);
+    if (p) { if (this.collectPickup(p)) this.pickups.kill(p); return; }
+    if (this.nearNpc()) { if (this.room.merchant) this.talkMerchant(); else this.useFountain(); }
+  }
+  /** 상인 · 샘물 앞에 서 있는가 */
+  nearNpc() {
+    const R = this.room, P = this.player;
+    if (!R || R.type !== 'rest' || this.roomCombat) return false;
+    if (!R.merchant && R.data.fountainUsed) return false;
+    return P.x * P.x + (P.z + 6.2) ** 2 < 2.6 * 2.6;
+  }
+
+  /** 상인에게 말 걸기: 대화창 선택지 */
+  async talkMerchant() {
+    const my = this._token, who = this.room.merchant, T = SHOP[who], P = this.player, R = this.room;
+    this.state = 'choice'; this.input.down.clear();
+    const choices = [];
+    if (who === 'sitra') {
+      choices.push({ text: T.opt.goods, then: T.goods });
+      choices.push({ text: T.opt.lemon, then: () => {
+        if (this.floor.lemonGiven) return T.lemonNo;
+        this.floor.lemonGiven = true; P.heal(1); this.ui.setHp(P.hp, P.maxHp); this.sfx.play('heal'); return T.lemonOk;
+      } });
+      choices.push({ text: T.opt.gate, then: T.gate });
+    } else {
+      choices.push({ text: T.opt.reroll, then: () => {
+        if (P.coins < 5) return T.rerollNo;
+        P.coins -= 5; this.sfx.play('buy'); this.restockInfinite(R); this.ui.setRogue(P); return T.rerollOk;
+      } });
+      choices.push({ text: T.opt.hall, then: T.hall });
+      choices.push({ text: T.opt.badge, then: T.badge });
+    }
+    choices.push({ text: T.opt.bye });
+    await this.talk([{ who, text: T.menu, choices, cancel: choices.length - 1 }]);
+    if (my !== this._token) return;
+    this.state = 'room';
+  }
+  restockInfinite(R) {
+    for (const p of this.pickups.list) if (p.active && p.type === 'item' && p.seller === 'infinite') { this.fx.burst(p.x, 1.6, p.z, 12, { color: [0x5fe8c0, 0xffffff], speed: 4, size: 0.6, life: 0.6 }); this.pickups.kill(p); }
+    [-4, 0, 4].forEach((x) => { const p = this.spawnItem('infinite', x, -2.4, { price: 1, seller: 'infinite' }); if (p) p.price = Math.round(RARITY[ITEM_BY_ID[p.itemId].rarity].price * 0.85); });
+    void R;
+  }
+  /** 샘물: 한 번만 고를 수 있다 */
+  async useFountain() {
+    const my = this._token, F = SHOP.fountain, P = this.player, R = this.room;
+    this.state = 'choice'; this.input.down.clear();
+    const k = await this.ui.choose(F.title, [F.drink, F.dip, F.leave], { cancel: 2 });
+    if (my !== this._token) return;
+    this.state = 'room';
+    if (k === 0) { R.data.fountainUsed = true; P.heal(2); this.ui.setHp(P.hp, P.maxHp); this.sfx.play('heal'); this.fx.ring(P.x, 0.6, P.z, 0x9fe8ff, 6, 0.6); }
+    else if (k === 1) { R.data.fountainUsed = true; P.ults = Math.min(P.bombCap, P.ults + 1); this.ui.setUlt(P.ults, P.bombCap); this.sfx.play('ult', { vol: 0.4 }); this.fx.ring(P.x, 0.6, P.z, 0xffe9a6, 6, 0.6); }
+    if (R.data.fountainUsed) { this.roomView.deco.visible = false; this.fx.burst(0, 1.6, -6.2, 20, { color: [0x9fe8ff, 0xffffff], speed: 4, size: 0.7, life: 0.7 }); }
+  }
+
+  /** 되돌릴 수 없는 결정 앞에서 묻는다. 거절하면 그 자리를 벗어날 때까지 다시 묻지 않는다 */
+  async confirmAt(x, z, title, yes, no) {
+    const my = this._token;
+    this.state = 'choice'; this.input.down.clear();
+    const k = await this.ui.choose(title, [yes, no], { cancel: 1 });
+    if (my !== this._token) return false;
+    this.state = 'room';
+    if (k !== 0) this._declined = { x, z };
+    return k === 0;
+  }
+  declinedNear(x, z) {
+    const d = this._declined, P = this.player; if (!d) return false;
+    if ((P.x - d.x) ** 2 + (P.z - d.z) ** 2 > 2.4 * 2.4) { this._declined = null; return false; }
+    return true;
+  }
   collectPickup(p) {
     const P = this.player, ui = this.ui, sfx = this.sfx;
     if (p.shop && p.price > 0) {
@@ -915,7 +1013,7 @@ export class Game {
       this.spawnItem('boss', 0, -4.2, rid && !owned.has(rid) ? { itemId: rid } : {});
       this.pickups.spawn({ type: 'heart', x: -2.6, z: -2 }); this.pickups.burst('coin', 2.6, -2, 3);
       this.chargeActive(2);
-      this.ui.banner('FLOOR CLEAR', `${B.def.name} 격파 — 함정문이 열렸다`, 2400);
+      this.ui.banner('STAGE CLEAR', `${B.def.name} 격파 — 다음 무대가 열렸다`, 2400);
     } else {
       await this.runEnding();
     }
@@ -940,7 +1038,6 @@ export class Game {
     if (!ex && !this.isInfiniteUnlocked()) { this.unlockInfinite(); notes.push('끝없는 복도의 상인 「인피니트」가 휴식방에 나타나기 시작합니다'); }
     // EXTRA · HELL 을 깨면 숨은 무대가 (다시) 열린다
     if (ex && !this.run.apo) { const was = this.isApoOpen(); this.unlockApo(); if (!was) notes.push('……어딘가의 막이 다시 올라갔다'); }
-    if (ex && !hell && !this.run.debugUsed && !this.isHellUnlocked()) { this.unlockHell(); notes.push('HELL 개방 — 타이틀에서 선택할 수 있습니다'); }
     // EXTRA 개방 조건: NORMAL 이상에서 노 컨티뉴 클리어
     const unlocked = !ex && n === 0 && this.run.diff.lv >= 1 && !this.run.debugUsed;
     if (unlocked && !this.isExtraUnlocked()) { this.unlockExtra(); notes.push('EXTRA 개방 — 타이틀에서 선택할 수 있습니다'); }
@@ -1015,7 +1112,7 @@ export class Game {
     await this.talk(this.run.hell ? (SCRIPT.gameoverHell || SCRIPT.gameoverExtra) : this.run.extra ? SCRIPT.gameoverExtra : SCRIPT.gameover); if (my !== this._token) return;
     const t = Math.round(this.fightT), st = this.stageList[this.run.stageIdx], P = this.player;
     this.ui.showResult(false, [
-      ['난이도', this.run.diff.name], ['도달', this.run.special ? `${st.label} — ${st.place}` : `${this.run.stageIdx + 1}층 — ${st.place}`],
+      ['난이도', this.run.diff.name], ['도달', this.run.special ? `${st.label} — ${st.place}` : `${st.label} — ${st.place}`],
       ['버틴 시간', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`], ['점수', Math.floor(P.score).toLocaleString()],
       ['물건', `${P.items.length}개`], ['컨티뉴 사용', this.run.extra ? '불가' : `${this.run.continues}회`], ['병사 격파', this.stats.mobs], ['그레이즈', this.stats.graze],
     ], 'GAME OVER');
@@ -1245,10 +1342,15 @@ export class Game {
         const isItem = p.type === 'item', [sx, sy] = this.world.project(p.x, isItem ? 0.25 : 0.1, p.z + (isItem ? 1.15 : 0.7)), c = this.priceOf(p);
         tags.push({ x: sx, y: sy, text: `◎ ${c}`, cls: P.coins < c ? 'poor' : p.seller === 'infinite' ? 'inf' : '' });
       }
-      if (p.type === 'item') { const d = (p.x - P.x) ** 2 + (p.z - P.z) ** 2; if (d < nd) { nd = d; near = p; } }
+      if ((p.type === 'item' || p.shop) && !p.lock) { const d = (p.x - P.x) ** 2 + (p.z - P.z) ** 2; if (d < nd) { nd = d; near = p; } }
     }
     this.ui.setTags(tags);
-    if (near) { const it = ITEM_BY_ID[near.itemId], R = RARITY[it.rarity]; this.ui.hint(`<b style="color:${R.color}">${it.name}</b> <small>${R.name}${it.active ? ' · 액티브(C)' : ''}</small><br>${it.desc}`); }
+    if (near) {
+      const inReach = nd < 1.5 * 1.5, cost = near.shop && near.price > 0 ? this.priceOf(near) : 0;
+      const act = !inReach ? '<small>가까이 가서</small> <kbd>E</kbd>' : cost ? (P.coins >= cost ? `<kbd>E</kbd> 구매 ◎ ${cost}` : `<span class="poor">동전이 모자랍니다 ◎ ${cost}</span>`) : '<kbd>E</kbd> 줍기';
+      if (near.type === 'item') { const it = ITEM_BY_ID[near.itemId], R = RARITY[it.rarity]; this.ui.hint(`<b style="color:${R.color}">${it.name}</b> <small>${R.name}${it.active ? ' · 액티브(C)' : ''}</small><br>${it.desc}<div class="act">${act}</div>`); }
+      else this.ui.hint(`<b>${PICKUPS[near.type].name}</b><div class="act">${act}</div>`);
+    } else if (this.nearNpc()) this.ui.hint(this.room.merchant ? `<b>${this.room.merchant === 'sitra' ? '시트라' : '인피니트'}</b><div class="act"><kbd>E</kbd> 말 걸기</div>` : `<b>샘물</b><div class="act"><kbd>E</kbd> 살펴본다</div>`);
     else this.ui.hint(null);
   }
 
