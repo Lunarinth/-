@@ -1,0 +1,168 @@
+LUCENT NOCTURNE — 루센트 야상곡
+LUNARINTH · 달의 삼위일체
+
+탄막 슈팅 × 로그라이크. 초대 하녀장 클레르가 봉인을 푼 성검을 들고, 누군가의 속삭임에 홀린 저택의 주인 루나린스를 바로잡으러 달의 정원으로 향합니다.
+
+------------------------------------------------------------
+
+게임 소개
+
+루센트 저택은 둘로 갈라졌습니다. 주인의 뜻을 따르는 루나린스 파, 그것이 잘못되었다고 믿는 클레르 파. 관측대, 기술실, 테라스 정원, 도서관, 기록실을 지나 달의 정원까지 — 여섯 개의 무대마다 길을 막는 이들이 기다리고 있습니다.
+
+- 여섯 개의 무대 + EXTRA, 그리고 숨겨진 무대
+- 동방 프로젝트 스타일의 보스전: 통상 → 스킬 → 라스트 스킬로 이어지는 단계와 스킬 선언 컷인
+- 아이작의 번제 스타일의 탐험: 무대마다 새로 만들어지는 방 구조, 보물방 · 휴식방 · 도전방 · 문지기의 방
+- 70여 종의 물건: 탄의 모양과 성질(관통, 분열, 폭발, 연쇄, 독, 반사, 부메랑, 레이저, 모아베기)이 바뀌고, 옵션이 붙고, 체력이 늘거나 줄어듭니다
+- 같은 계열 물건 3개를 모으면 변신 (7종)
+- C 키로 쓰는 액티브 스킬 15종
+- 처음엔 약하게 시작해 파워(P)를 모으며 강해지는 성장
+- 휴식방의 상인: 레몬 수레를 끄는 시트라, 그리고 첫 클리어 이후에만 나타나는 끝없는 복도의 상인 인피니트
+- 난이도 4단계 (EASY / NORMAL / HARD / MADNESS)
+- 한국어 · English 지원 (설정에서 변경, 처음 실행 시 시스템 언어를 따릅니다)
+
+조작
+- 방향키 또는 WASD: 이동
+- Z: 샷 (누르고 있으면 연사) · 대사 넘기기 · 결정
+- X: 성광(폭탄) — 무적 + 탄 소거 + 큰 피해
+- C: 액티브 스킬
+- E 또는 Space: 물건 줍기 · 상점 구매 · 말 걸기
+- Shift: 저속 이동 + 피탄점 표시
+- Esc 또는 P: 일시정지
+- F11: 전체 화면
+
+------------------------------------------------------------
+
+설치 방법 (Windows)
+
+1. 다운로드한 zip 파일을 마우스 오른쪽 버튼으로 누르고 "압축 풀기"를 선택합니다. 바탕 화면이나 문서 폴더처럼 원하는 곳에 풀면 됩니다.
+2. 풀린 폴더 안의 LucentNocturne.exe 를 실행합니다.
+3. 설치 과정은 없습니다. 폴더째 들고 다니며 실행하는 방식입니다.
+
+주의: zip 안에서 exe 를 바로 더블클릭하면 실행되지 않습니다. 반드시 압축을 먼저 푸세요.
+
+삭제 방법: 게임 폴더를 지우면 끝입니다. 저장 데이터(해금 상태, 설정)까지 지우려면 아래 폴더도 지웁니다.
+%APPDATA%\LUCENT NOCTURNE
+(Windows 키 + R → %APPDATA% 입력 → 엔터 → LUCENT NOCTURNE 폴더 삭제)
+
+시스템 요구 사항
+- Windows 10 / 11 (64비트)
+- 디스크 여유 공간 약 350MB
+- WebGL 2 를 지원하는 그래픽 (최근 10년 안의 내장 그래픽이면 대부분 됩니다)
+- 헤드폰 권장
+
+------------------------------------------------------------
+
+"Windows의 PC 보호" 경고가 뜨는 이유
+
+처음 실행하면 파란 창으로 "Windows의 PC 보호" 경고가 뜰 수 있습니다. 이 경고는 프로그램이 위험하다는 뜻이 아니라, 아래 두 가지 때문에 뜹니다.
+
+- 코드 서명 인증서가 없습니다. 인증서는 매년 비용이 드는 유료 서비스라, 개인 제작 게임은 대부분 서명 없이 배포됩니다.
+- 새로 올라온 파일이라 아직 다운로드 기록이 적습니다. Windows SmartScreen 은 많이 내려받아진 파일만 "알려진 파일"로 취급합니다.
+
+실행하려면: 경고 창에서 "추가 정보"를 누른 뒤 "실행"을 누릅니다.
+
+일부 백신 프로그램이 같은 이유(서명 없음, 새 파일)로 의심 파일로 표시하는 경우가 있습니다. 직접 확인하고 싶다면 다음 방법을 권합니다.
+- VirusTotal(virustotal.com)에 zip 파일이나 LucentNocturne.exe 를 올려 여러 백신의 검사 결과를 비교해 볼 수 있습니다.
+- exe 를 마우스 오른쪽 버튼 → 속성 → 자세히 탭에서 제품 이름 LUCENT NOCTURNE 을 확인할 수 있습니다.
+
+이 게임이 무엇으로 만들어졌는지
+- 게임 본체는 HTML · JavaScript 로 만든 브라우저 게임이고, Electron(크롬 브라우저를 앱으로 감싸는 도구, Discord · VS Code 등이 쓰는 방식)으로 실행 파일을 만들었습니다. 폴더 안의 큰 파일들(dll, pak 등)은 대부분 이 브라우저 엔진입니다.
+- 관리자 권한을 요구하지 않고, 시스템 설정을 바꾸지 않으며, 저장 데이터는 위의 %APPDATA%\LUCENT NOCTURNE 폴더에만 기록합니다.
+- 게임 중에 인터넷 연결이 필요하지 않습니다. 글꼴(Cinzel, Noto Serif KR)을 웹에서 불러오려 시도하지만, 오프라인이면 컴퓨터의 기본 글꼴로 실행됩니다.
+
+------------------------------------------------------------
+
+문제가 생겼을 때
+- 화면이 검게만 나오면: 그래픽 드라이버를 최신으로 업데이트해 주세요.
+- 소리가 안 나면: 아무 키나 한 번 누르세요. 브라우저 엔진 규칙상 첫 입력 이후에 소리가 켜집니다.
+- 너무 어렵다면: EASY 난이도를 권합니다. EXTRA 는 제작자도 아직 못 깼습니다.
+
+제작: Lunarinth
+캐릭터 · 세계관: LUNARINTH · 달의 삼위일체
+
+
+============================================================
+ENGLISH
+============================================================
+
+LUCENT NOCTURNE
+LUNARINTH · The Lunar Trinity
+
+A bullet-hell shooter × roguelike. Claire, the first Head Maid, takes up her unsealed Holy Sword and heads for the Moon Garden to set right Lunarinth, the master of the manor, who has been bewitched by someone's whispers.
+
+------------------------------------------------------------
+
+About the game
+
+The Lucent Manor has split in two: Lunarinth's faction, who follow their master's will, and Claire's faction, who believe it is wrong. Through the observatory, the tech room, the terrace garden, the library and the archive to the Moon Garden — someone blocks the way in each of the six stages.
+
+- Six stages + EXTRA, and a hidden stage
+- Touhou-style boss fights: Nonspell → Spell → Last Spell forms, with spell declaration cut-ins
+- Binding of Isaac-style exploration: a new room layout every stage, with Treasure, Rest, Challenge and Gatekeeper rooms
+- 70+ items that change your shots' shape and behavior (pierce, split, explode, chain, poison, bounce, boomerang, laser, charge slash), add options, and raise or lower your max HP
+- Collect 3 items of the same set to transform (7 transformations)
+- 15 active skills on the C key
+- Start weak and grow stronger by collecting Power (P)
+- Merchants in Rest Rooms: Sitra with her lemon cart, and Infinite, the merchant of the Endless Corridor, who only appears after your first clear
+- 4 difficulty levels (EASY / NORMAL / HARD / MADNESS)
+- Korean and English (change it in Settings; on first launch it follows your system language)
+
+Controls
+- Arrow keys or WASD: Move
+- Z: Shot (hold to fire) · Advance dialogue · Confirm
+- X: Holy Flash (bomb) — invincibility + bullet clear + heavy damage
+- C: Active skill
+- E or Space: Pick up items · Buy · Talk
+- Shift: Focus movement + show hitbox
+- Esc or P: Pause
+- F11: Fullscreen
+
+------------------------------------------------------------
+
+How to install (Windows)
+
+1. Right-click the downloaded zip file and choose "Extract All". Extract it anywhere you like, such as your Desktop or Documents.
+2. Run LucentNocturne.exe inside the extracted folder.
+3. There is no installer. The game runs straight from its folder.
+
+Note: Double-clicking the exe while it is still inside the zip will not work. Extract the zip first.
+
+To uninstall, delete the game folder. To also remove your save data (unlocks and settings), delete this folder:
+%APPDATA%\LUCENT NOCTURNE
+(Press Windows key + R, type %APPDATA%, press Enter, and delete the LUCENT NOCTURNE folder.)
+
+System requirements
+- Windows 10 / 11 (64-bit)
+- About 350 MB of free disk space
+- Graphics with WebGL 2 support (most integrated graphics from the last ten years work)
+- Headphones recommended
+
+------------------------------------------------------------
+
+Why you may see a "Windows protected your PC" warning
+
+On first launch, Windows may show a blue "Windows protected your PC" screen. This does not mean the program is dangerous. It appears for two reasons:
+
+- The game has no code-signing certificate. Certificates are a paid yearly service, so most games made by individuals are distributed unsigned.
+- It is a new file with few downloads so far. Windows SmartScreen only treats files as "known" after many people have downloaded them.
+
+To run it: click "More info" on the warning screen, then click "Run anyway".
+
+Some antivirus programs may flag the file as suspicious for the same reasons (unsigned, new). If you would like to check for yourself:
+- Upload the zip file or LucentNocturne.exe to VirusTotal (virustotal.com) to compare results from many antivirus engines.
+- Right-click the exe → Properties → Details tab to see the product name LUCENT NOCTURNE.
+
+What the game is built with
+- The game itself is a browser game written in HTML and JavaScript, packaged into an executable with Electron (a tool that wraps the Chrome browser engine as an app — the same approach used by Discord and VS Code). Most of the large files in the folder (dll, pak and so on) are that browser engine.
+- It does not ask for administrator rights, does not change system settings, and only writes save data to the %APPDATA%\LUCENT NOCTURNE folder mentioned above.
+- No internet connection is needed to play. It tries to load its fonts (Cinzel, Noto Serif KR) from the web, but falls back to your system fonts when offline.
+
+------------------------------------------------------------
+
+Troubleshooting
+- If the screen stays black: please update your graphics driver.
+- If there is no sound: press any key once. Because of browser engine rules, sound starts after your first input.
+- If it is too hard: EASY is recommended. Even the developer has not cleared EXTRA yet.
+
+Made by: Lunarinth
+Characters · Setting: LUNARINTH · The Lunar Trinity
