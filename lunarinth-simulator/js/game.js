@@ -831,7 +831,11 @@ export class Game {
     this.ui.setBossTimer(null);
     const last = i + 1 >= B.stepCount;
     const nextUlt = B.def.steps[i + 1] && B.def.steps[i + 1].kind === 'ultimate' && !ultimate;
-    if (ultimate) {
+    if (step.endure && reason === 'dead') {
+      this._ultDying = false;
+      this.ui.warn('쓰러졌습니다 — 그래도 시련은 끝났습니다', 1800);
+      this.player.revive(this);
+    } else if (ultimate) {
       // 얼티메이트 스킬: 버텨내거나(timeout) 맞아서 쓰러지면(dead) 다음 식으로 넘어간다
       this._ultDying = false;
       if (reason === 'dead') this.ui.warn(`쓰러졌습니다 — ${step.tag.split(' ')[0]} 종료, 다음 식으로`, 1800);
@@ -848,7 +852,7 @@ export class Game {
         const capture = !this.run.stepHit && !this.run.stepUlt;
         this.stats.spellsCaptured += capture ? 1 : 0;
         if (capture) { this.player.score += 100000; this.pickups.burst('P', B.x, B.z + 1.5, 1); }
-        this.ui.warn(capture ? '스킬 격파 — 노 미스·노 궁극기' : '스킬 격파', 1700);
+        this.ui.warn(capture ? '스킬 격파 — 노 미스 · 노 성광' : '스킬 격파', 1700);
       }
     } else {
       this.sfx.play(step.endure ? 'heal' : 'telegraph');
@@ -891,7 +895,7 @@ export class Game {
       B.kick(0, 1.2); B.ghostForce = true; this.sfx.play('laugh', { vol: 0.5 });
       await sleep(800); if (my !== this._token) return;
       await this.talk(SCRIPT.bellisProxy); if (my !== this._token) return;
-      this.ui.banner('빌려온 달', '99초를 버텨라', 2600);
+      this.ui.banner('빌려온 달', '20초를 버텨라 — 쓰러져도 시련은 끝난다', 2600);
     }
     this.state = 'fight';
     B.startStep(i + 1);
@@ -981,7 +985,7 @@ export class Game {
     await this.talk(SCRIPT.lunarinth.ultimateStart); if (my !== this._token) return;
     this.world.setDolly(0);
     this.sealed = true; this.ui.setSealed(true);
-    this.ui.warn('잔기 · 컨티뉴 · 궁극기 — 전부 봉인', 2200);
+    this.ui.warn('컨티뉴 · 성광 — 전부 봉인', 2200);
     this.state = 'fight';
     B.startStep(i + 1);
   }
@@ -1076,6 +1080,15 @@ export class Game {
     else this.gameOver();
   }
 
+  /** 버티기 시련(빌려온 달) 중 쓰러짐: 게임 오버 대신 시련이 끝나고 다음으로 넘어간다 */
+  onEndureDeath() {
+    if (this._ultDying || this.state !== 'fight') return;
+    this._ultDying = true;
+    const P = this.player; P.alive = false; P.deathFx(this);
+    this.ui.setVeil(0); this.hitstop(0.12);
+    this.boss.endStep('dead');
+  }
+
   /** 얼티메이트 스킬 중 피격: 체력과 관계없이 즉사 → 그 식은 끝나고 다음 식으로 */
   onUltimateDeath() {
     if (this._ultDying || this.state !== 'fight') return;
@@ -1139,9 +1152,9 @@ export class Game {
     this.sfx.play('ult');
     P.beginUlt(this, mode);
     if (!inStage) {
-      if (mode === 'reject') { this.ui.warn('리젝트 — 궁극기가 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
-      else if (mode === 'immune') { this.ui.warn('면역 — 이 스킬에는 궁극기가 통하지 않습니다', 1800); }
-      else if (mode === 'resist') { this.ui.warn('저항 — 궁극기 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
+      if (mode === 'reject') { this.ui.warn('리젝트 — 성광이 무효화되었습니다', 1800); B.barkFor(B.def.id + 'Ult'); }
+      else if (mode === 'immune') { this.ui.warn('면역 — 이 스킬에는 성광이 통하지 않습니다', 1800); }
+      else if (mode === 'resist') { this.ui.warn('저항 — 성광 피해가 크게 줄어듭니다', 1500); if (Math.random() < 0.6) B.barkFor(B.def.id + 'Ult'); }
       else if (Math.random() < 0.5) B.barkFor(B.def.id + 'Ult');
       if (B.addAnalysis) B.addAnalysis(10);
     }

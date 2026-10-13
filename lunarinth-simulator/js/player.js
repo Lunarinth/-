@@ -167,7 +167,7 @@ export class Player {
 
     // 성광(X)
     if (input.take('ult')) {
-      if (G.sealed) G.ui.warn('궁극기가 봉인되어 있습니다', 900);
+      if (G.sealed) G.ui.warn('성광이 봉인되어 있습니다', 900);
       else if (this.ults > 0 && this.ultT <= 0 && G.canUlt()) G.useUlt(false);
     }
     // 액티브 스킬(C)
@@ -318,6 +318,7 @@ export class Player {
     if (this.flags.lastStand) this.recalc();
     if (this.hp <= 0) {
       if (this.flags.revive && !this.reviveUsed) { this.reviveUsed = true; this.hp = 2; this.inv = 3; G.ui.banner('두 번째 기회', '성검이 다시 빛난다', 2000); G.audio.sfx.play('heal'); G.ui.setHp(this.hp, this.maxHp); return true; }
+      if (G.state === 'fight' && G.boss.step && G.boss.step.endure && G.boss.state === 'run') { G.onEndureDeath(); return true; } // 버티기 시련은 쓰러져도 넘어간다
       this.alive = false; G.onPlayerDown(); return true;
     }
     if (G.state === 'fight' && Math.random() < 0.5) G.boss.barkFor(G.boss.def.id + 'Hit');

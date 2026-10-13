@@ -31,8 +31,8 @@ export const BELLIS = {
   ],
 };
 
-// 쓰러진 벨리스 뒤로 루나린스의 잔상이 나타나 힘을 건넨다: 99초 동안 계속 바뀌는 패턴을 버티는 시련 (무적, 체력 5 고정)
-BELLIS.steps.push({ kind: 'last', tag: '신탁', name: '빌려온 달', form: 'verdict', time: 99, attacks: ['spProxy'], hp: 5, fixedHp: 5, idle: 0, ultMode: 'immune', endure: true, fake: 'bellis' });
+// 쓰러진 벨리스 뒤로 루나린스의 잔상이 나타나 힘을 건넨다: 20초 동안 계속 바뀌는 패턴을 버티는 시련 (무적, 체력 5 고정). 쓰러져도 시련은 끝나고 다음으로 넘어간다
+BELLIS.steps.push({ kind: 'last', tag: '신탁', name: '빌려온 달', form: 'verdict', time: 20, attacks: ['spProxy'], hp: 5, fixedHp: 5, idle: 0, ultMode: 'immune', endure: true, fake: 'bellis' });
 
 // 6스테이지 중간 보스로 다시 나타난 벨리스: 통상 1개 + (하드 이상) 스킬 1개
 export const BELLIS_MID = {
@@ -306,7 +306,7 @@ export class Bellis extends Boss {
   /** 신탁 「빌려온 달」: 벨리스의 술식과 달빛 탄이 번갈아 바뀐다 (버티기) */
   *atk_spProxy() {
     const G = this.G, pal = this.pal;
-    this.cast('moon_throw'); this.glide(0, -6.4, 1.0); G.ui.warn('달의 잔상이 벨리스에게 힘을 건넨다 — 99초를 버텨라', 2200); yield 1.2;
+    this.cast('moon_throw'); this.glide(0, -6.4, 1.0); G.ui.warn('달의 잔상이 벨리스에게 힘을 건넨다 — 20초를 버텨라', 2200); yield 1.2;
     const moon = [
       function* (s) { for (let k = 0; k < 5; k++) { s.fan(s.n(7, 4), 1.4, s.aim(), { kind: 'crescent', speed: 5.6, size: 1.3, color: 0xe3d6ff, spin: 5 }); s.sfx('fan'); yield s.t(0.6); } },
       function* (s) { for (let k = 0; k < 4; k++) { s.ring(s.n(18, 10), { kind: 'crescent', speed: 4.4, size: 1.2, color: 0xfff1c9, spin: 5, accel: 1.2, accelAt: 0.8, maxS: 8 }); s.sfx('orb'); yield s.t(0.7); } },

@@ -13,7 +13,7 @@ export const ROOM_INFO = {
   normal: { name: '방', color: 0xffffff },
   treasure: { name: '보물방', color: 0xffd34a },
   rest: { name: '휴식방', color: 0x7fe3b5 },
-  mini: { name: '수호자의 방', color: 0xff9a4a },
+  mini: { name: '문지기의 방', color: 0xff9a4a },
   challenge: { name: '도전방', color: 0xc48bff },
   boss: { name: '보스방', color: 0xff3b5c },
 };

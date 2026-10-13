@@ -398,7 +398,7 @@ export class Lunarinth extends Boss {
   // ═════ 라스트 스킬 「트리니티 이클립스」: 세 개의 달이 겹치는 밤 (궁극기 면역) ═════
   *atk_spTrinity() {
     const G = this.G;
-    this.cast('moon_throw'); this.sfx('laugh_big'); G.ui.warn('삼위일체 — 궁극기는 닿지 않습니다', 1800); yield 1.0;
+    this.cast('moon_throw'); this.sfx('laugh_big'); G.ui.warn('삼위일체 — 성광은 닿지 않습니다', 1800); yield 1.0;
     while (true) {
       const seq = shuffle(['trinityBarrage', 'lunaticSpiral', 'moonfall', 'madnessWave', 'moonThrow']);
       for (const name of seq) yield* this['atk_' + name]();

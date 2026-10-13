@@ -63,7 +63,7 @@ export const STAGES = [
   { id: 'astra', no: '2', label: 'STAGE 2', place: '저택의 기술실', mobName: '회로의 병사', env: 'techlab', stageMusic: 'stage2', mid: 'mid_circuit', warn: '아스트라 접근' },
   { id: 'tramont', no: '3', label: 'STAGE 3', place: '빵 굽는 테라스 정원', mobName: '장미창의 병사', env: 'terrace', stageMusic: 'stage3', mid: 'mid_rose', warn: '트라몽 접근' },
   { id: 'index', no: '4', label: 'STAGE 4', place: '저택의 도서관', mobName: '서가의 병사', env: 'library', stageMusic: 'stage4', mid: 'mid_tome', warn: '인덱스 접근' },
-  { id: 'bellis', no: '5', label: 'STAGE 5', place: '저택의 기록실', mobName: '서술의 병사', env: 'archive', stageMusic: 'stage5', mid: 'mid_ledger', warn: '벨리스 접근' },
+  { id: 'bellis', no: '5', label: 'STAGE 5', place: '저택의 기록실', mobName: '룬의 병사', env: 'archive', stageMusic: 'stage5', mid: 'mid_ledger', warn: '벨리스 접근' },
   { id: 'lunarinth', no: '6', label: 'FINAL STAGE', place: '달의 정원', mobName: '달의 병사', env: 'moongarden', stageMusic: 'stage6', mid: 'bellis', warn: '루나린스 강림' },
 ];
 export const EXTRA_STAGE = { id: 'arkesia', no: 'EX', label: 'EXTRA STAGE', place: '실이 드리운 인형극장', mobName: '춤추는 인형', env: 'theater', stageMusic: 'stageEx', mid: 'index', warn: '？？？ 접근' };
