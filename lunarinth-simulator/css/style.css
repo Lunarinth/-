@@ -362,3 +362,12 @@ body.timestop #gl { filter: saturate(.25) hue-rotate(200deg) brightness(.9); }
 .ch-hint { margin-top: 10px; font-size: 11px; color: var(--ink-dim); letter-spacing: .08em; }
 .d-choices { display: grid; gap: 6px; margin-top: 10px; }
 .d-choices button { font-size: 14px; padding: 6px 14px; }
+
+/* ───── 언어 ───── */
+.row.lang select { font: inherit; padding: 3px 8px; border-radius: 8px; background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid var(--glass-edge); }
+.row.lang select option { background: #1a0b3a; }
+.lang-note { margin: -4px 0 8px; font-size: 11px; color: var(--ink-dim); text-align: right; }
+body.lang-en .d-text { letter-spacing: .01em; }
+body.lang-en #banner .b-title, body.lang-en .m-sub { letter-spacing: .15em; }
+body.lang-en #lives small, body.lang-en #ults small, body.lang-en #r-power small { width: 72px; white-space: nowrap; }
+body.lang-en #stats small { letter-spacing: .1em; }

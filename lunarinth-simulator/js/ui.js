@@ -4,6 +4,7 @@ import { ITEMS, ITEM_BY_ID, RARITY, TRANSFORMS } from './items.js';
 import { itemIcon } from './icons.js';
 import { SKILLS } from './skills.js';
 import { ROOM_INFO } from './floor.js';
+import { T, LANG, setLang } from './i18n.js';
 import { OPSIR } from './bosses/opsir.js';
 import { ASTRA } from './bosses/astra.js';
 import { TRAMONT } from './bosses/tramont.js';
@@ -81,6 +82,8 @@ export class UI {
     };
     bind('#o-mute', null, true); bind('#o-shake', 'shake'); bind('#o-calm', 'calm');
     // 테스터용 암호: 입력하면 컨티뉴 무제한 (EXTRA 제외)
+    const lg = $('#o-lang');
+    if (lg) { lg.value = LANG; lg.onchange = () => setLang(lg.value); }
     const pw = $('#o-pass');
     if (pw) pw.oninput = () => {
       const v = pw.value.trim().toLowerCase(), on = v === 'lunacute';
@@ -463,7 +466,7 @@ export class UI {
         const hasFace = ln.who !== 'narr' && this._paintPortrait(ln.who);
         this.el.dPortrait.classList.toggle('narr', !hasFace);
         d.dataset.who = ln.who;
-        full = ln.text; pos = 0; typing = true; textEl.textContent = '';
+        full = T(ln.text); pos = 0; typing = true; textEl.textContent = '';
         if (hooks.onLine) hooks.onLine(ln, i);
         clearInterval(timer);
         timer = setInterval(() => {

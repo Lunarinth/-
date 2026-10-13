@@ -1,4 +1,7 @@
 import { Game } from './game.js';
+import { installI18n } from './i18n.js';
+
+installI18n(); // 영어 모드면 화면 문구를 영어로 바꿔 끼운다
 
 const game = new Game();
 game.init().catch((err) => {
