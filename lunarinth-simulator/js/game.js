@@ -104,7 +104,7 @@ export class Game {
     return {
       diff, char: CHARS[0], extra, hell: !!diff.hell, apo: !!diff.apo, stages: special ? [special] : STAGES, special: !!special,
       stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0,
-      hpScale: special ? 1.1 : HP_SCALE[0],
+      hpScale: special ? (diff.apo ? 0.8 : 1.0) : HP_SCALE[0],
     };
   }
   get stageList() { return this.run.stages || STAGES; }
@@ -272,7 +272,7 @@ export class Game {
     this.skills.reset(); this.pickups.clear(); this.roomView.hideAll(); this.floor = null; this.room = null;
     // EXTRA · HELL · APOTHEOSIS: 저택 6층을 지나온 하녀장처럼 미리 강해진 상태로 시작한다
     if (this.run.special) {
-      P.power = 3; P.coins = 25; P.keys = 2; P.ults = 3;
+      P.power = 4; P.coins = 25; P.keys = 2; P.ults = 3;
       const owned = new Set();
       for (let i = 0; i < 4; i++) { const it = rollItem(i === 3 ? 'boss' : 'treasure', owned, Math.random, 10); if (it.active) { i--; owned.add(it.id); continue; } owned.add(it.id); P.addItem(it, this); }
       P.hp = P.maxHp;
@@ -301,7 +301,8 @@ export class Game {
     const my = ++this._token, run = this.run, P = this.player;
     run.stageIdx = i;
     const st = this.stageList[i];
-    run.hpScale = run.special ? 1.1 : HP_SCALE[i] ?? 1;
+    run.hpScale = run.special ? (run.apo ? 0.8 : 1.0) : HP_SCALE[i] ?? 1; // APOTHEOSIS 는 체력 무한이라 길어지기만 하므로 줄인다
+    run.lunaK = st.id === 'lunarinth' ? 1.8 : 1; // 루나린스는 HP_K 가 없는 대신 최종층에서 보정 (후반의 강해진 하녀장 기준)
     this.floor = genFloor({ idx: run.special ? 2 : i, rooms: run.special ? 13 : 8 + i, infinite: this.isInfiniteUnlocked(), mid: !!st.mid });
     if (P.flags.map) this.revealMap(true); else if (P.flags.compass) this.revealMap(false);
     for (const b of Object.values(this.bosses)) { b.visible = false; b.alpha = 0; }
@@ -399,6 +400,9 @@ export class Game {
   roomClear() {
     const room = this.room, P = this.player;
     room.cleared = true; this.roomCombat = false; this.encounter = null; this._roomWall = 0;
+    // 남은 적탄은 점수 아이템이 되어 사라진다 (동방식 소거)
+    let n = 0; for (const b of this.bullets.list) if (b.active && b.owner === 'boss') { if (n++ < 24) this.pickups.spawn({ type: 'point', x: b.x, z: b.z, delay: 0.2, auto: true }); this.fx.puff(b.x, 0.9, b.z, b.color, 1); this.bullets.kill(b); }
+    this.zones.clear(); this.beams.clear(); this.mobs.clearLinks();
     this.roomView.setOpen(true); this.sfx.play('door'); this.ui.drawMap(this.floor, room);
     this.chargeActive(1);
     if (room.type === 'challenge') {
@@ -530,7 +534,7 @@ export class Game {
   onPowerUp() {
     const P = this.player;
     this.fx.ring(P.x, 0.6, P.z, 0xff5a5a, 5, 0.5);
-    if (P.plv >= 4) { this.ui.banner('FULL POWER', '성검이 온전히 깨어났다', 1800); this.sfx.play('ult', { vol: 0.5 }); }
+    if (P.plv >= 4) { this.ui.banner('FULL POWER', '성검이 온전히 깨어났다', 1800); this.sfx.play('ult', { vol: 0.5 }); this.pickups.collectAll(); }
     else this.ui.announce(`POWER UP — ${P.plv}단계 · 탄 ${1 + P.plv}줄`, 1400);
   }
 
@@ -659,7 +663,7 @@ export class Game {
     this.music.stop(0.6); this.timeScale = 0.3;
     this.fx.burst(B.x, B.bobY, B.z, 50, { color: [0xffffff, B.pal.glow, B.pal.b], speed: 10, size: 1.0, life: 1.1, up: 1.4 });
     this.fx.ring(B.x, B.bobY, B.z, 0xffffff, 18, 0.8); this.sfx.play('boss_down', { vol: 0.7 }); this.ui.flash('#ffffff', 600, 0.6);
-    this.pickups.burst('p', B.x, B.z + 1, 8); this.pickups.burst('point', B.x, B.z + 1, 6);
+    this.pickups.burst('p', B.x, B.z + 1, 8); this.pickups.burst('point', B.x, B.z + 1, 6); this.pickups.collectAll();
     await sleep(700); if (my !== this._token) return;
     this.timeScale = 1; B.alphaT = 0; B.cancelAttack();
     await sleep(600); if (my !== this._token) return;
@@ -741,6 +745,7 @@ export class Game {
       this.fx.ring(B.x, B.bobY, B.z, 0xffffff, last ? 20 : 14, 0.8);
       // 동방처럼: 단계를 깨면 파워 · 점수 아이템이 쏟아진다
       this.pickups.burst('p', B.x, B.z + 1.5, isSpell ? 6 : 3); this.pickups.burst('point', B.x, B.z + 1.5, isSpell ? 6 : 3);
+      this.pickups.collectAll(); // 동방처럼 단계를 깨면 화면의 아이템이 전부 회수된다
       if (isSpell) {
         const capture = !this.run.stepHit && !this.run.stepUlt;
         this.stats.spellsCaptured += capture ? 1 : 0;
