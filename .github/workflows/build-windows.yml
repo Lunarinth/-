@@ -1,0 +1,37 @@
+# LUCENT NOCTURNE — Windows exe 자동 빌드
+# lunarinth-simulator 가 바뀌어 푸시될 때마다 GitHub 서버가 exe 를 만들어 Actions 탭에 올려 둔다.
+# 받는 법: 저장소 → Actions → "Build Windows exe" → 가장 위의 실행 → 아래 Artifacts 의 LucentNocturne-win64
+name: Build Windows exe
+
+on:
+  push:
+    paths:
+      - 'lunarinth-simulator/**'
+      - '.github/workflows/build-windows.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # exe 아이콘 · 버전 정보를 넣는 도구 (Linux 에서도 동작)
+      - name: Install icon tool
+        run: |
+          mkdir -p /tmp/resedit && npm install --prefix /tmp/resedit --no-audit --no-fund resedit@2 pe-library@1
+          ln -sfn /tmp/resedit/node_modules lunarinth-simulator/electron/node_modules
+
+      - name: Build
+        run: bash lunarinth-simulator/electron/build-win.sh
+
+      # 폴더째 올리면 GitHub 이 zip 하나로 묶어 준다
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LucentNocturne-win64
+          path: lunarinth-simulator/dist/LucentNocturne-win32-x64/
+          retention-days: 30
