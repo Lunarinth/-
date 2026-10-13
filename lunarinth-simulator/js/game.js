@@ -179,7 +179,8 @@ export class Game {
     this.ui.setPortraits(portraits, imgs);
 
     this._wireUI();
-    this.input.onAny = () => { this.engine.init(); };
+    // 첫 입력에서 오디오를 켠다. 일시정지 중에는 멈춰 둔 소리를 다시 켜지 않는다
+    this.input.onAny = () => { if (!this.engine.ctx) this.engine.init(); else if (!this.paused) this.engine.resume(); };
 
     this.ui.refreshExtra();
     this.toMenu(true);

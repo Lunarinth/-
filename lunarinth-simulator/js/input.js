@@ -17,7 +17,10 @@ export class Input {
     this.onAny = null;          // 첫 입력 콜백 (오디오 잠금 해제)
     this.block = null;          // true 를 돌려주면 그 키 입력은 게임 액션으로 등록하지 않는다 (대사 중 등)
 
+    // 입력칸(암호 등)에 타이핑할 때는 게임 조작으로 가로채지 않는다
+    const typing = (e) => { const t = e.target; return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable); };
     window.addEventListener('keydown', (e) => {
+      if (typing(e)) return;
       if (this.block && this.block(e)) { if (this._owns(e)) e.preventDefault(); if (this.onAny) this.onAny(e); return; }
       if (e.repeat) { if (this._owns(e)) e.preventDefault(); return; }
       const a = this._action(e.code);

@@ -142,6 +142,8 @@ export class UI {
   _bindKeys() {
     window.addEventListener('keydown', (e) => {
       if (e.repeat || !this.el.dialog.hidden) return;
+      // 입력칸(암호 등) 타이핑 중에는 단축키를 쓰지 않는다 (Esc 로 빠져나가기만 허용)
+      const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'SELECT' || tg.tagName === 'TEXTAREA')) { if (e.code === 'Escape') tg.blur(); else return; }
       const code = e.code, yes = code === 'KeyZ' || code === 'Enter', no = code === 'KeyX' || code === 'Escape';
       // 컨티뉴
       if (!$('#m-continue').hidden) { if (yes) { e.preventDefault(); this.on.continueYes && this.on.continueYes(); } else if (code === 'KeyX') { e.preventDefault(); this.on.continueNo && this.on.continueNo(); } return; }
