@@ -14,6 +14,7 @@ const ROOT = path.join(__dirname, 'game');
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280, height: 760, minWidth: 800, minHeight: 500,
+    icon: path.join(__dirname, 'icon.png'),
     backgroundColor: '#0a0614', title: 'LUCENT NOCTURNE — 루센트 야상곡', autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false },
   });
