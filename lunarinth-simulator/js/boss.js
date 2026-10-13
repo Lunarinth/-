@@ -258,7 +258,7 @@ export class Boss {
     this.hp -= amount; this.flash = 0.06;
     G.stats.damage += amount;
     if (!isUlt) {
-      G.audio.sfx.play(amount > 15 ? 'hit_boss_heavy' : 'hit_boss', { pan: G.audio.pan(this.x), pitch: rnd(0.9, 1.2) });
+      G.audio.sfx.play(amount > 60 ? 'hit_boss_heavy' : 'hit_boss', { pan: G.audio.pan(this.x), pitch: rnd(0.9, 1.2), vol: amount > 60 ? 0.6 : 1 }); // 강타음은 모아베기 같은 큰 일격에만
       G.fx.burst(x, 1.6, z, 3, { color: [0xffffff, this.pal.b], speed: 3, size: 0.5, life: 0.45 });
     }
     if (this.hp <= 0) { this.hp = 0; G.ui.setBoss(0); this.endStep('broken'); return; }

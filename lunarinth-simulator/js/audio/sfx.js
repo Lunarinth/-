@@ -97,11 +97,11 @@ export class Sfx {
     } };
 
     // ───── 보스 피격 / 사망 ─────
-    D.hit_boss = { cd: 55, len: 0.2, vol: 0.5, fn: (E, b, t, p) => {
+    D.hit_boss = { cd: 85, len: 0.2, vol: 0.3, fn: (E, b, t, p) => {
       E.tone(b, { type: 'sine', f: 240 * p, f1: 110 * p, glide: 0.07, t, dur: 0.1, vol: 0.18, a: 0.001, d: 0.09, s: 0.01, r: 0.03 });
       E.noise(b, { t, dur: 0.07, vol: 0.12, type: 'highpass', f: 4000 });
     } };
-    D.hit_boss_heavy = { cd: 80, len: 0.5, vol: 0.9, fn: (E, b, t) => {
+    D.hit_boss_heavy = { cd: 260, len: 0.5, vol: 0.55, fn: (E, b, t) => {
       E.tone(b, { type: 'sine', f: 300, f1: 70, glide: 0.18, t, dur: 0.3, vol: 0.4, a: 0.001, d: 0.28, s: 0.01, r: 0.06 });
       E.noise(b, { t, dur: 0.25, vol: 0.3, type: 'bandpass', f: 3000, f1: 800, q: 1.2, rev: 0.4 });
       E.bell(b, t, 100, 0.1, 0.7, 0.4, 0);
