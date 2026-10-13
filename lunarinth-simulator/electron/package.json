@@ -1,0 +1,9 @@
+{
+  "name": "lucent-nocturne",
+  "productName": "LUCENT NOCTURNE",
+  "version": "5.0.0",
+  "description": "루센트 야상곡 — LUNARINTH 탄막 로그라이크",
+  "main": "main.js",
+  "scripts": { "start": "electron ." },
+  "devDependencies": { "electron": "44.7.0" }
+}
