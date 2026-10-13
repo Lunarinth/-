@@ -300,6 +300,23 @@ export class Sfx {
       E.noise(b, { t, dur: 0.8, vol: 0.14, type: 'bandpass', f: 400, f1: 4000, q: 1.5, swell: true, a: 0.05, rev: 0.5 });
     } };
 
+    // ───── 로그라이크: 픽업 · 상점 · 문 ─────
+    D.coin = { cd: 30, len: 0.4, vol: 0.5, fn: (E, b, t, p) => { E.bell(b, t, 96, 0.08, 0.5, 0.6, 0); E.bell(b, t + 0.06, 100, 0.07, 0.6, 0.6, 0); } };
+    D.pickup = { cd: 40, len: 0.4, vol: 0.5, fn: (E, b, t, p) => { E.tone(b, { type: 'sine', f: 880 * p, f1: 1320 * p, glide: 0.08, t, dur: 0.12, vol: 0.12, a: 0.002, d: 0.1, s: 0.01, r: 0.05, rev: 0.3 }); } };
+    D.power = { cd: 25, len: 0.3, vol: 0.4, fn: (E, b, t, p) => { E.tone(b, { type: 'triangle', f: 1200 * p, f1: 1800 * p, glide: 0.04, t, dur: 0.06, vol: 0.08, a: 0.001, d: 0.05, s: 0.01, r: 0.03 }); } };
+    D.item_get = { len: 2.2, important: true, fn: (E, b, t) => {
+      [79, 83, 86, 91, 95, 98].forEach((m, i) => E.bell(b, t + i * 0.07, m, 0.13, 2.0, 0.9, 0));
+      E.noise(b, { t, dur: 0.8, vol: 0.08, type: 'bandpass', f: 1200, f1: 7000, q: 1.2, swell: true, a: 0.03, rev: 0.6 });
+    } };
+    D.transform = { len: 3, important: true, fn: (E, b, t) => {
+      [62, 69, 74, 78, 81, 86, 90, 93].forEach((m, i) => E.bell(b, t + i * 0.09, m, 0.15, 2.8, 0.9, 0));
+      E.noise(b, { t, dur: 1.6, vol: 0.14, type: 'bandpass', f: 300, f1: 8000, q: 1.4, swell: true, a: 0.1, rev: 0.7 });
+    } };
+    D.door = { cd: 80, len: 0.8, vol: 0.6, fn: (E, b, t, p) => { E.noise(b, { t, dur: 0.35, vol: 0.14, type: 'lowpass', f: 600 * p, f1: 180, a: 0.01, rev: 0.4 }); E.bell(b, t + 0.05, 64, 0.1, 1.0, 0.7, 0); } };
+    D.unlock = { cd: 80, len: 0.8, vol: 0.6, fn: (E, b, t) => { E.bell(b, t, 88, 0.1, 0.6, 0.6, 0); E.bell(b, t + 0.12, 95, 0.12, 1.2, 0.8, 0); } };
+    D.buy = { cd: 80, len: 1.0, vol: 0.6, fn: (E, b, t) => { [91, 95, 98].forEach((m, i) => E.bell(b, t + i * 0.05, m, 0.1, 0.8, 0.7, 0)); E.noise(b, { t, dur: 0.12, vol: 0.06, type: 'highpass', f: 6000 }); } };
+    D.boom = { cd: 50, len: 1.0, vol: 0.7, fn: (E, b, t, p) => { E.noise(b, { t, dur: 0.6, vol: 0.3, type: 'lowpass', f: 900 * p, f1: 80, a: 0.003, rev: 0.4 }); E.tone(b, { type: 'sine', f: 120 * p, f1: 40, glide: 0.3, t, dur: 0.4, vol: 0.25, a: 0.002, d: 0.3, s: 0.01, r: 0.1 }); } };
+    D.blip_infinite = { cd: 34, len: 0.15, vol: 0.5, fn: (E, b, t, p) => { E.tone(b, { type: 'sine', f: R(1300, 1800) * p, f1: R(1800, 2400) * p, glide: 0.03, t, dur: 0.05, vol: 0.1, a: 0.002, d: 0.04, s: 0.01, r: 0.02, rev: 0.35 }); } };
     return D;
   }
 }

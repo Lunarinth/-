@@ -97,10 +97,10 @@ export const EXTRA = {
 // ───────── 난이도 ─────────
 // cnt: 탄 수 배율, spd: 탄속 배율, rate: 발사 간격 배율(클수록 빠름), hp: 보스 체력 배율, php: 플레이어 체력, lv: 추가 패턴 단계(0~3)
 export const DIFFS = [
-  { id: 'easy', name: 'EASY', kr: '이지', sub: '달빛 아래 첫 산책', lv: 0, cnt: 0.6, spd: 0.84, rate: 0.82, hp: 0.8, php: 9, color: '#7fe3a4' },
-  { id: 'normal', name: 'NORMAL', kr: '노멀', sub: '저택의 정규 근무', lv: 1, cnt: 1, spd: 1, rate: 1, hp: 1, php: 7, color: '#8fb8ff' },
-  { id: 'hard', name: 'HARD', kr: '하드', sub: '감사 기간의 야근', lv: 2, cnt: 1.16, spd: 1.06, rate: 1.07, hp: 1.12, php: 6, color: '#ffb86b' },
-  { id: 'madness', name: 'MADNESS', kr: '매드니스', sub: '루나틱 — 달이 미치는 밤', lv: 3, cnt: 1.28, spd: 1.1, rate: 1.13, hp: 1.25, php: 5, color: '#ff6fae' },
+  { id: 'easy', name: 'EASY', kr: '이지', sub: '달빛 아래 첫 산책', lv: 0, cnt: 0.6, spd: 0.84, rate: 0.82, hp: 0.8, php: 6, color: '#7fe3a4' },
+  { id: 'normal', name: 'NORMAL', kr: '노멀', sub: '저택의 정규 근무', lv: 1, cnt: 1, spd: 1, rate: 1, hp: 1, php: 5, color: '#8fb8ff' },
+  { id: 'hard', name: 'HARD', kr: '하드', sub: '감사 기간의 야근', lv: 2, cnt: 1.16, spd: 1.06, rate: 1.07, hp: 1.12, php: 4, color: '#ffb86b' },
+  { id: 'madness', name: 'MADNESS', kr: '매드니스', sub: '루나틱 — 달이 미치는 밤', lv: 3, cnt: 1.28, spd: 1.1, rate: 1.13, hp: 1.25, php: 3, color: '#ff6fae' },
 ];
 // EXTRA 전용 고정 난이도: NORMAL 과 HARD 의 중간, 체력 4
 // EXTRA: HARD 와 같은 수준, 체력 4, 컨티뉴 없음
@@ -111,18 +111,16 @@ export const HELL_DIFF = { id: 'hell', name: 'HELL', kr: '헬', sub: '끊어지�
 // ───────── 기체 ─────────
 export const CHARS = [
   { id: 'claire', name: '클레르', kr: '초대 하녀장 · 성검사', desc: '봉인이 풀린 성검으로 징벌을 집행하러 온 첫 번째 하녀장.', shot: '성검 참격파 — 일반 시 5갈래 부채꼴, 저속(Shift) 시 정면 집중 + 유도 검기', ult: ['성검 해방', '징벌의 월광'], ready: true, img: 'claire' },
-  { id: 'astra', name: '아스트라', kr: '기술실 담당 · 홀로그램술사', desc: '최초 격파 이후 사용할 수 있는 두 번째 기체. 화력은 낮지만 유도 위성이 알아서 적을 쫓는다.', shot: '홀로 위성탄 — 일반 시 좌우 위성의 유도탄, 저속(Shift) 시 정면 집중 + 위성 접근', ult: ['기술실 권한', '시스템 오버라이드'], ready: false, unlock: 'astra', img: 'astra' },
-  null, null,
 ];
-export const PLAYER_ULT = { claire: { tag: '성검 해방', name: '징벌의 월광' }, astra: { tag: '기술실 권한', name: '시스템 오버라이드' } };
+export const PLAYER_ULT = { claire: { tag: '성검 해방', name: '징벌의 월광' } };
 
 export const NAMES = {
   luna: '루나린스', claire: '클레르 · 초대 하녀장', opsir: '옵서 · 천체 관측관', astra: '아스트라 · 기술실', tramont: '트라몽 · 검사', index: '인덱스 · 도서관', bellis: '벨리스 · 기록실 감사관',
-  arkesia: '아르케시아', sitra: '시트라 · 직무대리', manager: '무대 관리자', narr: '',
+  arkesia: '아르케시아', sitra: '시트라 · 직무대리', infinite: '인피니트 · 끝없는 복도의 상인', manager: '무대 관리자', narr: '',
 };
 
 // ───────── 대사 ─────────
-// who: luna / claire / opsir / astra / tramont / index / bellis / arkesia / sitra / narr(지문). sitra 는 초상화 없이 이름만 표시된다.
+// who: luna / claire / opsir / astra / tramont / index / bellis / arkesia / sitra / infinite / narr(지문).
 // as: 표시 이름을 덮어쓴다 (정체를 밝히기 전의 아르케시아는 '？？？').
 // 말투: 클레르 정중한 존댓말 / 루나린스 장난기 섞인 존댓말 / 옵서·시트라 반말 / 아스트라 겁먹은 존댓말 / 트라몽 반말+프랑스어 / 인덱스 간결한 존댓말 / 벨리스 냉철한 존댓말.
 export const SCRIPT = {
@@ -569,4 +567,34 @@ export const BARKS = {
   arkesiaHit: ['어머, 실이 걸렸네요.', '그 비명, 좋아요.', '인형은 다치지 않는답니다.'],
   arkesiaUlt: ['그런 빛으로 실이 끊길까요?', '눈부시네요, 그래도 소용없어요.', '조명이 하나 더 늘었네요.'],
   arkesiaLow: ['……실이 한 가닥씩 끊겨요.', '아직 막이 남았답니다.', '커튼콜은 제가 정해요.'],
+};
+
+// ───────── 상인 (휴식방) ─────────
+// 시트라: 정문을 맡았던 직무대리. 저택 곳곳의 휴식방에 레몬 수레를 끌고 나타난다. 반말, 장난기, 서류는 늘 밀려 있다.
+// 인피니트: 끝없는 복도에서 온 상인. 한 번 달이 저문 밤(첫 클리어) 이후에만 나타나며, 유니크 · 레전더리 물건만 판다.
+export const SHOP = {
+  sitra: {
+    first: [
+      { who: 'narr', text: '휴식방 한가운데, 레몬이 산처럼 쌓인 작은 수레가 놓여 있다.' },
+      { who: 'sitra', text: '어, 클레르! 왔냐? 정문은…… 음, 잠깐 비워도 되겠지. 아마.' },
+      { who: 'claire', text: '시트라 씨. 정문을 지키신다고 하지 않으셨습니까.' },
+      { who: 'sitra', text: '지키는 중이야, 마음으로! 그보다 봐 봐, 저택 창고에서 쓸 만한 거 좀 챙겨 왔거든. 공짜는 아니고.' },
+      { who: 'sitra', text: '동전 있지? 바닥에 떨어진 거 다 주워. 그거 원래 다 저택 거니까, 결국 나한테 돌아오는 셈이야. 깔끔하지?' },
+    ],
+    greet: ['어서 와~ 오늘의 추천은 레몬! 내일의 추천도 레몬!', '또 왔네? 외상은 안 돼. 서류가 늘어나거든.', '클레르, 얼굴이 피곤해 보인다? 뭐라도 사 가.', '이거 창고에서 굴러다니던 건데…… 아, 아니다. 귀한 물건이야!', '레몬 하나 서비스! ……는 농담이고, 제값 받는다.', '싸게 해 줄까? 아니, 안 해 줄 거야. 물어본 거야.'],
+    buy: ['거래 성립~! 영수증은 없어!', '좋은 눈이네! 나라면 안 샀겠지만.', '고마워, 클레르! 이 돈으로 서류 정리 업체 부를 거야.', '그거 잘 써! 환불은 안 돼!'],
+    poor: ['동전이 모자라잖아. 바닥 좀 더 뒤져 봐.', '외상은 안 된다니까!', '음~ 그 돈으론 레몬 껍질도 못 사.'],
+  },
+  infinite: {
+    first: [
+      { who: 'narr', text: '휴식방의 문이 하나 더 있다. 아니, 없었다. 민트색 빛이 고리 모양으로 매듭지어져 있다.' },
+      { who: 'infinite', text: '안녕하세요오! 끝없는 복도 출장 상점, 인피니트입니다! 달이 한 번 저문 밤에만 문을 열어요!' },
+      { who: 'claire', text: '……이 저택에서 처음 뵙는 분이군요. 어느 부서 소속이십니까.' },
+      { who: 'infinite', text: '부서요? 음~ 복도요! 끝이 안 나는 복도! 거기서 주운 물건들이라 하나같이 귀하답니다!' },
+      { who: 'infinite', text: '가격은 조금 무한하지만…… 아, 아니에요, 유한해요! 동전으로 계산 가능합니다! 자, 골라 보세요!' },
+    ],
+    greet: ['어서 오세요! 오늘도 재고는 무한…… 아니고 세 개!', '와아, 단골이다! 단골은 무한히 환영이에요!', '이 물건들은 한 번 놓치면 다시 못 만나요! 아마도요!', '반짝반짝하죠? 복도 끝에서 주워 왔어요!', '고민은 짧게, 후회는 무한하게! 아니, 거꾸로였나?'],
+    buy: ['감사합니다! 이 인연, 무한히 이어지길!', '탁월한 선택! 복도가 박수 치고 있어요!', '포장은 생략할게요! 끝이 없거든요!'],
+    poor: ['앗, 동전이 조금 모자라요! 조금이 무한히 모자라진 않아요!', '외상은…… 복도 규칙상 안 돼요! 미안해요!'],
+  },
 };

@@ -1,5 +1,9 @@
 // DOM 기반 UI: 타이틀·난이도/캐릭터 선택, HUD, 대사창, 스킬 선언 컷인, 컨티뉴/엔딩/결과, 설정집.
-import { OFFICIAL, ROSTER, DIFFS, CHARS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, HELL_DIFF, APO_DIFF } from './lore.js';
+import { OFFICIAL, ROSTER, DIFFS, NAMES, STORY, MOB_NOTE, EXTRA, EXTRA_DIFF, HELL_DIFF, APO_DIFF } from './lore.js';
+import { ITEMS, ITEM_BY_ID, RARITY, TRANSFORMS } from './items.js';
+import { itemIcon } from './icons.js';
+import { SKILLS } from './skills.js';
+import { ROOM_INFO } from './floor.js';
 import { OPSIR } from './bosses/opsir.js';
 import { ASTRA } from './bosses/astra.js';
 import { TRAMONT } from './bosses/tramont.js';
@@ -24,15 +28,14 @@ export class UI {
       warn: $('#warn'), bubble: $('#bubble'), banner: $('#banner'), announce: $('#announce'), dialog: $('#dialog'),
       dName: $('#d-name'), dText: $('#d-text'), dCanvas: $('#d-canvas'), dPortrait: document.querySelector('.d-portrait'),
       flash: $('#fx-flash'), veil: $('#fx-veil'), menu: $('#menu'), declare: $('#declare'), dcCanvas: $('#dc-canvas'),
-      ending: $('#ending'), selDiff: $('#sel-diff'), selChar: $('#sel-char'),
+      ending: $('#ending'), selDiff: $('#sel-diff'),
       ana: $('#bb-ana'), anaFill: $('#ana-fill'), anaNum: $('#ana-num'),
     };
     this.on = {};
     this.starCount = 0; this.gemCount = 0;
     this.portraits = {};
     this._warnT = 0; this._bubT = 0; this._annT = 0; this._dcT = 0;
-    this.screen = null; this.diffIdx = 1; this.charIdx = 0; this.pickedDiff = DIFFS[1]; this.extraMode = false;
-    this.craftUnlocked = (id) => id === 'claire';
+    this.screen = null; this.diffIdx = 1; this.pickedDiff = DIFFS[1];
     this._kbuf = '';
     try { const d = localStorage.getItem('lunarinth.lastdiff'); if (d != null && DIFFS[+d]) this.diffIdx = +d; } catch (e) { /* noop */ }
     this._bindMenus();
@@ -50,11 +53,11 @@ export class UI {
     document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('button')) sfx.play('ui_click'); });
     $('#btn-start').onclick = () => this.openSelect('diff');
     $('#btn-extra').onclick = () => {
-      if (this.extraUnlocked()) { this.extraMode = true; this.pickedDiff = EXTRA_DIFF; this.openSelect('char'); }
+      if (this.extraUnlocked()) { this.showMenu(false); this.on.startExtra && this.on.startExtra(EXTRA_DIFF); }
       else { this.warn(`EXTRA 잠김 — ${EXTRA.unlock}`, 3200, true); this.sfx.play('hurt', { vol: 0.25 }); }
     };
-    $('#btn-apo').onclick = () => { if (this.apoOpen && this.apoOpen()) { this.extraMode = true; this.apoMode = true; this.pickedDiff = APO_DIFF; this.openSelect('char'); } };
-    $('#btn-hell').onclick = () => { if (this.hellUnlocked()) { this.extraMode = true; this.pickedDiff = HELL_DIFF; this.openSelect('char'); } };
+    $('#btn-apo').onclick = () => { if (this.apoOpen && this.apoOpen()) { this.showMenu(false); this.on.startApo && this.on.startApo(APO_DIFF); } };
+    $('#btn-hell').onclick = () => { if (this.hellUnlocked()) { this.showMenu(false); this.on.startExtra && this.on.startExtra(HELL_DIFF); } };
     $('#btn-codex').onclick = () => this.modal('#m-codex', true);
     $('#btn-settings').onclick = () => this.modal('#m-settings', true);
     $('#btn-help').onclick = () => this.modal('#m-help', true);
@@ -106,74 +109,32 @@ export class UI {
       b.onclick = () => { this.diffIdx = +b.dataset.i; this._paintDiff(); this.confirm(); };
       b.onmouseenter = () => { this.diffIdx = +b.dataset.i; this._paintDiff(); };
     });
-    const cc = $('#char-cards');
-    cc.innerHTML = CHARS.map((c, i) => `
-      <button class="card char ${c ? '' : 'empty'}" data-i="${i}">
-        <span class="c-art"><canvas width="220" height="260"></canvas></span>
-        <span class="c-en">${c ? c.name : '— — —'}</span><span class="c-kr">${c ? c.kr : '준비 중'}</span>
-      </button>`).join('');
-    this.refreshChars();
-    cc.querySelectorAll('.card').forEach((b) => {
-      b.onclick = () => { this.charIdx = +b.dataset.i; this._paintChar(); this.confirm(); };
-      b.onmouseenter = () => { this.charIdx = +b.dataset.i; this._paintChar(); };
-    });
-    this._paintDiff(); this._paintChar();
+    this._paintDiff();
   }
 
   _paintDiff() {
     document.querySelectorAll('#diff-cards .card').forEach((b, i) => b.classList.toggle('sel', i === this.diffIdx));
     const d = DIFFS[this.diffIdx];
-    $('#diff-desc').innerHTML = `<b style="color:${d.color}">${d.name} — ${d.kr}</b><br>${d.sub}<br><small>탄수 ×${d.cnt} · 탄속 ×${d.spd} · 보스 체력 ×${d.hp} · 내 체력 ${d.php}${d.lv >= 2 ? ' · 추가 패턴 있음' : ''}</small>`;
+    $('#diff-desc').innerHTML = `<b style="color:${d.color}">${d.name} — ${d.kr}</b><br>${d.sub}<br><small>탄수 ×${d.cnt} · 탄속 ×${d.spd} · 보스 체력 ×${d.hp} · 시작 체력 ${d.php}${d.lv >= 2 ? ' · 추가 패턴 있음' : ''}</small>`;
   }
-  refreshChars() {
-    document.querySelectorAll('#char-cards .card').forEach((b, i) => { const c = CHARS[i]; b.classList.toggle('locked', !!c && !this.craftUnlocked(c.id)); });
-    if (this.screen === 'char') this._paintCharArt();
-  }
-  _paintChar() {
-    document.querySelectorAll('#char-cards .card').forEach((b, i) => b.classList.toggle('sel', i === this.charIdx));
-    const c = CHARS[this.charIdx];
-    if (c && !this.craftUnlocked(c.id)) { $('#char-desc').innerHTML = `<b>${c.name}</b> — 잠김<br><small>${c.id === 'astra' ? '2스테이지의 아스트라를 처음 쓰러뜨리면 사용할 수 있습니다. (난이도 무관)' : ''}</small>`; return; }
-    $('#char-desc').innerHTML = c ? `<b>${c.name}</b> — ${c.kr}<br>${c.desc}<br><small>${c.shot}<br>궁극기: ${c.ult[0]} 「${c.ult[1]}」</small>` : '<b>빈 슬롯</b><br><small>아직 사용할 수 없습니다. (추후 추가 예정)</small>';
-  }
-  _paintCharArt() {
-    document.querySelectorAll('#char-cards .card').forEach((card, i) => {
-      const c = CHARS[i], cv = card.querySelector('canvas'), p = c && this.full && this.full[c.img]; if (!cv) return;
-      const g = cv.getContext('2d'); g.clearRect(0, 0, 220, 260);
-      if (!c) return;
-      if (p) { const k = Math.min(200 / p.width, 250 / p.height); g.drawImage(p, 0, 0, p.width, p.height, (220 - p.width * k) / 2, 250 - p.height * k, p.width * k, p.height * k); }
-      else { const q = this.portraits.claire; if (q && q.kind === 'canvas') g.drawImage(q.canvas, 0, 0, 220, 220); }
-    });
-  }
-
   openSelect(which) {
     this.screen = which;
     this.el.menu.hidden = true;
-    this.el.selDiff.hidden = which !== 'diff'; this.el.selChar.hidden = which !== 'char';
-    if (which === 'diff') this._paintDiff(); else { this._paintCharArt(); this._paintChar(); }
+    this.el.selDiff.hidden = which !== 'diff';
+    this._paintDiff();
     document.body.dataset.screen = 'select';
   }
-  closeSelect() { this.screen = null; this.el.selDiff.hidden = true; this.el.selChar.hidden = true; }
+  closeSelect() { this.screen = null; this.el.selDiff.hidden = true; }
   back() {
     this.sfx.play('ui_hover');
-    if (this.screen === 'char' && this.extraMode) { this.extraMode = false; this.apoMode = false; this.closeSelect(); this.showMenu(true); }
-    else if (this.screen === 'char') this.openSelect('diff');
-    else if (this.screen === 'diff') { this.closeSelect(); this.showMenu(true); }
+    if (this.screen === 'diff') { this.closeSelect(); this.showMenu(true); }
   }
   confirm() {
-    if (this.screen === 'diff') {
-      this.pickedDiff = DIFFS[this.diffIdx];
-      try { localStorage.setItem('lunarinth.lastdiff', String(this.diffIdx)); } catch (e) { /* noop */ }
-      this.sfx.play('ui_click'); this.openSelect('char');
-    } else if (this.screen === 'char') {
-      const c = CHARS[this.charIdx];
-      if (!c) { this.warn('아직 선택할 수 없는 슬롯입니다', 1200, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
-      if (this.apoMode && c.id !== 'claire') { this.warn('이 무대에는 클레르만 설 수 있다', 1400, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
-      if (!this.craftUnlocked(c.id)) { this.warn('아직 잠겨 있는 기체입니다', 1400, true); this.sfx.play('hurt', { vol: 0.3 }); return; }
-      this.closeSelect();
-      if (this.apoMode) { this.apoMode = false; this.extraMode = false; this.on.startApo && this.on.startApo(c); }
-      else if (this.extraMode) { this.extraMode = false; this.on.startExtra && this.on.startExtra(c, this.pickedDiff); }
-      else this.on.start && this.on.start(this.pickedDiff, c);
-    }
+    if (this.screen !== 'diff') return;
+    this.pickedDiff = DIFFS[this.diffIdx];
+    try { localStorage.setItem('lunarinth.lastdiff', String(this.diffIdx)); } catch (e) { /* noop */ }
+    this.sfx.play('ui_click'); this.closeSelect();
+    this.on.start && this.on.start(this.pickedDiff);
   }
 
   _bindKeys() {
@@ -186,10 +147,10 @@ export class UI {
       const open = ['#m-help', '#m-settings', '#m-codex'].find((s) => !$(s).hidden);
       if (open && no && $('#m-pause').hidden) { e.preventDefault(); this.modal(open, false); return; }
       if (this.anyModalOpen()) return;
-      if (this.screen === 'diff' || this.screen === 'char') {
-        const key = this.screen === 'diff' ? 'diffIdx' : 'charIdx', n = this.screen === 'diff' ? DIFFS.length : CHARS.length;
-        if (code === 'ArrowLeft' || code === 'KeyA') { this[key] = (this[key] + n - 1) % n; this.sfx.play('ui_hover'); this.screen === 'diff' ? this._paintDiff() : this._paintChar(); }
-        else if (code === 'ArrowRight' || code === 'KeyD') { this[key] = (this[key] + 1) % n; this.sfx.play('ui_hover'); this.screen === 'diff' ? this._paintDiff() : this._paintChar(); }
+      if (this.screen === 'diff') {
+        const n = DIFFS.length;
+        if (code === 'ArrowLeft' || code === 'KeyA') { this.diffIdx = (this.diffIdx + n - 1) % n; this.sfx.play('ui_hover'); this._paintDiff(); }
+        else if (code === 'ArrowRight' || code === 'KeyD') { this.diffIdx = (this.diffIdx + 1) % n; this.sfx.play('ui_hover'); this._paintDiff(); }
         else if (yes) { e.preventDefault(); this.confirm(); }
         else if (no) { e.preventDefault(); this.back(); }
         return;
@@ -227,7 +188,7 @@ export class UI {
     const loop = (now) => {
       requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (this.el.menu.hidden && this.el.selDiff.hidden && this.el.selChar.hidden) return;
+      if (this.el.menu.hidden && this.el.selDiff.hidden) return;
       g.clearRect(0, 0, w, h);
       for (const p of P) {
         p.y += p.v * dt * 3; p.d += dt; if (p.y > 1.05) { p.y = -0.05; p.x = Math.random(); }
@@ -276,7 +237,14 @@ export class UI {
       <h3>EXTRA ${tag('prop')}</h3><p class="note">${EXTRA.title} — ${EXTRA.sub}. 개방 조건: ${EXTRA.unlock}.<br>규칙: ${EXTRA.rules}<br>${EXTRA.hell}</p>
       ${this.extraUnlocked() ? bossCard(ROSTER.find((r) => r.id === 'arkesia'), defs.arkesia) : '<div class="form"><b>？？？ <small>EXTRA</small></b><p class="note">EXTRA를 개방하면 기록됩니다.</p></div>'}
       <h3>플레이어 ${tag('prop')}</h3>
-      <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 궁극기 「성검 해방 — 징벌의 월광」</li><li><b>아스트라</b> — 기술실 담당. 2스테이지에서 처음 쓰러뜨린 뒤 사용 가능. 궁극기 「기술실 권한 — 시스템 오버라이드」</li></ul>
+      <ul><li><b>클레르</b> — 초대 하녀장 · 성검사. 성광(폭탄) 「성검 해방 — 징벌의 월광」</li></ul>
+      <h3>상인 ${tag('prop')}</h3>
+      <ul><li><b>시트라</b> — 정문을 맡은 직무대리. 휴식방에 가끔 레몬 수레를 끌고 나타나 저택 창고의 물건을 판다.</li>
+      <li><b>인피니트</b> — 끝없는 복도에서 온 상인. 달이 한 번 저문 밤(첫 클리어) 이후에만 휴식방에 나타나며, 유니크 · 레전더리 물건만 판다.</li></ul>
+      <h3>변신 ${tag('prop')}</h3>
+      <ul>${Object.entries(TRANSFORMS).map(([k, t]) => `<li><b>${t.name}</b> <small>(${k} 계열 3개)</small> — ${t.desc}</li>`).join('')}</ul>
+      <h3>물건 도감 ${tag('prop')}</h3>
+      <div class="item-dex">${ITEMS.map((it) => `<div class="dex-it" style="--rc:${RARITY[it.rarity].color}" title="${it.desc}"><img src="${itemIcon(it).url}" alt=""><b>${it.name}</b><small>${RARITY[it.rarity].name}${it.tags && it.tags.length ? ' · ' + it.tags.join('/') : ''}</small><span>${it.desc}</span></div>`).join('')}</div>
       <p class="note">“성검을 해방한 것은 루나린스가 처음”이라는 전제는 이 게임의 창작 설정입니다.</p>`;
   }
 
@@ -326,6 +294,67 @@ export class UI {
   }
   setSealed(on) { this.el.hud.classList.toggle('sealed', !!on); $('#sealtag').hidden = !on; }
   showBossUI(show) { for (const s of ['#bossbar', '#bb-timer']) $(s).style.visibility = show ? '' : 'hidden'; if (!show) this.el.spell.hidden = true; }
+  // ───── 로그라이크 HUD ─────
+  setRogue(P) {
+    $('#r-coins').textContent = String(P.coins).padStart(2, '0'); $('#r-keys').textContent = String(P.keys).padStart(2, '0');
+    const pw = P.power; $('#pw-fill').style.width = (pw / 4 * 100).toFixed(1) + '%'; $('#pw-num').textContent = pw >= 4 ? 'MAX' : pw.toFixed(2);
+    $('#sc-num').textContent = String(Math.floor(P.score)).padStart(9, '0');
+  }
+  refreshActive(P) {
+    const box = $('#active-slot'), a = P.active; box.hidden = !a; if (!a) return;
+    const it = ITEM_BY_ID[a.id], img = $('#act-img'); if (img.dataset.id !== a.id) { img.src = itemIcon(it).url; img.dataset.id = a.id; }
+    $('#act-name').textContent = (SKILLS[a.skill] || {}).name || it.name;
+    const bars = $('#act-bars'); bars.innerHTML = Array.from({ length: a.max }, (_, i) => `<i class="${i < a.charge ? 'on' : ''}"></i>`).join('');
+    box.classList.toggle('ready', a.charge >= a.max);
+  }
+  setItems(P) {
+    const el = $('#items-strip'), ids = P.items;
+    if (el.dataset.n === String(ids.length)) return; el.dataset.n = String(ids.length);
+    el.innerHTML = ids.slice(-24).map((id) => { const it = ITEM_BY_ID[id]; return `<img src="${itemIcon(it).url}" title="${it.name}" style="--rc:${RARITY[it.rarity].color}">`; }).join('');
+  }
+  itemBanner(it, sub) {
+    const b = $('#itembanner'); b.querySelector('.ib-name').textContent = it.name; b.querySelector('.ib-desc').textContent = sub || it.desc;
+    b.style.setProperty('--rc', RARITY[it.rarity] ? RARITY[it.rarity].color : '#fff');
+    b.querySelector('img').src = itemIcon(it).url;
+    b.hidden = true; void b.offsetWidth; b.hidden = false; clearTimeout(this._ibT); this._ibT = setTimeout(() => { b.hidden = true; }, 2600);
+  }
+  /** 가격표 · 이름표: [{x, y, text, cls}] (화면 좌표) */
+  setTags(list) {
+    const root = $('#tags'); this._tagPool = this._tagPool || [];
+    while (this._tagPool.length < list.length) { const d = document.createElement('div'); d.className = 'tag'; root.appendChild(d); this._tagPool.push(d); }
+    this._tagPool.forEach((d, i) => { const t = list[i]; if (!t) { d.hidden = true; return; } d.hidden = false; d.className = 'tag ' + (t.cls || ''); if (d._t !== t.text) { d.innerHTML = t.text; d._t = t.text; } d.style.left = t.x + 'px'; d.style.top = t.y + 'px'; });
+  }
+  hint(html) { const h = $('#hint'); if (!html) { h.hidden = true; return; } h.hidden = false; if (h._t !== html) { h.innerHTML = html; h._t = html; } }
+  /** 미니맵: 아이작처럼 아는 방만 보인다 */
+  drawMap(floor, cur) {
+    const cv = $('#minimap'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+    g.clearRect(0, 0, W, H);
+    if (!floor) return;
+    const known = floor.list.filter((r) => r.known || r.visited);
+    let minX = 99, maxX = -99, minY = 99, maxY = -99;
+    for (const r of known) { minX = Math.min(minX, r.gx); maxX = Math.max(maxX, r.gx); minY = Math.min(minY, r.gy); maxY = Math.max(maxY, r.gy); }
+    const cw = Math.min(26, (W - 16) / (maxX - minX + 1)), ch = Math.min(20, (H - 16) / (maxY - minY + 1));
+    const ox = (W - (maxX - minX + 1) * cw) / 2 - minX * cw, oy = (H - (maxY - minY + 1) * ch) / 2 - minY * ch;
+    for (const r of known) {
+      const x = ox + r.gx * cw, y = oy + r.gy * ch, isCur = r === cur;
+      g.fillStyle = isCur ? 'rgba(255,255,255,.95)' : r.visited ? 'rgba(200,190,255,.55)' : 'rgba(120,110,160,.35)';
+      g.fillRect(x + 1.5, y + 1.5, cw - 3, ch - 3);
+      g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.strokeRect(x + 1.5, y + 1.5, cw - 3, ch - 3);
+      if (r.type !== 'normal' && r.type !== 'start') {
+        const col = '#' + ROOM_INFO[r.type].color.toString(16).padStart(6, '0');
+        g.fillStyle = isCur ? '#222' : col; g.font = `bold ${Math.floor(ch * 0.62)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+        const glyph = { boss: '☠', treasure: '★', rest: r.merchant === 'infinite' ? '∞' : r.merchant === 'sitra' ? '◎' : '♨', mini: '◆', challenge: '⚔' }[r.type] || '';
+        g.fillText(r.lock && !r.unlocked ? '🔒' : glyph, x + cw / 2, y + ch / 2 + 1);
+      }
+    }
+  }
+  setPauseItems(P) {
+    const el = $('#pause-items'); if (!el) return;
+    const rows = P.items.map((id) => ITEM_BY_ID[id]).concat(P.active ? [ITEM_BY_ID[P.active.id]] : []);
+    const tf = P.transforms.map((t) => `<span class="tf">${TRANSFORMS[t].name}</span>`).join('');
+    el.innerHTML = (tf ? `<div class="tfs">변신 ${tf}</div>` : '') + (rows.length ? rows.map((it) => `<div class="pi" style="--rc:${RARITY[it.rarity].color}"><img src="${itemIcon(it).url}"><b>${it.name}</b><small>${it.desc}</small></div>`).join('') : '<small>아직 얻은 물건이 없습니다</small>');
+  }
+
   setUlt(n, max = 3) {
     const h = this.el.gems;
     if (this.gemCount !== max) { h.innerHTML = Array.from({ length: max }, () => `<div class="gem">${GEM}</div>`).join(''); this.gemCount = max; }

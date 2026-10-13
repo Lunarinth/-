@@ -39,6 +39,7 @@ export class Input {
     switch (code) {
       case 'KeyZ': return 'shot';
       case 'KeyX': return 'ult';
+      case 'KeyC': return 'skill';
       case 'ShiftLeft': case 'ShiftRight': return 'focus';
       case 'Escape': case 'KeyP': return 'pause';
       case 'Enter': return 'confirm';

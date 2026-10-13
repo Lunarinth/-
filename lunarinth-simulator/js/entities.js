@@ -63,9 +63,10 @@ export class Bullets {
   clearAll() { for (const b of this.list) if (b.active) this.kill(b); }
   count() { let c = 0; for (const b of this.list) if (b.active) c++; return c; }
 
-  update(dt, px, pz, fx, tx = 0, tz = -6) {
+  update(dt, px, pz, fx, tx = 0, tz = -6, freeze = false) {
     for (const b of this.list) {
       if (!b.active) continue;
+      if (freeze && b.owner === 'boss') continue; // 시간 정지: 적탄만 멈춘다
       b.age += dt;
       if (b.delay > 0) { b.delay -= dt; continue; }
       if (b.hold > 0) {

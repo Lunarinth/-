@@ -108,7 +108,7 @@ export class Mobs {
         const w = L.state === 1 ? 0.1 + 0.18 * k : L.lw;
         L.gnd.visible = true; L.gnd.position.set(mx, 0.07, mz); L.gnd.rotation.y = -a; L.gnd.scale.set(len, 1, w);
         L.gnd.material.opacity = L.state === 1 ? 0.25 + 0.5 * k * (0.6 + 0.4 * Math.sin(L.t * 30)) : 1;
-        if (L.state === 2 && G.state === 'stage') {
+        if (L.state === 2 && (G.state === 'stage' || G.state === 'room')) {
           const vx = Bq.x - A.x, vz = Bq.z - A.z, l2 = vx * vx + vz * vz || 1;
           let u = ((P.x - A.x) * vx + (P.z - A.z) * vz) / l2; u = Math.max(0, Math.min(1, u));
           const ex = A.x + vx * u - P.x, ez = A.z + vz * u - P.z;
@@ -144,6 +144,7 @@ export class Mobs {
       G.fx.burst(m.x, 1.5, m.z, 18, { color: [0xffffff, m.ty.color, m.ty.glow], speed: 7, size: 0.8, life: 0.8 });
       G.fx.ring(m.x, 1.2, m.z, m.ty.glow, 4, 0.4);
       if (m.onDeath) m.onDeath(m);
+      if (G.onMobKilled) G.onMobKilled(m);
       this._remove(m, false);
       return true;
     }
@@ -154,6 +155,8 @@ export class Mobs {
   update(dt, G) {
     for (const m of this.list) {
       if (!m.alive) continue;
+      m.slowT = Math.max(0, (m.slowT || 0) - dt);
+      if (G.freezeT > 0) dt = 0; else if (m.slowT > 0) dt *= 0.5; // 시간 정지 · 감속
       m.age += dt; m.flash = Math.max(0, m.flash - dt);
       m.px = m.x; m.pz = m.z;
       if (m.path) { const p = m.path(m.age + m.t0, m); m.x = p[0]; m.z = p[1]; } else { m.x += m.vx * dt; m.z += m.vz * dt; }
@@ -161,12 +164,12 @@ export class Mobs {
       if (m.fire && m.age > 0.5 && !m.leaving) m.fire(m, dt, this);
       if (m.age > m.life || Math.abs(m.x) > 18 || m.z > 14 || m.z < -18) { this._remove(m, false); continue; }
       // 접촉 피해
-      if (m.age > 0.6 && G.state === 'stage' && (m.x - G.player.x) ** 2 + (m.z - G.player.z) ** 2 < (m.hr * 0.8 + PLAYER.hr) ** 2) G.player.hurt(G);
+      if (m.age > 0.6 && (G.state === 'stage' || G.state === 'room') && !(G.freezeT > 0) && (m.x - G.player.x) ** 2 + (m.z - G.player.z) ** 2 < (m.hr * 0.8 + PLAYER.hr) ** 2) G.player.hurt(G);
       // 렌더
       const fade = Math.min(1, m.age / 0.4) * (m.life - m.age < 0.4 ? Math.max(0, (m.life - m.age) / 0.4) : 1);
       const pulse = 1 + Math.sin(m.age * 5) * 0.04, s = m.size * pulse;
       m.spr.position.set(m.x, 1.5, m.z); m.spr.scale.set(s, s, 1); m.spr.material.rotation = (m.face ? m.faceA : m.age * m.spin) + (m.sway ? Math.sin(m.age * m.swayF + m.swayPh) * m.sway : 0);
-      const f = m.flash > 0 ? 2.0 : 1; m.mat.color.setHex(m.tint ?? m.ty.color); if (f > 1) m.mat.color.multiplyScalar(f);
+      const f = m.flash > 0 ? 2.0 : 1; m.mat.color.setHex(Mobs.mono ? 0xffffff : (m.tint ?? m.ty.color)); if (f > 1) m.mat.color.multiplyScalar(f);
       m.mat.opacity = fade * m.op;
       m.rim.position.set(m.x, 1.5, m.z - 0.05); m.rim.scale.set(s * 1.35, s * 1.35, 1); m.rmat.rotation = -m.age * m.spin * 0.6; m.rmat.opacity = m.rimOn ? fade * 0.55 : 0;
       m.sh.position.x = m.x; m.sh.position.z = m.z; m.sh.scale.set(s * 0.9, 1, s * 0.9);
