@@ -6,7 +6,7 @@ import { TRACKS } from './tracks.js';
 
 const LOOKAHEAD = 0.22;
 // 외부 음원(무료 BGM)으로 재생하는 곡: name -> { file, vol }
-const FILES = { manager: { file: 'assets/music/arachnophobia.mp3', vol: 0.9 } };
+const FILES = { manager: { file: 'assets/music/arachnophobia.mp3', vol: 0.38 } }; // 음원이 합성 BGM 보다 훨씬 커서 낮춘다
 const SCENES = TRACKS;
 
 // ───────── 디렉터 ─────────

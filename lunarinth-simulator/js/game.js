@@ -104,7 +104,7 @@ export class Game {
     return {
       diff, char: CHARS[0], extra, hell: !!diff.hell, apo: !!diff.apo, stages: special ? [special] : STAGES, special: !!special,
       stageIdx: 0, continues: 0, continuesMax: extra ? 0 : CONTINUES, stepHit: false, stepUlt: false, debugInf: dbg, debugUsed: 0,
-      hpScale: special ? (diff.apo ? 0.75 : 0.9) : HP_SCALE[0],
+      hpScale: special ? (diff.apo ? 0.75 : 0.82) : HP_SCALE[0],
     };
   }
   get stageList() { return this.run.stages || STAGES; }
@@ -300,7 +300,7 @@ export class Game {
     const my = ++this._token, run = this.run, P = this.player;
     run.stageIdx = i;
     const st = this.stageList[i];
-    run.hpScale = run.special ? (run.apo ? 0.75 : 0.9) : HP_SCALE[i] ?? 1; // APOTHEOSIS 는 체력 무한이라 길어지기만 하므로 줄인다
+    run.hpScale = run.special ? (run.apo ? 0.75 : 0.82) : HP_SCALE[i] ?? 1; // APOTHEOSIS 는 체력 무한이라 길어지기만 하므로 줄인다
     run.lunaK = st.id === 'lunarinth' ? 1.6 : 1; // 루나린스는 HP_K 가 없는 대신 최종층에서 보정 (후반의 강해진 하녀장 기준)
     this.floor = genFloor({ idx: run.special ? 2 : i, rooms: run.special ? 13 : 8 + i, infinite: this.isInfiniteUnlocked(), mid: !!st.mid });
     if (P.flags.map) this.revealMap(true); else if (P.flags.compass) this.revealMap(false);

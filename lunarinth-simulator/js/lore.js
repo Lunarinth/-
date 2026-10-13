@@ -104,7 +104,7 @@ export const DIFFS = [
 ];
 // EXTRA 전용 고정 난이도: NORMAL 과 HARD 의 중간, 체력 4
 // EXTRA: HARD 와 같은 수준, 체력 4, 컨티뉴 없음
-export const EXTRA_DIFF = { id: 'extra', name: 'EXTRA', kr: '엑스트라', sub: '실 끝에서 웃는 지배자', lv: 3, cnt: 1.28, spd: 1.1, rate: 1.13, hp: 1.25, php: 5, color: '#ff4f7a', extra: true };
+export const EXTRA_DIFF = { id: 'extra', name: 'EXTRA', kr: '엑스트라', sub: '실 끝에서 웃는 지배자', lv: 3, cnt: 1.2, spd: 1.07, rate: 1.08, hp: 1.18, php: 6, color: '#ff4f7a', extra: true };
 // HELL: MADNESS 이상
 export const HELL_DIFF = { id: 'hell', name: 'HELL', kr: '헬', sub: '끊어지지 않는 실', lv: 4, cnt: 1.4, spd: 1.14, rate: 1.2, hp: 1.3, php: 4, color: '#ff2b3d', extra: true, hell: true };
 

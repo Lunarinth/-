@@ -90,7 +90,8 @@ export class UI {
     document.body.classList.toggle('calm', S.calm);
   }
 
-  modal(sel, show) { $(sel).hidden = !show; }
+  /** 모달 열기/닫기. 나중에 연 모달이 항상 위에 뜬다 (일시정지 → 설정 등) */
+  modal(sel, show) { const el = $(sel); el.hidden = !show; if (show) el.style.zIndex = String(20 + (this._mz = (this._mz || 0) + 1)); }
   anyModalOpen() { return [...document.querySelectorAll('.modal')].some((m) => !m.hidden); }
   closeModals() { document.querySelectorAll('.modal').forEach((m) => { m.hidden = true; }); }
 
